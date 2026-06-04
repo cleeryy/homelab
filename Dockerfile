@@ -14,7 +14,9 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# public/ is tracked via .gitkeep (git doesn't track empty dirs).
+# If static files are added to public/, uncomment the line below:
+# COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.source ./.source
 USER nextjs
 EXPOSE 3545
