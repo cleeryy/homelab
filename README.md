@@ -11,28 +11,28 @@ Wiki de documentation technique pour l'infrastructure homelab, construit avec Ne
 
 ```bash
 pnpm install
-pnpm dev       # http://localhost:3000
+pnpm dev       # http://localhost:3545
 ```
 
 ## Build production
 
 ```bash
 pnpm build
-pnpm start     # http://localhost:3000
+pnpm start     # http://localhost:3545
 ```
 
 ## Docker
 
 ```bash
 docker build -t homelab-wiki .
-docker run -p 3000:3000 homelab-wiki
+docker run -p 3545:3545 homelab-wiki
 ```
 
 ## Déploiement Dokploy
 
 1. Connecter le dépôt Git dans Dokploy
 2. Le `Dockerfile` est présent à la racine
-3. Exposer le port **3000**
+3. Exposer le port **3545**
 4. Health check : `/`
 
 ## Structure du projet
