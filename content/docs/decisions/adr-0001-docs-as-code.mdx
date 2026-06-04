@@ -1,0 +1,44 @@
+---
+title: "ADR-0001: Docs-as-Code avec Fumadocs"
+description: "Utilisation de Fumadocs pour la documentation infrastructure"
+---
+
+# ADR-0001 : Docs-as-Code avec Fumadocs
+
+**Statut** : Accepté
+**Date** : 2026-06-04
+**Auteur** : [À compléter]
+
+## Contexte
+Documenter une infrastructure homelab de manière maintenable, versionnable et déployable automatiquement. La solution doit permettre une rédaction en Markdown simple, une navigation intuitive, et un déploiement automatisé.
+
+## Décision
+Utiliser Fumadocs avec Next.js App Router, contenu en MDX, déploiement via Dokploy.
+
+La stack retenue :
+- **Framework documentation** : Fumadocs v16
+- **Framework web** : Next.js 16 (App Router)
+- **Format de contenu** : MDX (Markdown avec composants React)
+- **Déploiement** : Docker (standalone) via Dokploy
+- **Package manager** : pnpm
+
+## Conséquences
+
+### Positives
+- Documentation versionnée dans Git (historique complet, rollback possible)
+- Déploiement automatisé via Docker/Dokploy (CI/CD intégré à la plateforme)
+- Navigation et recherche intégrées (Fumadocs fournit l'UI prête à l'emploi)
+- Contenu en Markdown simple et accessible (pas de courbe d'apprentissage)
+- Architecture extensible (composants React customisés si besoin futur)
+
+### Négatives
+- Nécessite une stack Node.js pour le build (charge mémoire et temps de build)
+- Maintenance des dépendances à prévoir (mises à jour régulières)
+- Build en standalone Docker produit une image volumineuse
+- Pas de WYSIWYG — les contributeurs doivent utiliser un éditeur de texte
+
+## Alternatives envisagées
+
+- **MkDocs** (Material for MkDocs) : Plus simple à mettre en place, thème Material complet, mais moins flexible pour des composants custom et pas natif en standalone Docker
+- **Docusaurus** : Très complet, bonne expérience utilisateur, mais stack plus lourde (nécessite React, webpack) et surdimensionnée pour un projet mono-documentation
+- **Wiki auto-hébergé** (BookStack, Wiki.js) : Interface WYSIWYG agréable mais pas de docs-as-code (pas de Git, pas de versionnement, déploiement manuel)

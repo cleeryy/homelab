@@ -1,0 +1,45 @@
+---
+title: Inventory
+description: Inventaire complet du matériel, des machines virtuelles et des conteneurs
+---
+
+# Inventory
+
+## Matériel physique
+
+| Name | Type | Role | Host | IP / VLAN | Storage | Criticality | Backup | Notes |
+|------|------|------|------|-----------|---------|-------------|--------|-------|
+| PVE-01 | Serveur | Hyperviseur Proxmox | Bare metal | 10.0.10.2 / Mgmt | 2×512GB NVMe | 🟢 Haute | Oui | Nœud principal |
+| PVE-02 | Serveur | Hyperviseur Proxmox | Bare metal | 10.0.10.3 / Mgmt | 2×512GB NVMe | 🟢 Haute | Oui | Nœud secondaire |
+| TNAS-01 | Serveur | Stockage NAS | Bare metal | 10.0.20.2 / Storage | 6×4TB HDD + 2×512GB SSD | 🟢 Haute | Oui | TrueNAS Scale |
+| GW-01 | VM | Firewall / Routeur | PVE-01 | 10.0.0.1 / LAN, DHCP WAN | 32GB vDisk | 🔴 Critique | Oui | OPNsense |
+| SW-01 | Switch | Switch managé | Rack | 10.0.10.254 / Mgmt | — | 🟢 Haute | Non | VLAN trunk |
+
+## Machines virtuelles
+
+| Name | Type | vCPU | RAM | Storage | Host | IP | Notes |
+|------|------|------|-----|---------|------|----|-------|
+| gw-01 | VM | 2 | 4096 | 32G | PVE-01 | 10.0.0.1 | Firewall OPNsense |
+| svc-dns-01 | CT | 1 | 512 | 4G | PVE-01 | 10.0.30.2 | DNS secondaire |
+| svc-dns-02 | CT | 1 | 512 | 4G | PVE-02 | 10.0.30.3 | DNS secondaire |
+| svc-docker-01 | VM | 4 | 8192 | 80G | PVE-01 | 10.0.30.10 | Docker / Dokploy |
+| svc-db-01 | VM | 2 | 4096 | 40G | PVE-02 | 10.0.30.20 | Base de données |
+| svc-media-01 | VM | 4 | 8192 | 100G | PVE-01 | 10.0.30.30 | Serveur multimédia |
+| svc-backup-01 | VM | 2 | 4096 | 50G | PVE-02 | 10.0.30.40 | Sauvegardes |
+
+## Conteneurs LXC
+
+| Name | Type | vCPU | RAM | Storage | Host | IP | Notes |
+|------|------|------|-----|---------|------|----|-------|
+| ct-mon-01 | CT | 1 | 1024 | 8G | PVE-01 | 10.0.30.50 | Monitoring |
+| ct-proxy-01 | CT | 1 | 1024 | 8G | PVE-02 | 10.0.30.60 | Reverse proxy |
+
+## Stocks consommables
+
+| Item | Quantité | Notes |
+|------|----------|-------|
+| SSD NVMe 512GB | 4 | 2 par nœud Proxmox |
+| HDD 4TB | 6 | Pool RAID-Z2 TrueNAS |
+| SSD SATA 512GB | 2 | Cache TrueNAS |
+| Baie 12U | 1 | Rack domestique |
+| UPS | 1 | Alimentation secourue |

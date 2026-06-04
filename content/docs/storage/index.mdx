@@ -1,0 +1,75 @@
+---
+title: Storage
+description: Layout des pools de stockage ZFS, datasets et volumes
+---
+
+# Storage
+
+## Architecture
+
+Le stockage est centralisé sur **TNAS-01** (TrueNAS Scale) et distribué aux hyperviseurs via NFS (templates ISO/CT, sauvegardes) et iSCSI (disques VM). Chaque nœud Proxmox conserve un stockage local ZFS pour les VM/CT critiques en cas de perte du NAS.
+
+## Pools ZFS — TrueNAS (TNAS-01)
+
+| Pool | RAID Level | Disks | Usable | Description |
+|------|-----------|-------|--------|-------------|
+| tank-01 | RAID-Z2 | 6×4TB HDD | ~14 TB | Stockage principal : données, sauvegardes, médias |
+| nvme-pool | Mirror | 2×512GB SSD | ~500 GB | Cache / haute performance : VM iSCSI |
+
+### tank-01 (RAID-Z2 — 6×4TB)
+
+- **Données brutes** : 24 TB
+- **Capacité utile** : ~14 TB (après redondance 2 disques et overhead ZFS)
+- **Record size** : 1M (fichiers volumineux / médias)
+- **Compression** : lz4
+- **Deduplication** : désactivée
+
+### nvme-pool (Mirror — 2×512GB)
+
+- **Données brutes** : 1 TB
+- **Capacité utile** : ~500 GB
+- **Record size** : 16K (VM blocks)
+- **Compression** : lz4
+
+## Datasets TrueNAS
+
+| Pool | Dataset | Type | Description |
+|------|---------|------|-------------|
+| tank-01 | tank-01/vms | iSCSI extent | Disques VM (via target iSCSI) |
+| tank-01 | tank-01/backups | NFS | Sauvegardes Proxmox |
+| tank-01 | tank-01/media | SMB | Partage multimédia |
+| tank-01 | tank-01/data | SMB | Données partagées générales |
+| tank-01 | tank-01/templates | NFS | Modèles ISO / CT templates |
+| nvme-pool | nvme-pool/vms | iSCSI extent | Disques VM haute performance |
+
+## Stockage local Proxmox
+
+### PVE-01
+
+| Pool | RAID Level | Disks | Usable | Usage |
+|------|-----------|-------|--------|-------|
+| rpool | Mirror | 2×512GB NVMe | ~490 GB | OS Proxmox + VM/CT locaux |
+
+### PVE-02
+
+| Pool | RAID Level | Disks | Usable | Usage |
+|------|-----------|-------|--------|-------|
+| rpool | Mirror | 2×512GB NVMe | ~490 GB | OS Proxmox + VM/CT locaux |
+
+## Stratégie de sauvegarde
+
+| Données | Fréquence | Destination | Rétention |
+|---------|-----------|-------------|-----------|
+| VM/CT (critiques) | Quotidienne | NAS (NFS) → tank-01/backups | 7j + 4 semaines |
+| VM/CT (standards) | Hebdomadaire | NAS (NFS) → tank-01/backups | 4 semaines |
+| Configuration TrueNAS | Quotidienne | Cloud (Backblaze B2) | 30j |
+| Données utilisateur | Hebdomadaire | Disque externe + Cloud | 90j |
+
+## Services de partage
+
+| Service | Protocole | Usage |
+|---------|-----------|-------|
+| NFS | v4 | Montage templates ISO, sauvegardes Proxmox |
+| iSCSI | — | Disques VM (block-level) |
+| SMB/CIFS | v3 | Partage fichiers utilisateur, médias |
+| S3 | — | Sauvegardes cloud (Backblaze B2) |

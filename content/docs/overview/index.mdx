@@ -1,0 +1,66 @@
+---
+title: Architecture
+description: Vue d'ensemble de l'infrastructure homelab — design, composants et principes
+---
+
+# Architecture
+
+## Vue d'ensemble
+
+L'infrastructure est organisée autour de trois piliers : la **virtualisation** (Proxmox), le **stockage** (TrueNAS Scale) et le **réseau / sécurité** (OPNsense). L'ensemble fonctionne sur deux nœuds hyperviseurs en cluster, avec un stockage partagé par NFS et iSCSI depuis le NAS.
+
+## Schéma logique
+
+```
+       ┌─────────────┐
+       │   FAI / WAN  │
+       └──────┬──────┘
+              │
+       ┌──────▼──────┐
+       │  OPNsense   │  ← Firewall / Routeur / VPN
+       │   (GW-01)   │
+       └──────┬──────┘
+              │
+     ┌────────┼────────────────┐
+     │        │                │
+┌────▼───┐ ┌──▼────┐    ┌─────▼─────┐
+│ PVE-01 │ │PVE-02 │    │ TNAS-01   │
+│ Nœud 1 │ │Nœud 2 │    │ TrueNAS   │
+│ Cluster│ │Cluster│    │ Scale     │
+└────┬───┘ └──┬────┘    └─────┬─────┘
+     │        │               │
+     └────────┼───────────────┘
+              │
+    ┌─────────▼──────────┐
+    │  Switch managé     │
+    │  VLAN trunk        │
+    └────────────────────┘
+```
+
+## Principes de design
+
+- **Redondance** — deux nœuds Proxmox permettent la migration à chaud des VM/CT
+- **Séparation des rôles** — chaque service a sa VM ou son CT dédié
+- **Stockage centralisé** — TrueNAS fournit le stockage partagé (NFS pour les templates, iSCSI pour les VM)
+- **Sécurité en couches** — OPNsense filtre et segmente le trafic par VLAN
+- **Sauvegarde externalisée** — les données critiques sont répliquées hors site
+
+## VLANs principaux
+
+| VLAN | Usage | Réseau |
+|------|-------|--------|
+| Management | Gestion hyperviseurs | 10.0.10.0/24 |
+| Storage | Traffic NAS / iSCSI / NFS | 10.0.20.0/24 |
+| Services | Applications et services | 10.0.30.0/24 |
+| LAN | Réseau local utilisateur | 10.0.0.0/24 |
+| DMZ | Services exposés | 10.0.99.0/24 |
+
+## Composants principaux
+
+| Service | Rôle | Technologie |
+|---------|------|------------|
+| Hyperviseurs | Virtualisation | Proxmox VE 8.x |
+| Stockage | NAS / SAN | TrueNAS Scale |
+| Firewall | Routage / Sécurité | OPNsense |
+| Orchestrateur | Déploiement | Dokploy |
+| Monitoring | Supervision | À définir |

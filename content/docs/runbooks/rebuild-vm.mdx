@@ -1,0 +1,51 @@
+---
+title: Rebuild a VM
+description: Procédure de reconstruction complète d'une VM Proxmox
+---
+
+# Runbook : Reconstruire une VM
+
+## Objectif
+Reconstruire une VM Proxmox à partir de zéro ou après un incident.
+
+## Prérequis
+- Accès SSH à PVE-01
+- Backup disponible sur le stockage TrueNAS
+- Credentials Proxmox (root ou compte avec privilèges de backup/restore)
+
+## Durée estimée
+30-45 minutes
+
+## Procédure
+
+### 1. Vérification
+- [ ] Identifier la VM à reconstruire (nom, VM ID, rôle)
+- [ ] Vérifier l'existence du backup dans l'interface Proxmox Backup Server
+- [ ] Noter la configuration réseau : adresse IP, masque, gateway, DNS
+- [ ] Noter les spécifications : vCPU, RAM, disques
+- [ ] Vérifier qu'aucun service critique n'est en cours d'exécution sur la VM cible
+
+### 2. Reconstruction
+- [ ] Arrêter la VM si elle est encore en fonctionnement
+- [ ] Supprimer la VM défectueuse (optionnel, selon la situation)
+- [ ] Restaurer la VM depuis le backup PBS :
+  ```bash
+  # Exemple via l'interface Proxmox ou CLI vzdump
+  qmrestore <backup-path> <vmid> --storage <storage>
+  ```
+- [ ] Démarrer la VM restaurée
+- [ ] Vérifier le boot et la console
+
+### 3. Post-rebuild
+- [ ] Vérifier la connectivité réseau (ping, SSH)
+- [ ] Vérifier les services applicatifs internes à la VM
+- [ ] Mettre à jour la configuration DNS si l'adresse IP a changé
+- [ ] Restaurer les données applicatives si le backup ne les inclut pas
+- [ ] Notifier les utilisateurs du service de la fin de l'intervention
+
+## Rollback
+En cas d'échec de la restauration :
+- [ ] Arrêter la VM restaurée si elle est partiellement fonctionnelle
+- [ ] Restaurer une version antérieure du backup si disponible
+- [ ] En dernier recours, reconstruire la VM manuellement depuis l'ISO d'installation
+- [ ] Documenter l'incident et les actions entreprises
