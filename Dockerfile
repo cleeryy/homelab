@@ -1,5 +1,4 @@
-FROM node:22-alpine AS base
-RUN apk add --no-cache libc6-compat
+FROM node:22-slim AS base
 
 FROM base AS deps
 WORKDIR /app
@@ -17,7 +16,7 @@ RUN pnpm build
 FROM base AS runner
 WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+    adduser --system --uid 1001 --ingroup nodejs --no-create-home nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/.source ./.source
