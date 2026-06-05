@@ -1,7 +1,3 @@
-<<<<<<< Updated upstream
-@import 'fumadocs-ui/css/neutral.css';
-=======
 @import 'tailwindcss';
-@import 'fumadocs-ui/css/solar.css';
->>>>>>> Stashed changes
+@import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
