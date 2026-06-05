@@ -1,4 +1,9 @@
-FROM node:22-alpine AS deps
+FROM node:22-alpine AS base
+# libc6-compat is required for native Node.js modules (e.g. @tailwindcss/oxide)
+# to load correctly on Alpine Linux (musl libc).
+RUN apk add --no-cache libc6-compat
+
+FROM base AS deps
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 COPY package.json pnpm-lock.yaml source.config.ts next.config.ts tsconfig.json ./
@@ -8,7 +13,7 @@ FROM deps AS builder
 COPY . .
 RUN pnpm build
 
-FROM node:22-alpine AS runner
+FROM base AS runner
 WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
