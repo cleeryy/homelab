@@ -1,16 +1,10 @@
 FROM node:22-slim AS base
 
-FROM base AS deps
-WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
-
 FROM base AS builder
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 FROM base AS runner
