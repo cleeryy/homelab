@@ -1,15 +1,16 @@
 FROM node:22-alpine AS base
-# libc6-compat is required for native Node.js modules (e.g. @tailwindcss/oxide)
-# to load correctly on Alpine Linux (musl libc).
 RUN apk add --no-cache libc6-compat
 
 FROM base AS deps
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
-COPY package.json pnpm-lock.yaml source.config.ts next.config.ts tsconfig.json ./
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-FROM deps AS builder
+FROM base AS builder
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
 
@@ -19,10 +20,9 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# public/ is tracked via .gitkeep (git doesn't track empty dirs).
-# If static files are added to public/, uncomment the line below:
-# COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.source ./.source
+# Décommenter si des fichiers sont ajoutés dans public/
+# COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 USER nextjs
 EXPOSE 3545
 ENV PORT=3545
