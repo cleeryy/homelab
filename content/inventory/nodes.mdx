@@ -9,17 +9,46 @@ Authoritative list of physical nodes in the homelab, with hardware and role.
 
 ## Scope
 
-Hardware facts only. Role rationale lives in [Architecture > Node roles](/architecture/node-roles).
+Hardware facts. Role rationale lives in [Architecture > Node roles](/architecture/node-roles).
 
-## Nodes
+## Active nodes
 
-| Node | Role | CPU | RAM | Disks | Network |
-|------|------|-----|-----|-------|---------|
-| `pve3` | Primary compute | TODO | TODO | TODO | TODO |
-| `pve1` | Infrastructure / management | TODO | TODO | TODO | TODO |
+| Node | Role | Proxmox VE | Management | Gateway |
+|------|------|-----------|------------|---------|
+| `pve3` | Primary compute / production | 9.2.x | `192.168.1.103/24` on `vmbr0` | `192.168.1.1` |
+| `pve1` | Infrastructure / management | 9.2.x | `192.168.1.101/24` on `vmbr0` | `192.168.1.1` |
+
+### `pve3`
+
+- Bridges:
+  - `vmbr0` — management LAN.
+  - `vmbr1` — routed internal network, host IP `10.0.0.124`.
+  - `vmbr2` — currently down, holds `192.168.1.112` (purpose pending validation).
+- Storage attached:
+  - `local` — host directory.
+  - `local-lvm` — large LVM-thin pool, ~2.6 TB.
+  - `nas` — NFS share, shared with `pve1`.
+  - Additional physical disks passed through to the TrueNAS VM (`127`).
+- No active ZFS pool on the host.
+- CPU, RAM, and disk slot map: **pending capture**.
+
+### `pve1`
+
+- Bridges:
+  - `vmbr0` — management LAN.
+- Storage attached:
+  - `local` — host directory.
+  - `local-lvm` — LVM-thin.
+  - `nas` — NFS share, shared with `pve3`.
+  - `pve1-storage` — ZFS pool, ~1.09 TB usable.
+- CPU, RAM, and disk slot map: **pending capture**.
+
+## Disabled
+
+| Node | Status | Reason |
+|------|--------|--------|
+| `pve2` | Disabled / historical | Retired in place; not part of the active design. Removal pending decision in the [migration plan](/architecture/migration-plan). |
 
 ## Notes
 
-Update this table only with confirmed values. Do not infer specs from external sources.
-
-TODO: add firmware/BIOS revisions if they become operationally relevant.
+Update this page only with confirmed values. Do not infer specs from external sources.

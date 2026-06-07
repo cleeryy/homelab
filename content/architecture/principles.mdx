@@ -9,13 +9,18 @@ State the non-negotiable design principles. When a decision is contested, this p
 
 ## Principles
 
-- **Target state is documented, not legacy state.** Pages describe the system as it should be. Migration is a separate concern.
-- **One node, one role.** `pve3` is for workloads. `pve1` is for infrastructure. Cross-purpose deployments need an explicit reason.
-- **Services are portable.** A workload should move between nodes with config changes only, not redesign.
-- **Backups are a feature, not an afterthought.** Every stateful service has a documented backup and restore path before it ships.
+- **Asymmetric nodes by design.** `pve3` carries production workloads, `pve1` carries the platform. Symmetry is not a goal.
+- **Target state is documented, not legacy state.** Pages describe the system as it should be. Migration is a separate concern, captured in the [migration plan](/architecture/migration-plan).
+- **One node, one role.** Apps and media go on `pve3`. Platform and ingress go on `pve1`. Cross-role placements need an explicit reason.
+- **Services are portable.** A workload should move between nodes with config changes only, not a redesign.
+- **Backups are a feature, not an afterthought.** Every stateful service has a documented backup and restore path before it is treated as production.
 - **Boring tech wins.** Prefer well-understood, widely-deployed components over novel ones.
-- **No undocumented decisions.** If it influences architecture, it lives in this section.
+- **No undocumented decisions.** If a choice influences architecture or operations, it lives in the docs.
+- **Documentation has one home.** Fumadocs is the canonical layer. Docmost is transitional and will be retired.
 
-## Notes
+## Non-goals
 
-TODO: extend with explicit non-goals once the first round of decisions stabilises.
+- High availability across nodes. The platform is single-rack, single-region; designs assuming HA failover are out of scope.
+- Symmetric clustering. `pve3` and `pve1` are not interchangeable.
+- Bring-your-own-storage per service. Storage tiers are platform-managed.
+- Reviving `pve2` as an active node.

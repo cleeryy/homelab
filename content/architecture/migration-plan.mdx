@@ -9,31 +9,68 @@ Sequence the work needed to reach the target architecture from the current state
 
 ## Scope
 
-This is the only page in the Architecture section where the legacy environment is described. Everywhere else, only the target state is documented.
+This is the only page where current/legacy state is described in detail. Everywhere else, only the target state is documented.
 
-## Migration phases
+## Starting point
 
-### Phase 1 — Foundation
+- Two active Proxmox nodes, `pve1` and `pve3`, in cluster `home`.
+- `pve2` survives in cluster metadata but does not host workloads.
+- Several application VMs and LXCs currently live on `pve1`, which should be the infrastructure node (Nextcloud, n8n, BentoPDF, RustyPaste, Element/Synapse, small webapps).
+- One infrastructure service currently lives on `pve3` (Apache Guacamole).
+- Documentation lives in two places: Docmost (transitional) and this Fumadocs site (canonical going forward).
 
-- Reconfirm node roles: `pve3` for compute, `pve1` for infrastructure.
-- Lock the network design (VLANs, firewall policy).
-- Stand up the management plane on `pve1` (reverse proxy, monitoring, this wiki).
+## Phase 1 — Lock the platform
 
-### Phase 2 — Platform services
+- [ ] Confirm node roles per [Node roles](/architecture/node-roles): `pve3` for workloads, `pve1` for platform.
+- [ ] Confirm cluster quorum and replication settings are aligned with two-node operation.
+- [ ] Decide the fate of `pve2`: keep as a cold reference or remove from the cluster.
+- [ ] Confirm `vmbr2` and the `192.168.1.112` assignment on `pve3` — keep, repurpose, or remove.
+- [ ] Capture node hardware in [Inventory > Nodes](/inventory/nodes).
 
-- Bring core services online on `pve1` per [Service placement](/architecture/service-placement).
-- Document each service in the [Services](/services/core/reverse-proxy) section before traffic is cut over.
+## Phase 2 — Network and ingress
 
-### Phase 3 — Workload migration
+- [ ] Validate OPNsense as the single edge router for the platform.
+- [ ] Agree on VLAN IDs and CIDRs for services, storage, and lab zones; record them in [Network](/architecture/network).
+- [ ] Decide between Nginx Proxy Manager (`100`) and the secondary Nginx (`105`); decommission whichever is redundant.
+- [ ] Document the cloudflared tunnel scope (which services it fronts).
 
-- Move user-facing apps to `pve3` one service at a time.
-- For each service: backup → restore on `pve3` → swap ingress → decommission old instance.
+## Phase 3 — Storage and backups
 
-### Phase 4 — Cleanup
+- [ ] Confirm TrueNAS dataset layout on `pve3` and record it in [Inventory > Storage assets](/inventory/storage-assets).
+- [ ] Confirm `pve1-storage` ZFS layout and what application data lives there.
+- [ ] Choose a backup destination outside `pve3` and outside the TrueNAS chassis.
+- [ ] Define backup cadence and retention per tier; record them in [Backups](/architecture/backups) and [Operations > Backup & restore](/operations/backup-restore).
+- [ ] Exercise a full restore for at least one workload per tier.
 
-- Decommission legacy VMs and storage per [Operations > Decommissioning](/operations/decommissioning).
-- Remove legacy references from the documentation.
+## Phase 4 — Workload relocation
+
+For each service to relocate, follow the same shape: backup → provision on the target node → restore data → swap ingress → decommission source.
+
+Move from `pve1` to `pve3` (apps):
+
+- [ ] Nextcloud (`200`)
+- [ ] n8n (`204`)
+- [ ] BentoPDF (`104`)
+- [ ] RustyPaste (`101`)
+- [ ] Element / Synapse (`107`)
+- [ ] Small webapps (`102`)
+
+Move from `pve3` to `pve1` (platform):
+
+- [ ] Apache Guacamole (`106`)
+
+Documentation migration:
+
+- [ ] Move all surviving Docmost content into Fumadocs.
+- [ ] Decommission Docmost (`109`) once content parity is reached.
+
+## Phase 5 — Cleanup
+
+- [ ] Decommission inactive services: confirm and retire the secondary PostgreSQL (`113`); decide on Hermes Agent (`125`).
+- [ ] Validate or retire utility containers (`108` `alpine-docker`, `122` `ubuntu`, `1005` `debian`).
+- [ ] Remove or retire `pve2` from the cluster.
+- [ ] Remove legacy references from this documentation.
 
 ## Notes
 
-TODO: track the live state of each phase in a separate checklist once execution begins. Do not turn this page into a status tracker.
+Track the live status of each item outside this page. The migration plan captures intent and ordering, not progress.

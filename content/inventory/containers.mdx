@@ -1,29 +1,50 @@
 ---
 title: Containers
-description: LXC containers and Docker workloads.
+description: LXC containers across the cluster.
 ---
 
 ## Purpose
 
-List containerised workloads: Proxmox LXC and Docker. Track where each one runs and what it does.
+List every LXC in the cluster, the service it hosts, and the node it runs on. Mark items whose current placement differs from the target.
 
-## LXC
+## `pve3` — production / compute
 
-| CT ID | Name | Host node | Purpose | OS template |
-|-------|------|-----------|---------|-------------|
-| TODO | TODO | TODO | TODO | TODO |
+| CT ID | Name | Role | Target node | Notes |
+|-------|------|------|-------------|-------|
+| `106` | `apache-guacamole` | Admin gateway | `pve1` | Pending migration to platform node |
+| `110` | `discopanel` | Lab | `pve3` | |
+| `119` | `code` | code-server (lab) | `pve3` | |
+| `124` | `forgejo-runner` | CI runner | `pve3` | Pairs with Forgejo on `pve1` |
+| `125` | `hermesagent` | Lab agent | `pve3` | Currently stopped; decide between revival and retirement |
+| `126` | `affine` | AFFiNE | `pve3` | Application |
+| `310` | `prod-lockbits` | Lab | `pve3` | |
+| `320` | `preprod-lockbits` | Lab | `pve3` | |
+| `331` | `debian-test-edragent` | EDR test | `pve3` | Lab |
+| `332` | `debian-test-edragent2` | EDR test | `pve3` | Lab |
+| `333` | `debian-test-edragent3` | EDR test | `pve3` | Lab |
 
-## Docker
+## `pve1` — infrastructure / management
 
-| Stack | Host VM/node | Compose file location | Services |
-|-------|--------------|-----------------------|----------|
-| TODO | TODO | TODO | TODO |
+| CT ID | Name | Role | Target node | Notes |
+|-------|------|------|-------------|-------|
+| `101` | `alpine-rustypaste` | RustyPaste | `pve3` | Application; pending migration |
+| `103` | `cloudflared` | Outbound tunnel | `pve1` | Platform |
+| `104` | `bentopdf` | BentoPDF | `pve3` | Application; pending migration |
+| `107` | `elementsynapse` | Element / Synapse | `pve3` | Application; pending migration |
+| `108` | `alpine-docker` | Docker host | Pending validation | Purpose to be confirmed |
+| `109` | `docmost` | Transitional wiki | Decommission | Replaced by Fumadocs |
+| `111` | `forgejo` | Git forge | `pve1` | Platform |
+| `112` | `postgresql` | Primary Postgres | `pve1` | Shared database |
+| `113` | `postgresql` | Secondary Postgres | Decommission | Appears inactive; confirm and retire |
+| `122` | `ubuntu` | Utility | Pending validation | Purpose to be confirmed |
+| `1005` | `debian` | Utility | Pending validation | Purpose to be confirmed |
+| `1101` | `glpi` | GLPI asset management | `pve1` | Platform |
 
 ## Conventions
 
-- Prefer LXC for single-purpose system services, Docker for app stacks with multiple components.
-- Compose files are version-controlled, not edited in place on the host.
+- LXC for single-purpose system services. Docker compose stacks run inside a Docker host (LXC or VM), not directly on the Proxmox host.
+- CT IDs follow the same per-role allocation idea as VMs; legacy IDs predating the convention are kept rather than renumbered.
 
 ## Notes
 
-TODO: clarify the rule for "when LXC vs when VM" — currently informal.
+Containers marked **pending validation** must either be assigned a documented purpose or retired through [Operations > Decommissioning](/operations/decommissioning).

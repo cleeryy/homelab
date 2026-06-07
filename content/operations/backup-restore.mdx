@@ -7,31 +7,71 @@ description: How backups are taken and how restores are executed.
 
 Operational counterpart to [Architecture > Backups](/architecture/backups). Covers the actual procedures.
 
+## Current building blocks
+
+- **Proxmox `vzdump`** for VM and LXC archive backups.
+- **ZFS snapshots** on `pve1-storage` for infra application data on `pve1`.
+- **TrueNAS snapshots** on the datasets backing media and bulk data on `pve3`.
+- **NFS share `nas`** mounted on both nodes, usable as an intermediate staging area but **not** as the long-term backup target on its own.
+
+A dedicated backup destination outside `pve3` and outside the TrueNAS chassis is **pending validation**. Until it exists, the platform does not meet its own design.
+
 ## Backup procedure
 
-- [ ] Confirm the backup target is reachable and has capacity.
-- [ ] Trigger or verify the scheduled job for each tier.
-- [ ] Record the job result in the monitoring dashboard.
+### Per-workload `vzdump`
+
+- [ ] Confirm the backup target is reachable and has free capacity.
+- [ ] Trigger the scheduled `vzdump` job, or run an on-demand backup from the Proxmox UI or `vzdump <vmid>` on the host.
+- [ ] Verify the archive landed and its size is consistent with previous runs.
+- [ ] Record the job result in monitoring.
+
+### Application data on `pve1-storage`
+
+- [ ] Confirm the relevant ZFS dataset has a recent snapshot.
+- [ ] Replicate or send the snapshot to the backup destination once it is defined.
+
+### TrueNAS datasets
+
+- [ ] Use TrueNAS-native replication for datasets that hold media and bulk data.
+- [ ] Confirm destination retention matches the design.
+
+Cadence and retention values are **pending validation** for every tier. Do not document them here until they are agreed and applied.
 
 ## Restore procedure
 
 ### Single service
 
 - [ ] Identify the source backup (date, location, checksum if available).
-- [ ] Provision or reuse a target VM/CT per [Provisioning](/operations/provisioning).
-- [ ] Restore data into the target.
+- [ ] Provision or reuse a target VM/CT on the correct node per [Service placement](/architecture/service-placement) and [Operations > Provisioning](/operations/provisioning).
+- [ ] Restore the VM/CT from the `vzdump` archive (`qmrestore` for VMs, `pct restore` for LXCs).
+- [ ] Restore application data from the relevant snapshot or replica if it is not bundled with the archive.
 - [ ] Validate the service end-to-end before swapping ingress.
+- [ ] Update DNS / Nginx Proxy Manager routes only after validation.
 
 ### Whole-node failure
 
-- [ ] Stand up replacement node (or reuse a survivor) per [Architecture > Node roles](/architecture/node-roles).
-- [ ] Restore platform-critical services first (reverse proxy, monitoring).
-- [ ] Restore application services in priority order.
+#### `pve1` down
+
+- [ ] Stand up a replacement `pve1` (or repair the existing host).
+- [ ] Restore ingress first: Nginx Proxy Manager (`100`) and `cloudflared` (`103`).
+- [ ] Restore Forgejo (`111`) and primary PostgreSQL (`112`).
+- [ ] Restore monitoring (Beszel `202`).
+- [ ] Restore remaining platform services per [Service placement](/architecture/service-placement).
+
+#### `pve3` down
+
+- [ ] Stand up a replacement `pve3` (or repair the existing host).
+- [ ] Restore OPNsense (`401`) first if WAN is lost.
+- [ ] Restore TrueNAS (`127`) and re-attach passed-through disks; verify pool import on the TrueNAS side.
+- [ ] Restore the media stack (`300`, `301`, `302`) once datasets are reachable.
+- [ ] Restore application workloads.
+- [ ] Validate end-to-end before resuming user access.
 
 ## Test cadence
 
-TODO: define how often restores are exercised. An untested backup is not a backup.
+Restore drills are **pending validation**. An untested backup is not a backup; at least one workload per tier must be exercised before the design is closed.
 
 ## Notes
 
-Per-service restore details belong on the service's page, not here.
+- Per-service restore quirks (database dump steps, config rehydration, key restoration) belong on the service's own page, not here.
+- Document any deviation between the running state and this procedure immediately — the next incident is the worst time to discover drift.

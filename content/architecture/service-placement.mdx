@@ -5,31 +5,74 @@ description: Which service runs where, and why.
 
 ## Purpose
 
-Capture the authoritative mapping of services to nodes, with the rationale. Placement should never be inferred from the running system.
+Authoritative mapping of services to nodes, with the rationale. Placement should never be inferred from the running system.
 
-## Target state
+## Target placement
 
-| Service | Host node | Reason |
-|---------|-----------|--------|
-| Reverse proxy | `pve1` | Platform-critical, must stay stable |
-| Forgejo | `pve1` | Source of truth for code and config |
-| Fumadocs (this wiki) | `pve1` | Documentation lives on the management plane |
-| Monitoring | `pve1` | Observes the platform, including `pve3` |
-| Nextcloud | `pve3` | Application workload |
-| n8n | `pve3` | Application workload |
-| Docmost | `pve3` | Application workload |
-| Jellyfin | `pve3` | Media workload |
-| *arr stack | `pve3` | Media workload |
-| qBittorrent | `pve3` | Media workload |
-| Pre-prod / lab | `pve3` | Isolated namespace, never on `pve1` |
+Services are grouped by role. Apps and media live on `pve3`; platform, ingress, and observability live on `pve1`.
+
+### Core / infrastructure (target: `pve1`)
+
+| Service | VM / CT | Current node | Target node | Notes |
+|---------|---------|--------------|-------------|-------|
+| Nginx Proxy Manager | VM `100` | `pve1` | `pve1` | Primary HTTPS ingress |
+| Nginx (secondary) | VM `105` | `pve1` | `pve1` | Role pending validation — keep one, retire the other |
+| cloudflared | LXC `103` | `pve1` | `pve1` | Outbound tunnel |
+| Forgejo | LXC `111` | `pve1` | `pve1` | Source of truth for code |
+| PostgreSQL (primary) | LXC `112` | `pve1` | `pve1` | Shared database for infra services |
+| PostgreSQL (secondary) | LXC `113` | `pve1` | Decommission | Appears inactive; confirm and retire |
+| Fumadocs (this wiki) | — | — | `pve1` | Deployment placement pending |
+| Docmost | LXC `109` | `pve1` | Decommission after Fumadocs migration | Transitional |
+| Beszel | VM `202` | `pve1` | `pve1` | Monitoring |
+| Apache Guacamole | LXC `106` | `pve3` | `pve1` | Admin gateway belongs on the platform node |
+| GLPI | LXC `1101` | `pve1` | `pve1` | Asset management |
+
+### Applications (target: `pve3`)
+
+| Service | VM / CT | Current node | Target node | Notes |
+|---------|---------|--------------|-------------|-------|
+| Nextcloud | VM `200` | `pve1` | `pve3` | Migrate to compute node |
+| n8n | VM `204` | `pve1` | `pve3` | Migrate to compute node |
+| AFFiNE | LXC `126` | `pve3` | `pve3` | In place |
+| BentoPDF | LXC `104` | `pve1` | `pve3` | Migrate to compute node |
+| RustyPaste | LXC `101` | `pve1` | `pve3` | Migrate to compute node |
+| Element / Synapse | LXC `107` | `pve1` | `pve3` | Migrate to compute node |
+| Small webapps | VM `102` | `pve1` | `pve3` | Migrate to compute node |
+
+### Media (target: `pve3`)
+
+| Service | VM / CT | Current node | Target node | Notes |
+|---------|---------|--------------|-------------|-------|
+| Jellyfin | VM `300` | `pve3` | `pve3` | In place |
+| Servarr stack | VM `301` | `pve3` | `pve3` | In place |
+| qBittorrent | VM `302` | `pve3` | `pve3` | In place |
+| TrueNAS | VM `127` | `pve3` | `pve3` | Storage platform; does not move (passed-through disks) |
+
+### Lab / pre-production (target: `pve3`)
+
+| Service | VM / CT | Current node | Target node | Notes |
+|---------|---------|--------------|-------------|-------|
+| `prod-lockbits` | LXC `310` | `pve3` | `pve3` | Lab namespace |
+| `preprod-lockbits` | LXC `320` | `pve3` | `pve3` | Lab namespace |
+| EDR test agents | LXC `331`, `332`, `333` | `pve3` | `pve3` | Lab namespace |
+| code-server | LXC `119` | `pve3` | `pve3` | Lab |
+| Hermes Agent | LXC `125` | `pve3` (stopped) | `pve3` | Decide between revival and retirement |
+| Discopanel | LXC `110` | `pve3` | `pve3` | Lab |
+| Forgejo runner | LXC `124` | `pve3` | `pve3` | CI compute pairs with Forgejo on `pve1` |
+| Mint workstation | VM `10001` | `pve3` | `pve3` | Lab desktop |
+
+### Edge (target: `pve3`)
+
+| Service | VM / CT | Current node | Target node | Notes |
+|---------|---------|--------------|-------------|-------|
+| OPNsense | VM `401` | `pve3` | `pve3` | Dual-homed `vmbr0` + `vmbr1` |
 
 ## Placement rules
 
-- Workloads that serve users go on `pve3`.
-- Anything the platform relies on to observe, route, authenticate, or recover goes on `pve1`.
-- Cross-node dependencies (e.g. monitoring scrapes a workload on `pve3`) are expected and not a violation.
 - A service must not move nodes without updating this table.
+- Lab and pre-production workloads stay on `pve3` and never on `pve1`.
+- `pve2` does not host services.
 
 ## Notes
 
-TODO: revisit when a third node or a clustered placement is on the table.
+Items marked **Migrate** are tracked in the [migration plan](/architecture/migration-plan). Items marked **Decommission** are tracked in [Operations > Decommissioning](/operations/decommissioning).

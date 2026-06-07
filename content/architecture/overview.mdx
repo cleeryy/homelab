@@ -5,31 +5,42 @@ description: High-level view of the target homelab architecture.
 
 ## Purpose
 
-Summarise the target homelab as a single coherent system: which nodes exist, what each one is responsible for, and how workloads flow between them.
+Summarise the homelab as a single coherent system: which nodes exist, what each one is for, and how workloads, storage, and traffic flow between them.
 
 ## Scope
 
-This page is a map, not a manual. It points to the detailed pages in this section rather than restating their content.
+A map of the platform, not a manual. Each topic links to its dedicated page.
 
-## Target state
+## Platform
 
-- Two Proxmox VE nodes form the platform:
-  - `pve3` — primary compute, runs production VMs and containers.
-  - `pve1` — infrastructure and management plane (identity, monitoring, backups, ingress).
-- Storage, network, and backups are designed independently of the workloads so services can be relocated between nodes without redesign.
-- Every service has a defined home node and a documented failover or recovery posture.
+- Two-node Proxmox VE 9.2 cluster named `home`, with quorum enabled.
+- `pve3` (`192.168.1.103`) — primary compute and production node.
+- `pve1` (`192.168.1.101`) — infrastructure and management node.
+- `pve2` is retired in place; it remains visible in some Proxmox views but is not part of the active design.
+
+The cluster is **not symmetric**. `pve3` is the stronger node and carries the bulk of execution; `pve1` is the stable host for shared platform services. High availability across nodes is not in scope.
+
+## Building blocks
+
+- **Edge / routing.** OPNsense runs as a VM on `pve3` and bridges the management LAN (`vmbr0`) with the routed internal network on `vmbr1`.
+- **Ingress.** Nginx Proxy Manager on `pve1` terminates HTTPS for user-facing services. A `cloudflared` LXC provides outbound tunneling for selected services.
+- **Source of truth for code.** Forgejo on `pve1`, with a Forgejo runner on `pve3` for CI compute.
+- **Documentation.** This Fumadocs site is becoming the canonical documentation surface, replacing Docmost (transitional).
+- **Storage.** TrueNAS on `pve3` owns the bulk and shared data tier via passed-through disks. A ZFS pool on `pve1` (`pve1-storage`) backs infra-side data. An NFS share (`nas`) is mounted on both nodes for shared assets.
+- **Observability.** Beszel collects host metrics across the cluster.
+- **Workloads.** Apps, media stack, and lab workloads live on `pve3`.
 
 ## Reading order
 
-1. [Principles](/architecture/principles) — what we optimise for and what we refuse to do.
-2. [Node roles](/architecture/node-roles) — what each physical node is for.
-3. [Network](/architecture/network) — segmentation and routing.
-4. [Storage](/architecture/storage) — pools, datasets, and where data lives.
-5. [Service placement](/architecture/service-placement) — which workload runs where, and why.
-6. [Backups](/architecture/backups) — the recovery story.
-7. [Security](/architecture/security) — trust boundaries and access model.
-8. [Migration plan](/architecture/migration-plan) — how we move from current to target state.
+1. [Principles](/architecture/principles) — what the design optimises for.
+2. [Node roles](/architecture/node-roles) — the responsibility split.
+3. [Network](/architecture/network) — segments, bridges, and routing.
+4. [Storage](/architecture/storage) — tiers and pools.
+5. [Service placement](/architecture/service-placement) — which workload runs where.
+6. [Backups](/architecture/backups) — the recovery posture.
+7. [Security](/architecture/security) — trust boundaries.
+8. [Migration plan](/architecture/migration-plan) — how the current state converges on the target.
 
 ## Notes
 
-TODO: insert a topology diagram once the target wiring is settled.
+A topology diagram is pending. Capture it once VLAN segmentation on `vmbr1` is agreed.
