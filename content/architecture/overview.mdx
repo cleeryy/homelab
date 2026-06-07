@@ -1,0 +1,35 @@
+---
+title: Overview
+description: High-level view of the target homelab architecture.
+---
+
+## Purpose
+
+Summarise the target homelab as a single coherent system: which nodes exist, what each one is responsible for, and how workloads flow between them.
+
+## Scope
+
+This page is a map, not a manual. It points to the detailed pages in this section rather than restating their content.
+
+## Target state
+
+- Two Proxmox VE nodes form the platform:
+  - `pve3` — primary compute, runs production VMs and containers.
+  - `pve1` — infrastructure and management plane (identity, monitoring, backups, ingress).
+- Storage, network, and backups are designed independently of the workloads so services can be relocated between nodes without redesign.
+- Every service has a defined home node and a documented failover or recovery posture.
+
+## Reading order
+
+1. [Principles](/architecture/principles) — what we optimise for and what we refuse to do.
+2. [Node roles](/architecture/node-roles) — what each physical node is for.
+3. [Network](/architecture/network) — segmentation and routing.
+4. [Storage](/architecture/storage) — pools, datasets, and where data lives.
+5. [Service placement](/architecture/service-placement) — which workload runs where, and why.
+6. [Backups](/architecture/backups) — the recovery story.
+7. [Security](/architecture/security) — trust boundaries and access model.
+8. [Migration plan](/architecture/migration-plan) — how we move from current to target state.
+
+## Notes
+
+TODO: insert a topology diagram once the target wiring is settled.

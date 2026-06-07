@@ -1,0 +1,5 @@
+{
+  "title": "Apps",
+  "description": "User-facing applications on the compute node",
+  "pages": ["nextcloud", "n8n", "docmost"]
+}

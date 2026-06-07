@@ -1,0 +1,34 @@
+---
+title: Security
+description: Trust boundaries, access model, and security posture.
+---
+
+## Purpose
+
+Define where trust boundaries are drawn and how access to the homelab is controlled.
+
+## Scope
+
+Design intent and policy. Concrete credentials, keys, and per-service hardening live with each service page or out-of-band, never here.
+
+## Target state
+
+- **Trust boundaries**
+  - Public internet → perimeter firewall → reverse proxy → service.
+  - Management plane is not reachable from user-facing networks.
+  - Lab workloads are isolated from production segments.
+- **Identity & access**
+  - SSH access is key-based; passwords are disabled where supported.
+  - Web services sit behind the reverse proxy with TLS terminated centrally.
+  - Administrative access is restricted to the management segment.
+- **Secrets**
+  - Stored out-of-band, never committed to the documentation repo.
+  - Rotation policy is documented per service.
+- **Patching**
+  - Cadence and method are defined in [Operations > Patching](/operations/patching).
+
+## Notes
+
+Do not document specific credentials, ports, or hostnames in this page. Reference services and operations pages instead.
+
+TODO: enumerate non-obvious threat scenarios this design defends against, and the ones it explicitly does not.

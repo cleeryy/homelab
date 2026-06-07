@@ -1,0 +1,36 @@
+---
+title: Patching
+description: How and when the platform and workloads are updated.
+---
+
+## Purpose
+
+Define the patching cadence and method so updates do not surprise the platform.
+
+## Cadence
+
+| Scope | Cadence | Window |
+|-------|---------|--------|
+| Proxmox VE nodes | TODO | TODO |
+| Platform services (`pve1`) | TODO | TODO |
+| Application services (`pve3`) | TODO | TODO |
+| Firmware / BIOS | TODO | TODO |
+
+## Procedure
+
+### Per-node
+
+- [ ] Check current cluster health and backup status.
+- [ ] Drain or pause non-essential workloads if needed.
+- [ ] Apply updates.
+- [ ] Reboot if required, validate platform afterwards.
+
+### Per-service
+
+- [ ] Snapshot or back up before updating.
+- [ ] Update through the documented mechanism for the service.
+- [ ] Smoke-test after update.
+
+## Notes
+
+TODO: choose between automated and manual patching per tier. Document the trade-off here.

@@ -1,0 +1,25 @@
+---
+title: Pre-production
+description: Staging environment for services before they reach production.
+---
+
+## Purpose
+
+Validate configuration changes, upgrades, and new services before they touch production workloads.
+
+## Target state
+
+- **Host node:** `pve3`, in a clearly isolated namespace
+- **Role:** Lab
+- **Storage:** Application data tier with shorter retention; no bulk allocation
+- **Ingress:** Internal only
+
+## Conventions
+
+- Pre-prod workloads are named with a `pp-` prefix.
+- Pre-prod never shares persistent volumes with production.
+- Pre-prod is excluded from production backups.
+
+## Notes
+
+If a pre-prod workload needs to ingest production data, do it through a one-off export, not a live link.

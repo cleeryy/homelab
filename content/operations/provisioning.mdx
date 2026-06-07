@@ -1,0 +1,42 @@
+---
+title: Provisioning
+description: How to bring a new VM, container, or service online.
+---
+
+## Purpose
+
+Standardise how new workloads are created so any service can be reproduced from this document.
+
+## Scope
+
+VMs, LXC containers, and Docker stacks. Bare-metal provisioning of new physical nodes is out of scope.
+
+## Procedure
+
+### 1. Plan
+
+- [ ] Decide the host node per [Architecture > Service placement](/architecture/service-placement).
+- [ ] Allocate VM/CT ID and hostname from the conventions in [Inventory](/inventory/virtual-machines).
+- [ ] Pick a network segment per [Architecture > Network](/architecture/network).
+- [ ] Identify storage tier per [Architecture > Storage](/architecture/storage).
+
+### 2. Create
+
+- [ ] Provision the VM or container on the chosen node.
+- [ ] Apply baseline configuration (timezone, SSH, monitoring agent).
+- [ ] Register in the relevant [Inventory](/inventory/nodes) page.
+
+### 3. Wire up
+
+- [ ] Add ingress through the reverse proxy if user-facing.
+- [ ] Configure backups before exposing the service.
+- [ ] Add monitoring targets.
+
+### 4. Document
+
+- [ ] Add or update the service page under [Services](/services/core/reverse-proxy).
+- [ ] Link the service from [Service placement](/architecture/service-placement).
+
+## Notes
+
+TODO: replace the manual steps above with a reference to an automation runbook once provisioning is scripted.

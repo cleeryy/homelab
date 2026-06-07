@@ -1,0 +1,32 @@
+---
+title: Node roles
+description: Responsibility split between the physical nodes.
+---
+
+## Purpose
+
+Define what each physical node is responsible for, so workload placement is not improvised.
+
+## Target state
+
+### `pve3` — primary compute / production
+
+- Runs production application VMs and containers (apps, media, lab workloads on a separate trust boundary).
+- Hosts user-facing services that should not share fate with the management plane.
+- Sized for the workload mix; storage and network are tuned for it.
+
+### `pve1` — infrastructure / management
+
+- Hosts the management plane: monitoring, ingress, identity, automation, backup orchestrators.
+- Hosts platform-critical services (e.g. reverse proxy, Forgejo, documentation).
+- Stays stable: changes to `pve1` are infrequent and gated.
+
+## Allocation rules
+
+- A service is placed by **role**, not by convenience. Apps go on `pve3`. Platform goes on `pve1`.
+- Cross-node dependencies are explicit and documented in [Service placement](/architecture/service-placement).
+- Lab and test workloads stay on `pve3` under a clearly separated namespace, never on `pve1`.
+
+## Notes
+
+TODO: capture hardware specs (CPU, RAM, disks, NICs) on the corresponding [Inventory > Nodes](/inventory/nodes) page, not here.

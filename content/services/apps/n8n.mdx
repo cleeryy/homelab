@@ -1,0 +1,31 @@
+---
+title: n8n
+description: Workflow automation.
+---
+
+## Purpose
+
+Connect homelab services and external APIs through visual workflows.
+
+## Target state
+
+- **Host node:** `pve3`
+- **Role:** Application
+- **Storage:** Application data tier
+- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+
+## Configuration
+
+TODO: deployment method, queue mode if needed.
+
+## Backups
+
+TODO: workflow definitions + credentials store.
+
+## Restore
+
+TODO: validate restore with at least one trigger-based workflow.
+
+## Notes
+
+Credentials inside n8n are encrypted with an instance-level key — back up that key out-of-band.

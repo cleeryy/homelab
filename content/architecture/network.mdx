@@ -1,0 +1,35 @@
+---
+title: Network
+description: Network segmentation, VLANs, and routing for the target state.
+---
+
+## Purpose
+
+Describe how the network is segmented, how traffic flows between segments, and where the trust boundaries sit.
+
+## Scope
+
+Logical design only. Cable diagrams and physical port maps belong under [Inventory > Networks](/inventory/networks).
+
+## Target state
+
+- VLAN-segmented network with clear roles per segment (management, services, lab, storage, guest).
+- Inter-VLAN routing handled by the perimeter firewall; default-deny between segments unless explicitly allowed.
+- Management plane is reachable only from a trusted segment.
+- Ingress to user-facing services goes through a single reverse proxy.
+
+## Segments
+
+TODO: enumerate VLAN IDs, names, subnets, and DHCP ranges once they are finalised. Use one table row per segment.
+
+| VLAN | Name | Purpose | Subnet | Gateway |
+|------|------|---------|--------|---------|
+| TODO | TODO | TODO | TODO | TODO |
+
+## Routing & firewall
+
+TODO: document the policy direction (default-deny, allow-list rules) and reference the firewall service page once it exists.
+
+## Notes
+
+Do not invent subnets or VLAN IDs in this document. Update the table only with values that are confirmed.

@@ -1,0 +1,11 @@
+{
+  "title": "Operations",
+  "description": "Day-2 procedures",
+  "pages": [
+    "provisioning",
+    "backup-restore",
+    "patching",
+    "incident-response",
+    "decommissioning"
+  ]
+}

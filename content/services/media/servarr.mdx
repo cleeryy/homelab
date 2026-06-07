@@ -1,0 +1,35 @@
+---
+title: "*arr stack"
+description: Sonarr, Radarr, Prowlarr, and related automation.
+---
+
+## Purpose
+
+Automate acquisition, organisation, and metadata for the media library consumed by [Jellyfin](/services/media/jellyfin).
+
+## Target state
+
+- **Host node:** `pve3`
+- **Role:** Media
+- **Storage:** Bulk tier for downloads and library, application data tier for service state
+- **Ingress:** Internal only — these services do not need public exposure
+
+## Components
+
+TODO: list the exact set used (Sonarr, Radarr, Prowlarr, Bazarr, ...) and version pinning approach.
+
+## Configuration
+
+TODO: deployment method, shared volume layout with [qBittorrent](/services/media/qbittorrent) and [Jellyfin](/services/media/jellyfin).
+
+## Backups
+
+TODO: per-service config and database.
+
+## Restore
+
+TODO: validate the full chain from indexer → downloader → library.
+
+## Notes
+
+The shared volume layout between download client, *arr stack, and Jellyfin matters more than any one service's config — document it once, here.

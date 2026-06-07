@@ -1,0 +1,33 @@
+---
+title: Incident response
+description: How to triage, mitigate, and follow up on incidents.
+---
+
+## Purpose
+
+Provide a predictable response procedure when something breaks, so triage is fast and follow-up is consistent.
+
+## Triage
+
+- [ ] Identify the affected service and its scope (single service, segment, node, whole platform).
+- [ ] Check [Architecture > Service placement](/architecture/service-placement) to confirm impact.
+- [ ] Look at monitoring dashboards for correlated signals.
+
+## Mitigate
+
+- [ ] Apply the smallest change that restores service (restart, rollback, failover).
+- [ ] Avoid configuration drift: any emergency change is followed by a documented update.
+
+## Recover
+
+- [ ] If a backup restore is needed, follow [Backup & restore](/operations/backup-restore).
+- [ ] Validate the service end-to-end before declaring resolution.
+
+## Follow-up
+
+- [ ] Write a short postmortem: what happened, what was done, what changes are needed.
+- [ ] Update affected documentation (architecture, service page, runbook) so the next incident is shorter.
+
+## Notes
+
+TODO: define a severity scale and what each level implies for response time.

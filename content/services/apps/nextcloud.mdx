@@ -1,0 +1,31 @@
+---
+title: Nextcloud
+description: File sync, share, and collaboration suite.
+---
+
+## Purpose
+
+Personal cloud: files, calendar, contacts, optional collaboration apps.
+
+## Target state
+
+- **Host node:** `pve3`
+- **Role:** Application
+- **Storage:** Application data tier; user files may live on the bulk tier — see [Architecture > Storage](/architecture/storage)
+- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+
+## Configuration
+
+TODO: deployment method (VM, LXC, Docker compose).
+
+## Backups
+
+TODO: separate backup paths for the database and the user data directory.
+
+## Restore
+
+TODO: validate end-to-end restore from a cold node.
+
+## Notes
+
+Sensitive to clock drift and TLS misconfiguration — both must be solid before exposing.

@@ -1,0 +1,5 @@
+{
+  "title": "Core",
+  "description": "Platform-critical services on the management plane",
+  "pages": ["reverse-proxy", "forgejo", "fumadocs", "monitoring"]
+}

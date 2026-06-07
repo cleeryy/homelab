@@ -1,0 +1,37 @@
+---
+title: Decommissioning
+description: How to retire a service, VM, container, or node.
+---
+
+## Purpose
+
+Retire workloads cleanly so the documentation, monitoring, and storage state stay consistent.
+
+## Procedure
+
+### Service
+
+- [ ] Confirm no other service depends on it (check [Service placement](/architecture/service-placement)).
+- [ ] Remove ingress and DNS entries.
+- [ ] Take a final backup if data must be preserved.
+- [ ] Stop and remove the workload.
+- [ ] Delete monitoring targets.
+- [ ] Remove the service page or move it to an archive section if historically relevant.
+
+### VM / container
+
+- [ ] Confirm the hosted service is decommissioned first.
+- [ ] Remove from [Inventory](/inventory/virtual-machines).
+- [ ] Delete from the host node.
+- [ ] Release the VM/CT ID for reuse only after a cooldown period.
+
+### Node
+
+- [ ] Migrate or decommission all workloads first.
+- [ ] Remove from the cluster.
+- [ ] Wipe storage.
+- [ ] Update [Inventory > Nodes](/inventory/nodes) and [Architecture > Node roles](/architecture/node-roles).
+
+## Notes
+
+TODO: define the cooldown period for ID reuse.

@@ -1,0 +1,31 @@
+---
+title: qBittorrent
+description: Download client used by the media stack.
+---
+
+## Purpose
+
+Download client managed by the [*arr stack](/services/media/servarr).
+
+## Target state
+
+- **Host node:** `pve3`
+- **Role:** Media
+- **Storage:** Bulk tier
+- **Ingress:** Internal only
+
+## Configuration
+
+TODO: deployment method, VPN egress policy if applicable.
+
+## Backups
+
+TODO: configuration is small and reproducible from the *arr stack. Decide whether it is worth backing up.
+
+## Restore
+
+TODO: document recovery sequence.
+
+## Notes
+
+Network egress policy (direct vs. VPN-bound) is a security-relevant decision — record it in [Architecture > Security](/architecture/security) once chosen.

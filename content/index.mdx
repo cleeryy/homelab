@@ -1,0 +1,26 @@
+---
+title: Homelab Wiki
+description: Infrastructure blueprint and operational knowledge base.
+---
+
+This site is the source of truth for the homelab. It describes the **target** design — the system as it should be — and the operations that keep it healthy. Legacy state is not documented here unless a page explicitly carries a migration note.
+
+## Sections
+
+- **[Architecture](/architecture/overview)** — Design intent: principles, node roles, network, storage, service placement, backups, security, and the migration plan.
+- **[Inventory](/inventory/nodes)** — Physical and logical assets: nodes, virtual machines, containers, storage, and networks.
+- **[Operations](/operations/provisioning)** — Day-2 procedures: provisioning, backup and restore, patching, incident response, and decommissioning.
+- **[Services](/services/core/reverse-proxy)** — Running workloads grouped by role: core, applications, media, and lab.
+
+## Conventions
+
+- Pages describe the **target state** first. Differences from the current state belong under a **Notes** or migration section, not in the main body.
+- Unknown or undecided values are left as `TODO` placeholders, not invented.
+- Naming, casing, and structure stay consistent across sections — see existing pages before adding new ones.
+
+## Node roles at a glance
+
+| Node | Role |
+|------|------|
+| `pve3` | Primary compute and production workloads |
+| `pve1` | Infrastructure and management plane |

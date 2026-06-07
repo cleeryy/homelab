@@ -1,0 +1,33 @@
+---
+title: Reverse proxy
+description: Central HTTPS ingress for all user-facing services.
+---
+
+## Purpose
+
+Single ingress point for HTTPS traffic into the homelab. Terminates TLS and routes to the appropriate backend.
+
+## Target state
+
+- **Host node:** `pve1`
+- **Role:** Core platform
+- **Exposes:** All user-facing services in [Apps](/services/apps/nextcloud) and [Media](/services/media/jellyfin)
+- **Certificates:** TODO — choose between ACME and an internal CA
+
+## Configuration
+
+- Routing config is version-controlled.
+- Each upstream service has a clearly labelled block.
+- Health checks fail closed.
+
+## Backups
+
+TODO: confirm what needs to be backed up beyond the config repo.
+
+## Restore
+
+TODO: document time-to-restore.
+
+## Notes
+
+TODO: pick the reverse-proxy implementation (Caddy, Traefik, Nginx, ...) and record the rationale here.

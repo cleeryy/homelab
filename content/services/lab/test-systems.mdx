@@ -1,0 +1,25 @@
+---
+title: Test systems
+description: Throwaway and experimental workloads.
+---
+
+## Purpose
+
+Host short-lived experiments and one-off test workloads without polluting production or pre-production.
+
+## Target state
+
+- **Host node:** `pve3`, in the lab namespace
+- **Role:** Lab
+- **Storage:** Application data tier with the shortest retention; treat as ephemeral
+- **Ingress:** Internal only
+
+## Conventions
+
+- Test workloads are time-boxed; they have a documented end-of-life date when created.
+- No production data ever lands on a test workload.
+- Test workloads are not monitored for alerting purposes.
+
+## Notes
+
+If a test workload is promoted, it follows the [Provisioning](/operations/provisioning) procedure as a brand-new service. It does not "graduate" in place.

@@ -1,0 +1,21 @@
+---
+title: Principles
+description: Design principles the homelab is held to.
+---
+
+## Purpose
+
+State the non-negotiable design principles. When a decision is contested, this page is the tiebreaker.
+
+## Principles
+
+- **Target state is documented, not legacy state.** Pages describe the system as it should be. Migration is a separate concern.
+- **One node, one role.** `pve3` is for workloads. `pve1` is for infrastructure. Cross-purpose deployments need an explicit reason.
+- **Services are portable.** A workload should move between nodes with config changes only, not redesign.
+- **Backups are a feature, not an afterthought.** Every stateful service has a documented backup and restore path before it ships.
+- **Boring tech wins.** Prefer well-understood, widely-deployed components over novel ones.
+- **No undocumented decisions.** If it influences architecture, it lives in this section.
+
+## Notes
+
+TODO: extend with explicit non-goals once the first round of decisions stabilises.

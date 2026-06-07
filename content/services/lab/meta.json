@@ -1,0 +1,5 @@
+{
+  "title": "Lab",
+  "description": "Pre-production and test workloads",
+  "pages": ["preprod", "test-systems"]
+}

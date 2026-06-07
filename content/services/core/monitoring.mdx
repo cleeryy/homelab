@@ -1,0 +1,35 @@
+---
+title: Monitoring
+description: Metrics, logs, and alerting for the homelab.
+---
+
+## Purpose
+
+Observe the platform: node health, service health, storage, network. Drive incident response with real signal.
+
+## Target state
+
+- **Host node:** `pve1`
+- **Role:** Core platform
+- **Coverage:** All nodes, all services declared in [Service placement](/architecture/service-placement)
+
+## Components
+
+TODO: choose the stack (e.g. Prometheus + Grafana + Loki, or alternative) and record the choice.
+
+## Configuration
+
+- Targets are scraped via a documented service discovery mechanism, not hand-edited.
+- Dashboards live in the [Forgejo](/services/core/forgejo) repo and are loaded as code.
+
+## Backups
+
+TODO: short retention is acceptable for raw metrics; dashboards and alert rules must be in Git.
+
+## Restore
+
+TODO: confirm time-to-restore for the alerting plane.
+
+## Notes
+
+Monitoring must come up early in disaster recovery so we have visibility while restoring everything else.

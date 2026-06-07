@@ -1,20 +1,36 @@
-# Wiki Technique Homelab
+# Homelab Wiki
 
-Wiki de documentation technique pour l'infrastructure homelab, construit avec Next.js 16 et Fumadocs v16.
+Technical documentation for the homelab infrastructure. The site is the source of truth for the **target** architecture and the operations that keep it running.
 
-## Prérequis
+Built with Next.js 16 and Fumadocs v16. Content is MDX under `content/`.
 
-- Node.js 22+
-- pnpm 9+
+## Structure
 
-## Installation locale
+```
+content/
+  index.mdx              — homepage / entry point
+  architecture/          — design intent: principles, node roles, network, storage, etc.
+  inventory/             — physical and logical assets
+  operations/            — day-2 procedures
+  services/
+    core/                — platform-critical services on the management plane
+    apps/                — user-facing applications
+    media/               — media library and acquisition stack
+    lab/                 — pre-production and test workloads
+```
+
+Sidebar order is controlled by `meta.json` files next to each section's content.
+
+## Local development
+
+Requirements: Node.js 22+ and pnpm 9+.
 
 ```bash
 pnpm install
 pnpm dev       # http://localhost:3545
 ```
 
-## Build production
+## Production build
 
 ```bash
 pnpm build
@@ -28,28 +44,19 @@ docker build -t homelab-wiki .
 docker run -p 3545:3545 homelab-wiki
 ```
 
-## Déploiement Dokploy
+## Deployment (Dokploy)
 
-1. Connecter le dépôt Git dans Dokploy
-2. Le `Dockerfile` est présent à la racine
-3. Exposer le port **3545**
-4. Health check : `/`
+1. Connect this repository in Dokploy.
+2. The `Dockerfile` at the repo root produces a standalone Next.js image.
+3. Expose port **3545**.
+4. Health check: `/`.
 
-## Structure du projet
+## Editing content
 
-- `content/docs/` : pages MDX organisées par section
-- `meta.json` : configuration de la sidebar par dossier
-- `lib/source.ts` : configuration Fumadocs source
-- Modifier les pages MDX dans `content/docs/` pour mettre à jour le contenu
+- Pages live under `content/`. Each `.mdx` file is a docs page; each `meta.json` controls navigation order.
+- Write in English. Describe the **target** state. Use `TODO` for unconfirmed values; do not invent infrastructure facts.
+- See [`content/architecture/principles`](content/architecture/principles.mdx) for editorial principles.
 
-## Décisions techniques
-
-- **Fumadocs v16** (pas v9) pour la compatibilité Next.js 16
-- **Thème neutral.css** (sobre, technique)
-- **Monolangue français V1** (pas d'i18n)
-- Pas de diagrammes Mermaid (MDX tables suffisent)
-- Pas d'i18n, pas de CI/CD, pas d'authentification
-
-## Licence
+## License
 
 MIT
