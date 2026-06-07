@@ -1,6 +1,6 @@
 ---
 title: Network
-description: Network segmentation, VLANs, and routing for the target state.
+description: Network segmentation, bridges, and routing for the target state.
 ---
 
 ## Purpose
@@ -9,27 +9,49 @@ Describe how the network is segmented, how traffic flows between segments, and w
 
 ## Scope
 
-Logical design only. Cable diagrams and physical port maps belong under [Inventory > Networks](/inventory/networks).
+Logical design. Physical wiring and per-port assignments belong in [Inventory > Networks](/inventory/networks).
 
-## Target state
+## Current bridges
 
-- VLAN-segmented network with clear roles per segment (management, services, lab, storage, guest).
-- Inter-VLAN routing handled by the perimeter firewall; default-deny between segments unless explicitly allowed.
-- Management plane is reachable only from a trusted segment.
-- Ingress to user-facing services goes through a single reverse proxy.
+| Bridge | Node | Role | Notes |
+|--------|------|------|-------|
+| `vmbr0` | `pve1`, `pve3` | Management / trusted LAN on `192.168.1.0/24` | Both Proxmox management IPs sit here; gateway `192.168.1.1` |
+| `vmbr1` | `pve3` | Routed internal network, host IP `10.0.0.124` | Carries `opnsense.net1`; CIDR pending validation |
+| `vmbr2` | `pve3` | Holds `192.168.1.112`, currently down | Purpose pending validation — keep, repurpose, or remove |
 
-## Segments
+### Edge
 
-TODO: enumerate VLAN IDs, names, subnets, and DHCP ranges once they are finalised. Use one table row per segment.
+The OPNsense VM (`401`) on `pve3` is dual-homed:
+- `net0` on `vmbr0` — management/trusted LAN side.
+- `net1` on `vmbr1` — routed internal side.
 
-| VLAN | Name | Purpose | Subnet | Gateway |
-|------|------|---------|--------|---------|
-| TODO | TODO | TODO | TODO | TODO |
+OPNsense owns WAN termination and inter-zone policy.
 
-## Routing & firewall
+### Ingress
 
-TODO: document the policy direction (default-deny, allow-list rules) and reference the firewall service page once it exists.
+User-facing HTTPS ingress goes through Nginx Proxy Manager on `pve1` (VM `100`). The `cloudflared` LXC on `pve1` provides outbound tunneling for selected services. A secondary Nginx instance (VM `105`) exists; its target role is pending confirmation — keep one, retire the other.
+
+## Target zoning
+
+The intent is to consolidate around the following logical zones, with OPNsense enforcing the boundaries.
+
+| Zone | Purpose | Status |
+|------|---------|--------|
+| Management / admin | Proxmox hosts, OPNsense management, infra console access | Confirmed on `192.168.1.0/24` |
+| Services | Platform and application workloads exposed via ingress | Pending validation |
+| Storage | NFS, TrueNAS, replication traffic | Pending validation |
+| Lab | Isolated pre-production and test workloads on `pve3` | Pending validation |
+| WAN / edge | Internet uplink behind OPNsense | Owned by OPNsense |
+
+VLAN IDs and CIDRs for the non-management zones are **pending design confirmation**. Do not record values here until they are agreed and applied on the switches and on OPNsense.
+
+## Rules
+
+- Default-deny between zones. Inter-zone access is allow-listed on OPNsense.
+- The management plane is reachable only from the management zone.
+- Ingress to user-facing services traverses Nginx Proxy Manager (or the cloudflared tunnel where explicitly chosen); direct exposure of backend services is not allowed.
 
 ## Notes
 
-Do not invent subnets or VLAN IDs in this document. Update the table only with values that are confirmed.
+- `vmbr2` and its `192.168.1.112` assignment need a documented purpose or removal.
+- Cluster replication traffic shares `vmbr0` today. Promoting it to a dedicated storage zone is part of the [migration plan](/architecture/migration-plan).

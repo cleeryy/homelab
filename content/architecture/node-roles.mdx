@@ -1,32 +1,51 @@
 ---
 title: Node roles
-description: Responsibility split between the physical nodes.
+description: Responsibility split between the active Proxmox nodes.
 ---
 
 ## Purpose
 
-Define what each physical node is responsible for, so workload placement is not improvised.
+Define what each physical node is responsible for so workload placement is not improvised.
 
-## Target state
+## Active nodes
 
 ### `pve3` — primary compute / production
 
-- Runs production application VMs and containers (apps, media, lab workloads on a separate trust boundary).
-- Hosts user-facing services that should not share fate with the management plane.
-- Sized for the workload mix; storage and network are tuned for it.
+- Proxmox VE 9.2.x.
+- Management: `192.168.1.103/24` on `vmbr0`, gateway `192.168.1.1`.
+- Additional bridges: `vmbr1` carrying the routed internal network (host IP `10.0.0.124`), `vmbr2` currently down (holds `192.168.1.112`, purpose pending validation).
+- Storage profile: large `local-lvm` thin pool (~2.6 TB), shared `nas` (NFS), additional disks passed through to the TrueNAS VM. No active ZFS pool on the host itself.
+- Hosts:
+  - Production application VMs and containers.
+  - The media stack (Jellyfin, Servarr, qBittorrent) and the TrueNAS storage VM that backs it.
+  - The OPNsense edge VM.
+  - The Forgejo CI runner.
+  - Lab and pre-production workloads in a clearly separated namespace.
 
 ### `pve1` — infrastructure / management
 
-- Hosts the management plane: monitoring, ingress, identity, automation, backup orchestrators.
-- Hosts platform-critical services (e.g. reverse proxy, Forgejo, documentation).
-- Stays stable: changes to `pve1` are infrequent and gated.
+- Proxmox VE 9.2.x.
+- Management: `192.168.1.101/24` on `vmbr0`, gateway `192.168.1.1`.
+- Storage profile: `local`, `local-lvm`, shared `nas` (NFS), and `pve1-storage` (ZFS pool, ~1.09 TB usable) for infra-side persistent data.
+- Hosts:
+  - Ingress (Nginx Proxy Manager, secondary Nginx) and `cloudflared` outbound tunnel.
+  - Forgejo (Git forge), Fumadocs (this wiki), PostgreSQL.
+  - Monitoring (Beszel), GLPI, transitional Docmost.
+  - Support utilities and a number of small webapps currently in transit toward `pve3`.
 
-## Allocation rules
+## Disabled
 
-- A service is placed by **role**, not by convenience. Apps go on `pve3`. Platform goes on `pve1`.
-- Cross-node dependencies are explicit and documented in [Service placement](/architecture/service-placement).
-- Lab and test workloads stay on `pve3` under a clearly separated namespace, never on `pve1`.
+### `pve2`
+
+`pve2` is not part of the active design. It survives in cluster metadata for historical reasons and must not host new workloads. Any reference to `pve2` in service docs should be treated as a migration leftover. Its eventual removal from the cluster is tracked in the [migration plan](/architecture/migration-plan).
+
+## Placement rules
+
+- A service is placed by **role**, not by convenience. Apps and media go on `pve3`. Platform, ingress, and observability go on `pve1`.
+- Cross-node dependencies (e.g. Beszel on `pve1` scraping a workload on `pve3`) are expected and not a violation of the role split.
+- Lab and pre-production workloads stay on `pve3` under a clearly separated namespace, never on `pve1`.
+- TrueNAS does not move from `pve3` — it owns the passed-through disks.
 
 ## Notes
 
-TODO: capture hardware specs (CPU, RAM, disks, NICs) on the corresponding [Inventory > Nodes](/inventory/nodes) page, not here.
+Hardware specs (CPU model, RAM, disk slot map) are tracked in [Inventory > Nodes](/inventory/nodes), not here.

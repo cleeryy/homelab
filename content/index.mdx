@@ -3,24 +3,34 @@ title: Homelab Wiki
 description: Infrastructure blueprint and operational knowledge base.
 ---
 
-This site is the source of truth for the homelab. It describes the **target** design — the system as it should be — and the operations that keep it healthy. Legacy state is not documented here unless a page explicitly carries a migration note.
+This site is the source of truth for the homelab. It describes the **target architecture** — what the platform should look like — and the operational practices that keep it healthy. The current state is documented only where it clarifies the migration direction.
+
+## Platform at a glance
+
+- Proxmox VE 9.2 cluster `home`, two active nodes, quorum enabled.
+  - `pve3` (`192.168.1.103`) — primary compute and production workloads.
+  - `pve1` (`192.168.1.101`) — infrastructure and management plane.
+- `pve2` is retained as a disabled historical reference and is not part of the active design.
+- Edge routing is handled by an OPNsense VM on `pve3`. User-facing HTTPS ingress is fronted by Nginx Proxy Manager on `pve1`.
+- Bulk and shared storage is centralised on TrueNAS (VM on `pve3`), with an NFS share (`nas`) reachable from both nodes.
 
 ## Sections
 
-- **[Architecture](/architecture/overview)** — Design intent: principles, node roles, network, storage, service placement, backups, security, and the migration plan.
-- **[Inventory](/inventory/nodes)** — Physical and logical assets: nodes, virtual machines, containers, storage, and networks.
-- **[Operations](/operations/provisioning)** — Day-2 procedures: provisioning, backup and restore, patching, incident response, and decommissioning.
-- **[Services](/services/core/reverse-proxy)** — Running workloads grouped by role: core, applications, media, and lab.
+- **[Architecture](/architecture/overview)** — design intent: principles, node roles, network, storage, service placement, backups, security, and the migration plan.
+- **[Inventory](/inventory/nodes)** — current physical and logical assets.
+- **[Operations](/operations/provisioning)** — day-2 procedures.
+- **[Services](/services/core/reverse-proxy)** — running workloads grouped by role.
 
 ## Conventions
 
-- Pages describe the **target state** first. Differences from the current state belong under a **Notes** or migration section, not in the main body.
-- Unknown or undecided values are left as `TODO` placeholders, not invented.
-- Naming, casing, and structure stay consistent across sections — see existing pages before adding new ones.
+- Pages describe the **target state** first. Differences from the current state belong under a Notes or migration section, not in the main body.
+- Unknown or undecided values are marked **pending validation**, never invented.
+- Naming, casing, and structure stay consistent across sections; mirror existing pages when adding new ones.
 
-## Node roles at a glance
+## Node roles
 
-| Node | Role |
-|------|------|
-| `pve3` | Primary compute and production workloads |
-| `pve1` | Infrastructure and management plane |
+| Node | Role | Management |
+|------|------|------------|
+| `pve3` | Primary compute and production | `192.168.1.103/24` |
+| `pve1` | Infrastructure and management | `192.168.1.101/24` |
+| `pve2` | Disabled / historical | — |
