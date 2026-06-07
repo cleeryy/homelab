@@ -1,0 +1,37 @@
+---
+title: Backup & restore
+description: How backups are taken and how restores are executed.
+---
+
+## Purpose
+
+Operational counterpart to [Architecture > Backups](/architecture/backups). Covers the actual procedures.
+
+## Backup procedure
+
+- [ ] Confirm the backup target is reachable and has capacity.
+- [ ] Trigger or verify the scheduled job for each tier.
+- [ ] Record the job result in the monitoring dashboard.
+
+## Restore procedure
+
+### Single service
+
+- [ ] Identify the source backup (date, location, checksum if available).
+- [ ] Provision or reuse a target VM/CT per [Provisioning](/operations/provisioning).
+- [ ] Restore data into the target.
+- [ ] Validate the service end-to-end before swapping ingress.
+
+### Whole-node failure
+
+- [ ] Stand up replacement node (or reuse a survivor) per [Architecture > Node roles](/architecture/node-roles).
+- [ ] Restore platform-critical services first (reverse proxy, monitoring).
+- [ ] Restore application services in priority order.
+
+## Test cadence
+
+TODO: define how often restores are exercised. An untested backup is not a backup.
+
+## Notes
+
+Per-service restore details belong on the service's page, not here.

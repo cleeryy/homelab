@@ -1,0 +1,34 @@
+---
+title: Storage
+description: Storage tiers, pools, and data placement.
+---
+
+## Purpose
+
+Describe storage as a platform concern: which tiers exist, what each tier is for, and where service data lives by design.
+
+## Scope
+
+Logical layout and policy. Disk-level details (models, sizes, slot positions) go in [Inventory > Storage assets](/inventory/storage-assets).
+
+## Target state
+
+- Distinct storage tiers by purpose:
+  - **System / VM disks** — fast, local to the node.
+  - **Application data** — durable, snapshot-capable.
+  - **Bulk / media** — high-capacity, throughput-oriented.
+  - **Backups** — separate failure domain from the primary data.
+- Snapshots are a first-class feature where supported. They are not a replacement for backups.
+- Restore is exercised, not just configured.
+
+## Pools and datasets
+
+TODO: list pools and datasets once the layout is finalised. Use one row per dataset with its purpose, host node, and what consumes it.
+
+| Pool | Dataset | Host | Consumer | Purpose |
+|------|---------|------|----------|---------|
+| TODO | TODO | TODO | TODO | TODO |
+
+## Notes
+
+Do not document storage sizing without confirmed numbers. Reference [Inventory > Storage assets](/inventory/storage-assets) for the physical view.

@@ -1,0 +1,31 @@
+---
+title: Backups
+description: Backup strategy, retention, and recovery objectives.
+---
+
+## Purpose
+
+Describe how the homelab is backed up, what the recovery objectives are, and where backups physically live.
+
+## Scope
+
+Policy and design only. The day-to-day procedure is in [Operations > Backup & restore](/operations/backup-restore).
+
+## Target state
+
+- All stateful services have a documented backup path before they are considered in production.
+- Backups land in a **separate failure domain** from the primary data — different node, different pool, ideally different power source.
+- Restore is rehearsed on a defined cadence; an untested backup is not a backup.
+
+## Objectives
+
+| Tier | RPO | RTO | Notes |
+|------|-----|-----|-------|
+| Platform-critical (reverse proxy, identity, monitoring) | TODO | TODO | Recovery must not depend on user-facing services |
+| Application data (Nextcloud, Docmost, n8n, ...) | TODO | TODO | Tied to each service's recovery story |
+| Media | TODO | TODO | Acceptable to deprioritise vs. apps |
+| Lab / test | None | None | Treated as ephemeral |
+
+## Notes
+
+TODO: set concrete RPO/RTO numbers once the backup target is sized and tested.

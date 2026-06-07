@@ -1,0 +1,35 @@
+---
+title: Service placement
+description: Which service runs where, and why.
+---
+
+## Purpose
+
+Capture the authoritative mapping of services to nodes, with the rationale. Placement should never be inferred from the running system.
+
+## Target state
+
+| Service | Host node | Reason |
+|---------|-----------|--------|
+| Reverse proxy | `pve1` | Platform-critical, must stay stable |
+| Forgejo | `pve1` | Source of truth for code and config |
+| Fumadocs (this wiki) | `pve1` | Documentation lives on the management plane |
+| Monitoring | `pve1` | Observes the platform, including `pve3` |
+| Nextcloud | `pve3` | Application workload |
+| n8n | `pve3` | Application workload |
+| Docmost | `pve3` | Application workload |
+| Jellyfin | `pve3` | Media workload |
+| *arr stack | `pve3` | Media workload |
+| qBittorrent | `pve3` | Media workload |
+| Pre-prod / lab | `pve3` | Isolated namespace, never on `pve1` |
+
+## Placement rules
+
+- Workloads that serve users go on `pve3`.
+- Anything the platform relies on to observe, route, authenticate, or recover goes on `pve1`.
+- Cross-node dependencies (e.g. monitoring scrapes a workload on `pve3`) are expected and not a violation.
+- A service must not move nodes without updating this table.
+
+## Notes
+
+TODO: revisit when a third node or a clustered placement is on the table.

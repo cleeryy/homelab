@@ -1,0 +1,6 @@
+{
+  "title": "Homelab Wiki",
+  "description": "Infrastructure blueprint and operational knowledge base",
+  "root": true,
+  "pages": ["index", "architecture", "inventory", "operations", "services"]
+}

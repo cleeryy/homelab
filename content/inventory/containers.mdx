@@ -1,0 +1,29 @@
+---
+title: Containers
+description: LXC containers and Docker workloads.
+---
+
+## Purpose
+
+List containerised workloads: Proxmox LXC and Docker. Track where each one runs and what it does.
+
+## LXC
+
+| CT ID | Name | Host node | Purpose | OS template |
+|-------|------|-----------|---------|-------------|
+| TODO | TODO | TODO | TODO | TODO |
+
+## Docker
+
+| Stack | Host VM/node | Compose file location | Services |
+|-------|--------------|-----------------------|----------|
+| TODO | TODO | TODO | TODO |
+
+## Conventions
+
+- Prefer LXC for single-purpose system services, Docker for app stacks with multiple components.
+- Compose files are version-controlled, not edited in place on the host.
+
+## Notes
+
+TODO: clarify the rule for "when LXC vs when VM" — currently informal.

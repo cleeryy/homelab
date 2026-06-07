@@ -1,0 +1,35 @@
+---
+title: Fumadocs (this wiki)
+description: The documentation site you are reading now.
+---
+
+## Purpose
+
+Host the homelab wiki itself. The site is built from the `homelab-wiki` repository and deployed as a containerised Next.js application.
+
+## Target state
+
+- **Host node:** `pve1`
+- **Role:** Core platform
+- **Deployment:** Docker image built from this repository's `Dockerfile`, deployed via Dokploy
+- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+- **Port:** 3545
+
+## Configuration
+
+- Source lives in [Forgejo](/services/core/forgejo).
+- Build uses pnpm + Next.js standalone output.
+- Content is authored in MDX under `content/`.
+
+## Backups
+
+The site is stateless. Backups consist of the Git repository, which lives in Forgejo and is itself backed up.
+
+## Restore
+
+- Redeploy the image from the most recent main-branch build.
+- No data restore is required.
+
+## Notes
+
+Editorial conventions are in the homepage and in [Architecture > Principles](/architecture/principles).

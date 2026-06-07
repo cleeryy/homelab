@@ -1,0 +1,5 @@
+{
+  "title": "Media",
+  "description": "Media library and acquisition stack",
+  "pages": ["jellyfin", "servarr", "qbittorrent"]
+}

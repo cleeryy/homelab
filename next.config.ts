@@ -7,6 +7,9 @@ const config: NextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   transpilePackages: ['fumadocs-ui', 'fumadocs-mdx'],
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 export default withMDX(config);

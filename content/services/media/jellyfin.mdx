@@ -1,0 +1,31 @@
+---
+title: Jellyfin
+description: Media server for video and audio libraries.
+---
+
+## Purpose
+
+Stream the media library to local and remote clients.
+
+## Target state
+
+- **Host node:** `pve3`
+- **Role:** Media
+- **Storage:** Bulk tier for media, application data tier for metadata
+- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+
+## Configuration
+
+TODO: deployment method, hardware acceleration if applicable.
+
+## Backups
+
+TODO: metadata and config are the only stateful parts worth backing up. Library files are sourced separately.
+
+## Restore
+
+TODO: validate restore of metadata so users do not lose watch state.
+
+## Notes
+
+Hardware transcoding requires the host to expose the GPU/iGPU to the workload — capture this in the VM/CT definition.

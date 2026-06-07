@@ -1,0 +1,11 @@
+{
+  "title": "Inventory",
+  "description": "Physical and logical assets",
+  "pages": [
+    "nodes",
+    "virtual-machines",
+    "containers",
+    "storage-assets",
+    "networks"
+  ]
+}

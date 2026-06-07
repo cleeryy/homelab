@@ -1,0 +1,39 @@
+---
+title: Migration plan
+description: How we move from the current state to the target architecture.
+---
+
+## Purpose
+
+Sequence the work needed to reach the target architecture from the current state, and make the trade-offs explicit.
+
+## Scope
+
+This is the only page in the Architecture section where the legacy environment is described. Everywhere else, only the target state is documented.
+
+## Migration phases
+
+### Phase 1 — Foundation
+
+- Reconfirm node roles: `pve3` for compute, `pve1` for infrastructure.
+- Lock the network design (VLANs, firewall policy).
+- Stand up the management plane on `pve1` (reverse proxy, monitoring, this wiki).
+
+### Phase 2 — Platform services
+
+- Bring core services online on `pve1` per [Service placement](/architecture/service-placement).
+- Document each service in the [Services](/services/core/reverse-proxy) section before traffic is cut over.
+
+### Phase 3 — Workload migration
+
+- Move user-facing apps to `pve3` one service at a time.
+- For each service: backup → restore on `pve3` → swap ingress → decommission old instance.
+
+### Phase 4 — Cleanup
+
+- Decommission legacy VMs and storage per [Operations > Decommissioning](/operations/decommissioning).
+- Remove legacy references from the documentation.
+
+## Notes
+
+TODO: track the live state of each phase in a separate checklist once execution begins. Do not turn this page into a status tracker.

@@ -1,0 +1,31 @@
+---
+title: Forgejo
+description: Self-hosted Git forge.
+---
+
+## Purpose
+
+Source of truth for all homelab code, configuration, and infrastructure manifests.
+
+## Target state
+
+- **Host node:** `pve1`
+- **Role:** Core platform
+- **Storage:** Application data tier per [Architecture > Storage](/architecture/storage)
+- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+
+## Configuration
+
+TODO: deployment method (VM, LXC, Docker).
+
+## Backups
+
+TODO: define backup of repo data + database.
+
+## Restore
+
+TODO: document end-to-end restore on a fresh `pve1`.
+
+## Notes
+
+This service is platform-critical: it must come up early in a disaster recovery scenario.

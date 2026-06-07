@@ -1,0 +1,15 @@
+{
+  "title": "Architecture",
+  "description": "Design intent for the homelab",
+  "pages": [
+    "overview",
+    "principles",
+    "node-roles",
+    "network",
+    "storage",
+    "service-placement",
+    "backups",
+    "security",
+    "migration-plan"
+  ]
+}
