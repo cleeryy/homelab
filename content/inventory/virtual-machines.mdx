@@ -1,45 +1,40 @@
 ---
 title: Virtual machines
-description: VMs by host node.
+description: All Proxmox VMs by host node.
 ---
 
-## Purpose
+## `pve1`
 
-List every VM in the cluster, the service it hosts, and the node it runs on. Mark items whose current placement differs from the target.
+| VM ID | Name | Function | Status | Notes |
+|-------|------|----------|--------|-------|
+| `100` | `ubuntu-nginx-proxy-manager` | Reverse proxy / ingress | Running | Nginx Proxy Manager |
+| `102` | `ubuntu-small-webapps` | Docker host for the `web-apps` stack | Running | Beszel IP `192.168.1.23` |
+| `105` | `ubuntu-nginxrpm` | Reverse proxy (second) | Running | Role overlap with `100` pending validation |
+| `200` | `ubuntu-nextcloud` | Docker host for Nextcloud | Running | Beszel IP `192.168.1.27` |
+| `202` | `ubuntu-beszel` | Docker host for Beszel + Portainer + Watchtower + Termix | Running | Beszel IP `192.168.1.25` |
+| `204` | `ubuntu-n8n` | Docker host for n8n + internal Traefik | Running | Beszel IP `192.168.1.13`; Beszel system hostname displayed as `ntfy` |
 
-## `pve3` — production / compute
+## `pve3`
 
-| VM ID | Name | Role | Target node | Notes |
-|-------|------|------|-------------|-------|
-| `127` | `truenas` | Storage platform | `pve3` | Holds passed-through disks; does not move |
-| `300` | `ubuntu-jelly` | Jellyfin host | `pve3` | Media |
-| `301` | `ubuntu-servarr` | Servarr stack | `pve3` | Media automation |
-| `302` | `ubuntu-qbittorrent` | qBittorrent | `pve3` | Media downloader |
-| `401` | `opnsense` | Edge router | `pve3` | Dual-homed `vmbr0` + `vmbr1` |
-| `10001` | `mint` | Lab desktop | `pve3` | Lab |
+| VM ID | Name | Function | Status | Notes |
+|-------|------|----------|--------|-------|
+| `127` | `truenas` | Storage VM with passed-through disks | Running | Does not move |
+| `300` | `ubuntu-jelly` | Docker host for Jellyfin + Seerr | Running | Beszel IP `192.168.1.31` |
+| `301` | `ubuntu-servarr` | Docker host for the Servarr stack | Running | Beszel IP `192.168.1.26` |
+| `302` | `ubuntu-qbittorrent` | Docker host for qBittorrent + Gluetun | Running | Beszel IP `192.168.1.28` |
+| `401` | `opnsense` | Edge router / firewall | Running | Dual-homed `vmbr0` + `vmbr1` |
+| `10001` | `mint` | Lab desktop | Stopped | Decision pending |
 
-## `pve1` — infrastructure / management
+## ID ranges currently in use
 
-| VM ID | Name | Role | Target node | Notes |
-|-------|------|------|-------------|-------|
-| `100` | `ubuntu-nginx-proxy-manager` | Reverse proxy / ingress | `pve1` | Primary HTTPS ingress |
-| `102` | `ubuntu-small-webapps` | Small webapps | `pve3` | Application; pending migration |
-| `105` | `ubuntu-nginxrpm` | Secondary Nginx | `pve1` | Role pending validation |
-| `200` | `ubuntu-nextcloud` | Nextcloud | `pve3` | Application; pending migration |
-| `202` | `ubuntu-beszel` | Beszel monitoring | `pve1` | Observability |
-| `204` | `ubuntu-n8n` | n8n automation | `pve3` | Application; pending migration |
+- `100–199` — ingress and small platform VMs.
+- `200–299` — Docker host VMs for application workloads.
+- `300–399` — Docker host VMs for the media stack.
+- `400–499` — edge / network.
+- `127` — historical, outside the per-role ranges (TrueNAS).
+- `10000+` — lab desktops.
 
-## Conventions
+## OS notes
 
-- VM IDs are allocated from per-role ranges. Ranges currently in use:
-  - `100–199` — ingress and small platform VMs (on `pve1`).
-  - `200–299` — application VMs (currently on `pve1`, target `pve3`).
-  - `300–399` — media (on `pve3`).
-  - `400–499` — edge / network (on `pve3`).
-  - `10000+` — lab desktops.
-- VM names match the service they host where there is a 1:1 mapping.
-- Every VM should point to a service page under [Services](/services/core/reverse-proxy).
-
-## Notes
-
-VM `127` (`truenas`) is intentionally outside the per-role ranges because it predates the convention. Do not renumber.
+- The Docker host VMs run Ubuntu 24.04 (LTS releases observed: 24.04.2, 24.04.3).
+- The Nextcloud host's OS line is reported in Beszel as `6.8.0-111-generic` (kernel string); the Ubuntu release line is not captured at the same place.

@@ -1,31 +1,31 @@
 ---
 title: Docmost
-description: Collaborative wiki and document workspace.
+description: Transitional documentation app on the path to retirement.
 ---
 
-## Purpose
+## Placement
 
-Free-form collaborative notes and documents, separate from this technical wiki.
+- LXC `109` `docmost` on `pve1`.
 
-## Target state
+## Status
 
-- **Host node:** `pve3`
-- **Role:** Application
-- **Storage:** Application data tier
-- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+- Docmost is still deployed and reachable but **not** the canonical documentation surface.
+- Fumadocs (this site) is the canonical documentation layer.
 
-## Configuration
+## What to do with it
 
-TODO: deployment method.
+The decision is binary: migrate any surviving Docmost content into Fumadocs, then either keep Docmost online as a read-only archive or decommission the LXC entirely. This is tracked on the [migration plan](/architecture/migration-plan).
 
-## Backups
+## Dependencies
 
-TODO: database + attachments.
+- Docmost typically uses PostgreSQL. The PostgreSQL LXC (`112`) on `pve1` is the most likely backend, but the exact wiring is not exported into this documentation.
 
-## Restore
+## Failure impact
 
-TODO: validate end-to-end restore.
+- During the transition window, a Docmost outage means previously-written content is unreachable until either Docmost is restored or that content has been mirrored into Fumadocs.
 
-## Notes
+## Pending
 
-Docmost stores user content. The homelab wiki (Fumadocs) stores infrastructure documentation. Do not merge them.
+- Inventory of content not yet migrated.
+- Database wiring confirmation.
+- Decommissioning date.

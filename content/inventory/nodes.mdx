@@ -1,54 +1,39 @@
 ---
 title: Nodes
-description: Physical Proxmox VE nodes.
+description: Physical Proxmox nodes.
 ---
-
-## Purpose
-
-Authoritative list of physical nodes in the homelab, with hardware and role.
-
-## Scope
-
-Hardware facts. Role rationale lives in [Architecture > Node roles](/architecture/node-roles).
 
 ## Active nodes
 
 | Node | Role | Proxmox VE | Management | Gateway |
 |------|------|-----------|------------|---------|
-| `pve3` | Primary compute / production | 9.2.x | `192.168.1.103/24` on `vmbr0` | `192.168.1.1` |
-| `pve1` | Infrastructure / management | 9.2.x | `192.168.1.101/24` on `vmbr0` | `192.168.1.1` |
-
-### `pve3`
-
-- Bridges:
-  - `vmbr0` — management LAN.
-  - `vmbr1` — routed internal network, host IP `10.0.0.124`.
-  - `vmbr2` — currently down, holds `192.168.1.112` (purpose pending validation).
-- Storage attached:
-  - `local` — host directory.
-  - `local-lvm` — large LVM-thin pool, ~2.6 TB.
-  - `nas` — NFS share, shared with `pve1`.
-  - Additional physical disks passed through to the TrueNAS VM (`127`).
-- No active ZFS pool on the host.
-- CPU, RAM, and disk slot map: **pending capture**.
+| `pve1` | Infrastructure and management | 9.x | `192.168.1.101/24` on `vmbr0` | `192.168.1.1` |
+| `pve3` | Primary compute and production | 9.x | `192.168.1.103/24` on `vmbr0` | `192.168.1.1` |
 
 ### `pve1`
 
-- Bridges:
-  - `vmbr0` — management LAN.
-- Storage attached:
-  - `local` — host directory.
-  - `local-lvm` — LVM-thin.
-  - `nas` — NFS share, shared with `pve3`.
-  - `pve1-storage` — ZFS pool, ~1.09 TB usable.
-- CPU, RAM, and disk slot map: **pending capture**.
+- Bridges: `vmbr0` (management LAN).
+- Storage attached: `local`, `local-lvm`, `pve1-storage` (ZFS), `nas` (shared NFS).
+- Hosts ingress, code/database/wiki stack, monitoring, application VMs running Docker stacks.
+- Beszel reports ~83 systemd services monitored, no failed services at the last observation.
+- Memory pressure reported higher than `pve3`.
 
-## Disabled
+### `pve3`
 
-| Node | Status | Reason |
-|------|--------|--------|
-| `pve2` | Disabled / historical | Retired in place; not part of the active design. Removal pending decision in the [migration plan](/architecture/migration-plan). |
+- Bridges: `vmbr0` (management LAN), `vmbr1` (`10.0.0.124`, internal/routed), `vmbr2` (`192.168.1.112`, **down**).
+- Storage attached: `local`, `local-lvm` (large LVM-thin pool), `nas` (shared NFS).
+- Additional physical disks passed through to the TrueNAS VM (`127`).
+- No active ZFS pool on the host.
+- Beszel reports ~82 systemd services monitored, no failed services at the last observation.
 
-## Notes
+## Inactive
 
-Update this page only with confirmed values. Do not infer specs from external sources.
+| Node | Status | Notes |
+|------|--------|-------|
+| `pve2` | Inactive | Not part of the active design. `pve2-storage` entry survives in `/etc/pve/storage.cfg`. |
+
+## Pending capture
+
+- CPU model, core count, and RAM size per node.
+- Disk slot map per node, including which physical disks are passed to TrueNAS.
+- BIOS/firmware levels.

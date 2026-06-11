@@ -1,25 +1,31 @@
 ---
 title: Pre-production
-description: Staging environment for services before they reach production.
+description: Pre-production lab containers on `pve3`.
 ---
+
+## Components
+
+| Kind | ID | Name | Host | Status |
+|------|----|------|------|--------|
+| LXC | `320` | `preprod-lockbits` | `pve3` | Running |
+| LXC | `310` | `prod-lockbits` | `pve3` | Running |
+
+`prod-lockbits` is documented alongside `preprod-lockbits` because they are part of the same lab namespace.
 
 ## Purpose
 
-Validate configuration changes, upgrades, and new services before they touch production workloads.
+These containers are part of a `lockbits` lab namespace. The specific functional purpose is **not captured here**.
 
-## Target state
+## Placement
 
-- **Host node:** `pve3`, in a clearly isolated namespace
-- **Role:** Lab
-- **Storage:** Application data tier with shorter retention; no bulk allocation
-- **Ingress:** Internal only
+- Both run on `pve3` under the lab namespace.
 
-## Conventions
+## Operational notes
 
-- Pre-prod workloads are named with a `pp-` prefix.
-- Pre-prod never shares persistent volumes with production.
-- Pre-prod is excluded from production backups.
+- These are lab workloads. They are not part of the production data path and should not be relied on by user-facing services.
 
-## Notes
+## Pending
 
-If a pre-prod workload needs to ingest production data, do it through a one-off export, not a live link.
+- Functional description of each `lockbits` container.
+- Network reachability and exposure model.
+- Backup posture (likely none — lab workloads are typically ephemeral).

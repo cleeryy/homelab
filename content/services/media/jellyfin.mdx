@@ -1,31 +1,37 @@
 ---
 title: Jellyfin
-description: Media server for video and audio libraries.
+description: Jellyfin stack on the media host.
 ---
 
-## Purpose
+## Placement
 
-Stream the media library to local and remote clients.
+- VM `300` `ubuntu-jelly` on `pve3`.
+- Beszel label `Jelly`, IP `192.168.1.31`.
 
-## Target state
+## Docker containers
 
-- **Host node:** `pve3`
-- **Role:** Media
-- **Storage:** Bulk tier for media, application data tier for metadata
-- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+| Container | Function |
+|-----------|----------|
+| `jellyfin` | Jellyfin media server |
+| `seerr` | Request management (Jellyseerr / Overseerr family) |
+| `beszel-agent` | Monitoring agent |
 
-## Configuration
+## Dependencies
 
-TODO: deployment method, hardware acceleration if applicable.
+- The media library is expected to live on TrueNAS datasets and to be mounted into the Jellyfin container. The exact mount path is **not captured here**.
+- The media catalog is filled by the Servarr host (`301`), which writes to the same shared library.
 
-## Backups
+## Operational notes
 
-TODO: metadata and config are the only stateful parts worth backing up. Library files are sourced separately.
+- `jellyfin` was reported as using a large amount of memory at the last observation. Transient.
 
-## Restore
+## Failure impact
 
-TODO: validate restore of metadata so users do not lose watch state.
+- A `pve3` outage takes Jellyfin, the Servarr stack, and qBittorrent down at the same time. TrueNAS, which sits on the same node, is also affected.
+- Catalog continuity depends on Jellyfin's metadata volume, not on the media files themselves.
 
-## Notes
+## Pending
 
-Hardware transcoding requires the host to expose the GPU/iGPU to the workload — capture this in the VM/CT definition.
+- Library mount path.
+- Hardware acceleration / transcoder configuration.
+- Catalog backup procedure.

@@ -1,50 +1,40 @@
 ---
 title: Storage
-description: Storage tiers, pools, and data placement.
+description: Proxmox storage pools, shared NFS, and the TrueNAS VM.
 ---
 
-## Purpose
+## Proxmox storage from `/etc/pve/storage.cfg`
 
-Describe storage as a platform concern: which tiers exist, what each tier is for, and where service data lives by design.
+| Storage ID | Type | Path / source | Nodes | Content |
+|------------|------|---------------|-------|---------|
+| `local` | Directory | `/var/lib/vz` | `pve1`, `pve3` | `backup`, `iso`, `vztmpl` |
+| `local-lvm` | LVM-thin | local LVM | `pve1`, `pve3` | `images`, `rootdir` |
+| `pve1-storage` | ZFS pool | local ZFS on `pve1` | `pve1` | Application data on the infra node |
+| `pve2-storage` | (defined) | — | `pve2` | Not part of the active design |
+| `nas` | NFS | `192.168.1.16:/data/pve` | `pve1`, `pve3` | `rootdir`, `iso`, `backup`, `images` (`prune-backups keep-all=1`) |
 
-## Scope
+`pve3` has **no native ZFS pool on the host**. Its persistent data lives on `local-lvm`, on TrueNAS datasets, or on the shared `nas`.
 
-Logical layout and policy. Disk-level details (models, slot positions) go in [Inventory > Storage assets](/inventory/storage-assets).
+## TrueNAS VM
 
-## Tiers
+- VM `127` `truenas` runs on `pve3` with multiple physical disks passed through.
+- It exposes datasets (NFS/SMB) to the rest of the cluster.
+- Dataset-level layout, snapshot schedule, and replication targets are **not captured here**; this page will be extended once the TrueNAS configuration is exported.
 
-| Tier | Backing | Purpose |
-|------|---------|---------|
-| Platform / system | `local`, `local-lvm` on each node | VM and CT root disks, ephemeral host data |
-| Application | `pve1-storage` (ZFS on `pve1`), `local-lvm` on `pve3` | Persistent service data kept close to the workload |
-| Bulk / media / shared | TrueNAS on `pve3`, exposed as datasets and NFS shares | Media library, large archives, shared assets |
-| Backup | Pending validation | Destination must sit in a separate failure domain |
+## Tier model
 
-## Current pools
+This is how the storage layer is used in practice:
 
-| Pool | Host | Type | Approx. capacity | Role |
-|------|------|------|------------------|------|
-| `local` | `pve1`, `pve3` | Directory on host root | Small | Templates, ISOs, root disks for tiny workloads |
-| `local-lvm` | `pve1` | LVM-thin | Modest | VM and CT root disks on `pve1` |
-| `local-lvm` | `pve3` | LVM-thin | ~2.6 TB | VM and CT root disks on `pve3` |
-| `pve1-storage` | `pve1` | ZFS | ~1.09 TB | Application data on the infrastructure node |
-| `nas` | `pve1`, `pve3` | NFS | Shared | Cross-node shared assets, ISOs, exchange area |
-| TrueNAS datasets | `pve3` (VM `127`) | ZFS via TrueNAS | Multi-disk passthrough | Bulk data, NFS/SMB exports |
+| Tier | Where it lives | What sits there |
+|------|----------------|-----------------|
+| Node-local system | `local`, `local-lvm` on each node | VM and CT root disks, ISOs, templates, local backups |
+| Application data (infra) | `pve1-storage` (ZFS on `pve1`) | Persistent data for infra-side workloads |
+| Application data (compute) | `local-lvm` on `pve3`, TrueNAS datasets | Persistent data for production workloads |
+| Bulk / shared | TrueNAS datasets, `nas` | Media library, large archives, cross-node assets |
+| Backup | `nas` (configured), local Proxmox backups in `local` | See [Backups](/architecture/backups) |
 
-`pve3` has **no native ZFS pool on the host**. Its persistent data either lives on `local-lvm`, on a TrueNAS dataset, or on the shared `nas`.
+## Pending
 
-## Placement policy
-
-- VM and CT system disks live on the host's `local-lvm`.
-- Stateful application data lives on `pve1-storage` for infra services and on a TrueNAS dataset for application services that benefit from snapshots and shares.
-- Media and bulk data live on TrueNAS.
-- The shared `nas` mount is used for assets reachable from both nodes (templates, exchange area), not as a primary data tier.
-
-## Snapshots vs. backups
-
-Snapshots on ZFS (`pve1-storage`) and on TrueNAS datasets are a first-class feature. They are **not** a replacement for backups. The dedicated backup destination is pending — see [Backups](/architecture/backups) and [Operations > Backup & restore](/operations/backup-restore).
-
-## Notes
-
-- A dedicated backup target outside `pve3` and outside the TrueNAS chassis is required before the design is closed.
-- Per-dataset sizing is **pending capture** in [Inventory > Storage assets](/inventory/storage-assets).
+- TrueNAS dataset enumeration and capacity per pool.
+- Approximate usable capacity for `pve1-storage`, `pve3` `local-lvm`, and `nas`.
+- Whether `pve2-storage` should be removed from `storage.cfg`.

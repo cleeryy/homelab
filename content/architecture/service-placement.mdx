@@ -1,78 +1,85 @@
 ---
 title: Service placement
-description: Which service runs where, and why.
+description: Where each workload currently runs.
 ---
 
-## Purpose
+This is a flat view of where services live today. It is descriptive — not aspirational. Group is the role family, host is the Proxmox node, kind is VM or LXC.
 
-Authoritative mapping of services to nodes, with the rationale. Placement should never be inferred from the running system.
+## Edge and ingress
 
-## Target placement
+| Service | Kind | ID | Host | Notes |
+|---------|------|----|------|-------|
+| OPNsense | VM | `401` | `pve3` | Edge router, dual-homed `vmbr0` + `vmbr1` |
+| Nginx Proxy Manager | VM | `100` | `pve1` | `ubuntu-nginx-proxy-manager` |
+| Nginx (secondary) | VM | `105` | `pve1` | `ubuntu-nginxrpm`, role overlap with `100` pending validation |
+| cloudflared | LXC | `103` | `pve1` | Outbound tunnel |
 
-Services are grouped by role. Apps and media live on `pve3`; platform, ingress, and observability live on `pve1`.
+## Infrastructure / management
 
-### Core / infrastructure (target: `pve1`)
+| Service | Kind | ID | Host | Notes |
+|---------|------|----|------|-------|
+| Forgejo | LXC | `111` | `pve1` | Git forge |
+| Forgejo runner | LXC | `124` | `pve3` | CI compute |
+| PostgreSQL | LXC | `112` | `pve1` | Shared database |
+| PostgreSQL (stopped) | LXC | `113` | `pve1` | Currently stopped |
+| Beszel | VM | `202` | `pve1` | Monitoring (ports inside Docker) |
+| GLPI | LXC | `1101` | `pve1` | IT asset management |
+| Docmost | LXC | `109` | `pve1` | Transitional documentation; Fumadocs is canonical |
+| Apache Guacamole | LXC | `106` | `pve3` | Remote access gateway |
 
-| Service | VM / CT | Current node | Target node | Notes |
-|---------|---------|--------------|-------------|-------|
-| Nginx Proxy Manager | VM `100` | `pve1` | `pve1` | Primary HTTPS ingress |
-| Nginx (secondary) | VM `105` | `pve1` | `pve1` | Role pending validation — keep one, retire the other |
-| cloudflared | LXC `103` | `pve1` | `pve1` | Outbound tunnel |
-| Forgejo | LXC `111` | `pve1` | `pve1` | Source of truth for code |
-| PostgreSQL (primary) | LXC `112` | `pve1` | `pve1` | Shared database for infra services |
-| PostgreSQL (secondary) | LXC `113` | `pve1` | Decommission | Appears inactive; confirm and retire |
-| Fumadocs (this wiki) | — | — | `pve1` | Deployment placement pending |
-| Docmost | LXC `109` | `pve1` | Decommission after Fumadocs migration | Transitional |
-| Beszel | VM `202` | `pve1` | `pve1` | Monitoring |
-| Apache Guacamole | LXC `106` | `pve3` | `pve1` | Admin gateway belongs on the platform node |
-| GLPI | LXC `1101` | `pve1` | `pve1` | Asset management |
+## Applications (Docker stacks inside Ubuntu VMs)
 
-### Applications (target: `pve3`)
+| Service | Kind | ID | Host | Beszel label | IP |
+|---------|------|----|------|--------------|----|
+| Nextcloud | VM | `200` | `pve1` | `Nextcloud` | `192.168.1.27` |
+| n8n | VM | `204` | `pve1` | `n8n` | `192.168.1.13` |
+| Small webapps | VM | `102` | `pve1` | `web-apps` | `192.168.1.23` |
 
-| Service | VM / CT | Current node | Target node | Notes |
-|---------|---------|--------------|-------------|-------|
-| Nextcloud | VM `200` | `pve1` | `pve3` | Migrate to compute node |
-| n8n | VM `204` | `pve1` | `pve3` | Migrate to compute node |
-| AFFiNE | LXC `126` | `pve3` | `pve3` | In place |
-| BentoPDF | LXC `104` | `pve1` | `pve3` | Migrate to compute node |
-| RustyPaste | LXC `101` | `pve1` | `pve3` | Migrate to compute node |
-| Element / Synapse | LXC `107` | `pve1` | `pve3` | Migrate to compute node |
-| Small webapps | VM `102` | `pve1` | `pve3` | Migrate to compute node |
+## Applications (Proxmox LXCs)
 
-### Media (target: `pve3`)
+| Service | Kind | ID | Host | Notes |
+|---------|------|----|------|-------|
+| AFFiNE | LXC | `126` | `pve3` | Collaborative workspace |
+| BentoPDF | LXC | `104` | `pve1` | PDF utility |
+| RustyPaste | LXC | `101` | `pve1` | Pastebin utility |
+| Element / Synapse | LXC | `107` | `pve1` | Matrix homeserver / client host |
+| Discopanel | LXC | `110` | `pve3` | Application; exact role not documented |
+| Docker host | LXC | `108` | `pve1` | `alpine-docker`, generic Docker host |
 
-| Service | VM / CT | Current node | Target node | Notes |
-|---------|---------|--------------|-------------|-------|
-| Jellyfin | VM `300` | `pve3` | `pve3` | In place |
-| Servarr stack | VM `301` | `pve3` | `pve3` | In place |
-| qBittorrent | VM `302` | `pve3` | `pve3` | In place |
-| TrueNAS | VM `127` | `pve3` | `pve3` | Storage platform; does not move (passed-through disks) |
+## Media (Docker stacks inside Ubuntu VMs)
 
-### Lab / pre-production (target: `pve3`)
+| Service | Kind | ID | Host | Beszel label | IP |
+|---------|------|----|------|--------------|----|
+| Jellyfin host | VM | `300` | `pve3` | `Jelly` | `192.168.1.31` |
+| Servarr host | VM | `301` | `pve3` | `Servarr` | `192.168.1.26` |
+| qBittorrent host | VM | `302` | `pve3` | `QBittorrent` | `192.168.1.28` |
 
-| Service | VM / CT | Current node | Target node | Notes |
-|---------|---------|--------------|-------------|-------|
-| `prod-lockbits` | LXC `310` | `pve3` | `pve3` | Lab namespace |
-| `preprod-lockbits` | LXC `320` | `pve3` | `pve3` | Lab namespace |
-| EDR test agents | LXC `331`, `332`, `333` | `pve3` | `pve3` | Lab namespace |
-| code-server | LXC `119` | `pve3` | `pve3` | Lab |
-| Hermes Agent | LXC `125` | `pve3` (stopped) | `pve3` | Decide between revival and retirement |
-| Discopanel | LXC `110` | `pve3` | `pve3` | Lab |
-| Forgejo runner | LXC `124` | `pve3` | `pve3` | CI compute pairs with Forgejo on `pve1` |
-| Mint workstation | VM `10001` | `pve3` | `pve3` | Lab desktop |
+## Storage
 
-### Edge (target: `pve3`)
+| Service | Kind | ID | Host | Notes |
+|---------|------|----|------|-------|
+| TrueNAS | VM | `127` | `pve3` | Passed-through disks; does not move |
 
-| Service | VM / CT | Current node | Target node | Notes |
-|---------|---------|--------------|-------------|-------|
-| OPNsense | VM `401` | `pve3` | `pve3` | Dual-homed `vmbr0` + `vmbr1` |
+## Lab / pre-production / testing
 
-## Placement rules
+| Service | Kind | ID | Host | Status |
+|---------|------|----|------|--------|
+| `code` | LXC | `119` | `pve3` | Code / dev environment |
+| `prod-lockbits` | LXC | `310` | `pve3` | Lab namespace |
+| `preprod-lockbits` | LXC | `320` | `pve3` | Lab namespace |
+| `hermesagent` | LXC | `125` | `pve3` | Lab agent |
+| `debian-test-edragent` | LXC | `331` | `pve3` | EDR test (stopped) |
+| `debian-test-edragent2` | LXC | `332` | `pve3` | EDR test (stopped) |
+| `debian-test-edragent3` | LXC | `333` | `pve3` | EDR test |
+| `mint` | VM | `10001` | `pve3` | Lab desktop (stopped) |
 
-- A service must not move nodes without updating this table.
-- Lab and pre-production workloads stay on `pve3` and never on `pve1`.
-- `pve2` does not host services.
+## Utility / parked
+
+| Service | Kind | ID | Host | Status |
+|---------|------|----|------|--------|
+| `debian` | LXC | `1005` | `pve1` | Generic; purpose pending validation |
 
 ## Notes
 
-Items marked **Migrate** are tracked in the [migration plan](/architecture/migration-plan). Items marked **Decommission** are tracked in [Operations > Decommissioning](/operations/decommissioning).
+- "Beszel label" and "IP" come from Beszel's host list and apply only to the Docker host VMs. LXC IPs are not captured here.
+- This table is observed placement, not target placement. There is no implied recommendation to move any service in this view; see the [migration plan](/architecture/migration-plan) for in-flight transitions.

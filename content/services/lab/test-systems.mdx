@@ -1,25 +1,37 @@
 ---
 title: Test systems
-description: Throwaway and experimental workloads.
+description: Experimental and security-testing workloads.
 ---
 
-## Purpose
+## EDR test agents
 
-Host short-lived experiments and one-off test workloads without polluting production or pre-production.
+| Kind | ID | Name | Host | Status |
+|------|----|------|------|--------|
+| LXC | `331` | `debian-test-edragent` | `pve3` | **Stopped** |
+| LXC | `332` | `debian-test-edragent2` | `pve3` | **Stopped** |
+| LXC | `333` | `debian-test-edragent3` | `pve3` | Running |
 
-## Target state
+These containers are used for EDR (endpoint detection and response) testing. They are not part of any user-facing path.
 
-- **Host node:** `pve3`, in the lab namespace
-- **Role:** Lab
-- **Storage:** Application data tier with the shortest retention; treat as ephemeral
-- **Ingress:** Internal only
+## Other lab containers
 
-## Conventions
+| Kind | ID | Name | Host | Status |
+|------|----|------|------|--------|
+| LXC | `119` | `code` | `pve3` | Running — code / dev environment |
+| LXC | `125` | `hermesagent` | `pve3` | Running — lab agent |
+| LXC | `110` | `discopanel` | `pve3` | Running — application; exact role not documented |
+| VM | `10001` | `mint` | `pve3` | **Stopped** — lab desktop |
 
-- Test workloads are time-boxed; they have a documented end-of-life date when created.
-- No production data ever lands on a test workload.
-- Test workloads are not monitored for alerting purposes.
+## Placement
 
-## Notes
+- All lab and test workloads live on `pve3` under separated namespaces, distinct from the production stacks.
 
-If a test workload is promoted, it follows the [Provisioning](/operations/provisioning) procedure as a brand-new service. It does not "graduate" in place.
+## Operational notes
+
+- Stopped lab containers are documented because their existence is part of the architecture. They are decision items, not active workloads.
+- These systems are **not** monitored as production. Their state can change without notice.
+
+## Pending
+
+- Functional description for `discopanel` and `hermesagent`.
+- Decommissioning decisions for stopped systems — see the [migration plan](/architecture/migration-plan).

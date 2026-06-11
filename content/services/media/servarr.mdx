@@ -1,35 +1,45 @@
 ---
 title: "*arr stack"
-description: Sonarr, Radarr, Prowlarr, and related automation.
+description: Sonarr, Radarr, Prowlarr, Bazarr, and supporting containers.
 ---
 
-## Purpose
+## Placement
 
-Automate acquisition, organisation, and metadata for the media library consumed by [Jellyfin](/services/media/jellyfin).
+- VM `301` `ubuntu-servarr` on `pve3`.
+- Beszel label `Servarr`, IP `192.168.1.26`.
 
-## Target state
+## Docker containers
 
-- **Host node:** `pve3`
-- **Role:** Media
-- **Storage:** Bulk tier for downloads and library, application data tier for service state
-- **Ingress:** Internal only — these services do not need public exposure
+| Container | Function |
+|-----------|----------|
+| `sonarr` | TV series automation |
+| `radarr` | Movie automation |
+| `prowlarr` | Indexer aggregator |
+| `bazarr` | Subtitles |
+| `jellysweep` | Jellyfin library maintenance utility |
+| `flaresolverr` | Cloudflare challenge solver for indexers |
+| `gluetun` | VPN client used by indexer/download traffic |
+| `portainer` | Container management UI |
+| `watchtower` | Image auto-update |
+| `beszel-agent` | Monitoring agent |
 
-## Components
+## Dependencies
 
-TODO: list the exact set used (Sonarr, Radarr, Prowlarr, Bazarr, ...) and version pinning approach.
+- The stack writes to a shared media library mounted from TrueNAS. The same library is consumed by Jellyfin (`300`) and produced by qBittorrent (`302`).
+- `prowlarr` provides indexer configuration to `sonarr`, `radarr`, and `bazarr`.
+- `gluetun` provides a VPN egress for traffic that should not exit on the host's public IP.
 
-## Configuration
+## Operational notes
 
-TODO: deployment method, shared volume layout with [qBittorrent](/services/media/qbittorrent) and [Jellyfin](/services/media/jellyfin).
+- Network policy for the *arr containers depends on whether they are wired into `gluetun`'s network namespace. The exact wiring is **not captured here**.
 
-## Backups
+## Failure impact
 
-TODO: per-service config and database.
+- A `pve3` outage takes the stack down alongside qBittorrent, Jellyfin, and TrueNAS.
+- A `gluetun` failure may degrade indexer traffic but does not affect Jellyfin playback of already-downloaded content.
 
-## Restore
+## Pending
 
-TODO: validate the full chain from indexer → downloader → library.
-
-## Notes
-
-The shared volume layout between download client, *arr stack, and Jellyfin matters more than any one service's config — document it once, here.
+- Per-container compose wiring (which containers route through `gluetun`).
+- Backup path for the *arr configuration volumes.
+- VPN provider and credential rotation.

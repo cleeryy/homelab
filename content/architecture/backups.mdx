@@ -1,31 +1,34 @@
 ---
 title: Backups
-description: Backup strategy, retention, and recovery objectives.
+description: Backup destinations and known policy.
 ---
 
-## Purpose
+## Configured destinations
 
-Describe how the homelab is backed up, what the recovery objectives are, and where backups physically live.
+| Destination | Type | Where | Content allowed | Policy |
+|-------------|------|-------|-----------------|--------|
+| `local` | Directory on each node | `/var/lib/vz` on `pve1` and `pve3` | `backup`, `iso`, `vztmpl` | Default Proxmox retention |
+| `nas` | NFS | `192.168.1.16:/data/pve` | `rootdir`, `iso`, `backup`, `images` | `prune-backups keep-all=1` |
 
-## Scope
+`prune-backups keep-all=1` on `nas` means the configured pruning does not delete any backups. Retention on `local` is whatever the per-job Proxmox configuration sets — **not captured here**.
 
-Policy and design only. The day-to-day procedure is in [Operations > Backup & restore](/operations/backup-restore).
+## Snapshot capabilities
 
-## Target state
+- **ZFS snapshots** on `pve1-storage` (`pve1`) for infra-side application data.
+- **TrueNAS snapshots** for datasets backing media and bulk data on `pve3`.
 
-- All stateful services have a documented backup path before they are considered in production.
-- Backups land in a **separate failure domain** from the primary data — different node, different pool, ideally different power source.
-- Restore is rehearsed on a defined cadence; an untested backup is not a backup.
+Snapshots are a recovery feature, not an off-host backup.
 
-## Objectives
+## Unknown / pending
 
-| Tier | RPO | RTO | Notes |
-|------|-----|-----|-------|
-| Platform-critical (reverse proxy, identity, monitoring) | TODO | TODO | Recovery must not depend on user-facing services |
-| Application data (Nextcloud, Docmost, n8n, ...) | TODO | TODO | Tied to each service's recovery story |
-| Media | TODO | TODO | Acceptable to deprioritise vs. apps |
-| Lab / test | None | None | Treated as ephemeral |
+- Per-VM and per-LXC backup schedule (cadence, retention).
+- Whether `vzdump` runs against `nas`, `local`, or both for each guest.
+- Whether TrueNAS replicates datasets to an off-site or off-chassis target.
+- Whether the Docker hosts' application data (Nextcloud `nextcloud-db`, n8n state, Servarr config, qBittorrent state) is backed up by an additional path on top of the VM-level `vzdump`.
 
-## Notes
+These items are not documented in the source material and are not guessed at here. See [Operations > Backup & restore](/operations/backup-restore) for procedures.
 
-TODO: set concrete RPO/RTO numbers once the backup target is sized and tested.
+## Practical implications
+
+- The `nas` NFS share is the only off-host backup target visible in the storage configuration. It is hosted on `192.168.1.16`, which is on the same management LAN as the rest of the cluster — it is not on a separate failure domain.
+- The TrueNAS VM lives on `pve3`. A `pve3` failure affects both the production workload and a large fraction of the storage layer.

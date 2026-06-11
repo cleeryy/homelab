@@ -1,76 +1,42 @@
 ---
 title: Migration plan
-description: How we move from the current state to the target architecture.
+description: In-flight transitions observed in the current setup.
 ---
 
-## Purpose
+This page captures **transitions that are already visible** in the live setup, not aspirational moves. It is short by design.
 
-Sequence the work needed to reach the target architecture from the current state, and make the trade-offs explicit.
+## Documentation: Docmost → Fumadocs
 
-## Scope
+- Docmost runs as LXC `109` on `pve1`.
+- This Fumadocs site is the canonical documentation surface going forward.
+- Action: migrate any surviving Docmost content into Fumadocs, then decide whether to keep Docmost online for archive access or decommission the LXC.
 
-This is the only page where current/legacy state is described in detail. Everywhere else, only the target state is documented.
+## Cluster: `pve2`
 
-## Starting point
+- `pve2` is not active but `pve2-storage` is still defined in `/etc/pve/storage.cfg`.
+- Action: confirm whether `pve2` should be formally removed from the cluster and whether the `pve2-storage` entry should be cleaned up.
 
-- Two active Proxmox nodes, `pve1` and `pve3`, in cluster `home`.
-- `pve2` survives in cluster metadata but does not host workloads.
-- Several application VMs and LXCs currently live on `pve1`, which should be the infrastructure node (Nextcloud, n8n, BentoPDF, RustyPaste, Element/Synapse, small webapps).
-- One infrastructure service currently lives on `pve3` (Apache Guacamole).
-- Documentation lives in two places: Docmost (transitional) and this Fumadocs site (canonical going forward).
+## Ingress: two reverse-proxy VMs
 
-## Phase 1 — Lock the platform
+- `ubuntu-nginx-proxy-manager` (VM `100`) and `ubuntu-nginxrpm` (VM `105`) both live on `pve1`.
+- The split between them is not confirmed.
+- Action: decide which is the canonical ingress and either decommission or repurpose the other.
 
-- [ ] Confirm node roles per [Node roles](/architecture/node-roles): `pve3` for workloads, `pve1` for platform.
-- [ ] Confirm cluster quorum and replication settings are aligned with two-node operation.
-- [ ] Decide the fate of `pve2`: keep as a cold reference or remove from the cluster.
-- [ ] Confirm `vmbr2` and the `192.168.1.112` assignment on `pve3` — keep, repurpose, or remove.
-- [ ] Capture node hardware in [Inventory > Nodes](/inventory/nodes).
+## Network: `vmbr2`
 
-## Phase 2 — Network and ingress
+- `vmbr2` on `pve3` holds `192.168.1.112` but is currently **down**.
+- Action: decide whether this bridge is required, repurpose it, or remove it from the configuration.
 
-- [ ] Validate OPNsense as the single edge router for the platform.
-- [ ] Agree on VLAN IDs and CIDRs for services, storage, and lab zones; record them in [Network](/architecture/network).
-- [ ] Decide between Nginx Proxy Manager (`100`) and the secondary Nginx (`105`); decommission whichever is redundant.
-- [ ] Document the cloudflared tunnel scope (which services it fronts).
+## Stopped systems pending decision
 
-## Phase 3 — Storage and backups
+| Item | Kind | Status | Action |
+|------|------|--------|--------|
+| `mint` (`10001`) | VM on `pve3` | Stopped | Keep as parked lab desktop or remove |
+| `postgresql` (`113`) | LXC on `pve1` | Stopped | Confirm role of the secondary Postgres and either restart or decommission |
+| `debian-test-edragent` (`331`) | LXC on `pve3` | Stopped | EDR test cleanup or revival |
+| `debian-test-edragent2` (`332`) | LXC on `pve3` | Stopped | EDR test cleanup or revival |
+| `hermesagent` (`125`) | LXC on `pve3` | Documented as lab agent | Status to confirm |
 
-- [ ] Confirm TrueNAS dataset layout on `pve3` and record it in [Inventory > Storage assets](/inventory/storage-assets).
-- [ ] Confirm `pve1-storage` ZFS layout and what application data lives there.
-- [ ] Choose a backup destination outside `pve3` and outside the TrueNAS chassis.
-- [ ] Define backup cadence and retention per tier; record them in [Backups](/architecture/backups) and [Operations > Backup & restore](/operations/backup-restore).
-- [ ] Exercise a full restore for at least one workload per tier.
+## Out of scope
 
-## Phase 4 — Workload relocation
-
-For each service to relocate, follow the same shape: backup → provision on the target node → restore data → swap ingress → decommission source.
-
-Move from `pve1` to `pve3` (apps):
-
-- [ ] Nextcloud (`200`)
-- [ ] n8n (`204`)
-- [ ] BentoPDF (`104`)
-- [ ] RustyPaste (`101`)
-- [ ] Element / Synapse (`107`)
-- [ ] Small webapps (`102`)
-
-Move from `pve3` to `pve1` (platform):
-
-- [ ] Apache Guacamole (`106`)
-
-Documentation migration:
-
-- [ ] Move all surviving Docmost content into Fumadocs.
-- [ ] Decommission Docmost (`109`) once content parity is reached.
-
-## Phase 5 — Cleanup
-
-- [ ] Decommission inactive services: confirm and retire the secondary PostgreSQL (`113`); decide on Hermes Agent (`125`).
-- [ ] Validate or retire utility containers (`108` `alpine-docker`, `122` `ubuntu`, `1005` `debian`).
-- [ ] Remove or retire `pve2` from the cluster.
-- [ ] Remove legacy references from this documentation.
-
-## Notes
-
-Track the live status of each item outside this page. The migration plan captures intent and ordering, not progress.
+- Reorganising live workload placement between `pve1` and `pve3` is not in flight and is not planned here. Current placement is documented as-is in [Service placement](/architecture/service-placement).

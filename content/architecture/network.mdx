@@ -1,57 +1,75 @@
 ---
 title: Network
-description: Network segmentation, bridges, and routing for the target state.
+description: Bridges, segments, edge, and ingress.
 ---
 
-## Purpose
+## Segments
 
-Describe how the network is segmented, how traffic flows between segments, and where the trust boundaries sit.
+| Segment | CIDR | Role | Status |
+|---------|------|------|--------|
+| Management LAN | `192.168.1.0/24` | Proxmox management, Docker hosts, ingress | Confirmed |
+| Internal / routed | `10.0.0.0/24` (at least) | Carried on `vmbr1` via OPNsense `net1` | Confirmed at the host level; exact CIDR boundary pending |
+| Additional VLANs | — | — | Unknown / pending validation |
 
-## Scope
+The host gateway for both Proxmox nodes is `192.168.1.1`.
 
-Logical design. Physical wiring and per-port assignments belong in [Inventory > Networks](/inventory/networks).
+## Bridges
 
-## Current bridges
+| Bridge | Node | Address | Notes |
+|--------|------|---------|-------|
+| `vmbr0` | `pve1` | `192.168.1.101/24` | Management LAN |
+| `vmbr0` | `pve3` | `192.168.1.103/24` | Management LAN |
+| `vmbr1` | `pve3` | `10.0.0.124` (host side) | Internal/routed segment, used by OPNsense `net1` |
+| `vmbr2` | `pve3` | `192.168.1.112`, **down** | Purpose pending validation |
 
-| Bridge | Node | Role | Notes |
-|--------|------|------|-------|
-| `vmbr0` | `pve1`, `pve3` | Management / trusted LAN on `192.168.1.0/24` | Both Proxmox management IPs sit here; gateway `192.168.1.1` |
-| `vmbr1` | `pve3` | Routed internal network, host IP `10.0.0.124` | Carries `opnsense.net1`; CIDR pending validation |
-| `vmbr2` | `pve3` | Holds `192.168.1.112`, currently down | Purpose pending validation — keep, repurpose, or remove |
+## Edge — OPNsense
 
-### Edge
+OPNsense runs as VM `401` on `pve3`:
 
-The OPNsense VM (`401`) on `pve3` is dual-homed:
-- `net0` on `vmbr0` — management/trusted LAN side.
-- `net1` on `vmbr1` — routed internal side.
+- `net0` on `vmbr0` — management LAN side.
+- `net1` on `vmbr1` — internal/routed side.
 
-OPNsense owns WAN termination and inter-zone policy.
+OPNsense is the firewall/router and the boundary between WAN, management LAN, and the internal/routed segment.
 
-### Ingress
+## Ingress
 
-User-facing HTTPS ingress goes through Nginx Proxy Manager on `pve1` (VM `100`). The `cloudflared` LXC on `pve1` provides outbound tunneling for selected services. A secondary Nginx instance (VM `105`) exists; its target role is pending confirmation — keep one, retire the other.
+Two reverse-proxy VMs are present on `pve1`:
 
-## Target zoning
+- `ubuntu-nginx-proxy-manager` (`100`) — Nginx Proxy Manager.
+- `ubuntu-nginxrpm` (`105`) — second reverse-proxy VM.
 
-The intent is to consolidate around the following logical zones, with OPNsense enforcing the boundaries.
+Both are visible on the management LAN. The canonical ingress split (which traffic goes through which) is **not confirmed**; this is documented in the [migration plan](/architecture/migration-plan) for resolution.
 
-| Zone | Purpose | Status |
-|------|---------|--------|
-| Management / admin | Proxmox hosts, OPNsense management, infra console access | Confirmed on `192.168.1.0/24` |
-| Services | Platform and application workloads exposed via ingress | Pending validation |
-| Storage | NFS, TrueNAS, replication traffic | Pending validation |
-| Lab | Isolated pre-production and test workloads on `pve3` | Pending validation |
-| WAN / edge | Internet uplink behind OPNsense | Owned by OPNsense |
+A `cloudflared` LXC (`103`) on `pve1` provides outbound tunneling for selected services. The scope of services fronted by this tunnel is not captured here.
 
-VLAN IDs and CIDRs for the non-management zones are **pending design confirmation**. Do not record values here until they are agreed and applied on the switches and on OPNsense.
+## Docker host addresses
 
-## Rules
+Application VMs running Docker stacks all hold IPs on the management LAN. Addresses as reported by Beszel:
 
-- Default-deny between zones. Inter-zone access is allow-listed on OPNsense.
-- The management plane is reachable only from the management zone.
-- Ingress to user-facing services traverses Nginx Proxy Manager (or the cloudflared tunnel where explicitly chosen); direct exposure of backend services is not allowed.
+| Host (Beszel label) | IP | Proxmox VM | Node |
+|---------------------|----|------------|------|
+| `Beszel` | `192.168.1.25` | `202` `ubuntu-beszel` | `pve1` |
+| `Jelly` | `192.168.1.31` | `300` `ubuntu-jelly` | `pve3` |
+| `n8n` | `192.168.1.13` | `204` `ubuntu-n8n` | `pve1` |
+| `Nextcloud` | `192.168.1.27` | `200` `ubuntu-nextcloud` | `pve1` |
+| `QBittorrent` | `192.168.1.28` | `302` `ubuntu-qbittorrent` | `pve3` |
+| `Servarr` | `192.168.1.26` | `301` `ubuntu-servarr` | `pve3` |
+| `web-apps` | `192.168.1.23` | `102` `ubuntu-small-webapps` | `pve1` |
 
-## Notes
+LXC addresses are not captured here.
 
-- `vmbr2` and its `192.168.1.112` assignment need a documented purpose or removal.
-- Cluster replication traffic shares `vmbr0` today. Promoting it to a dedicated storage zone is part of the [migration plan](/architecture/migration-plan).
+## Beszel hostname mismatches
+
+Two Docker hosts report a system hostname `ntfy` in Beszel while their system label is different:
+
+- `n8n` host — label `n8n`, system hostname `ntfy`.
+- `web-apps` host — label `web-apps`, system hostname `ntfy`.
+
+The cause is not documented. The mismatch is recorded so that operators reading Beszel do not misidentify hosts.
+
+## Pending
+
+- VLAN IDs on the management LAN and on the internal segment.
+- The exact CIDR boundary of the `10.0.0.0/?` segment.
+- The role split between `ubuntu-nginx-proxy-manager` and `ubuntu-nginxrpm`.
+- The purpose of `vmbr2` / `192.168.1.112`.

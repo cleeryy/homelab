@@ -1,42 +1,48 @@
 ---
 title: Provisioning
-description: How to bring a new VM, container, or service online.
+description: Procedure for bringing a new VM, LXC, or Docker stack online.
 ---
 
-## Purpose
+## Decide where it goes
 
-Standardise how new workloads are created so any service can be reproduced from this document.
+- **Application Docker stack** → an Ubuntu VM on the appropriate node, following the pattern used for Nextcloud/n8n/Servarr (Docker compose + `portainer` + `watchtower` + `beszel-agent`).
+- **Single-purpose system service** → Proxmox LXC.
+- **Storage-adjacent workload** → coordinate with TrueNAS for dataset and share creation.
+- **Lab / pre-production** → `pve3`, in a clearly separated namespace.
 
-## Scope
+## Allocate the ID
 
-VMs, LXC containers, and Docker stacks. Bare-metal provisioning of new physical nodes is out of scope.
+ID ranges currently in use are documented in [Inventory > Virtual machines](/inventory/virtual-machines). Pick a free ID in the matching range.
 
-## Procedure
+## Provision the guest
 
-### 1. Plan
+### VM (Docker host)
 
-- [ ] Decide the host node per [Architecture > Service placement](/architecture/service-placement).
-- [ ] Allocate VM/CT ID and hostname from the conventions in [Inventory](/inventory/virtual-machines).
-- [ ] Pick a network segment per [Architecture > Network](/architecture/network).
-- [ ] Identify storage tier per [Architecture > Storage](/architecture/storage).
+- [ ] Create on the target node.
+- [ ] OS: Ubuntu 24.04 LTS to stay consistent with the rest of the Docker hosts.
+- [ ] Install Docker and the compose plugin.
+- [ ] Install the `beszel-agent` container and register the host in Beszel.
+- [ ] Install `portainer` and `watchtower` if the host pattern uses them.
+- [ ] Drop the compose file under version control (Forgejo).
 
-### 2. Create
+### LXC
 
-- [ ] Provision the VM or container on the chosen node.
-- [ ] Apply baseline configuration (timezone, SSH, monitoring agent).
-- [ ] Register in the relevant [Inventory](/inventory/nodes) page.
+- [ ] Create on the target node from a vetted template.
+- [ ] Apply baseline configuration (timezone, networking, SSH).
+- [ ] Add to Beszel monitoring if relevant.
 
-### 3. Wire up
+## Wire it in
 
-- [ ] Add ingress through the reverse proxy if user-facing.
-- [ ] Configure backups before exposing the service.
-- [ ] Add monitoring targets.
+- [ ] If user-facing, add a route through the reverse-proxy layer on `pve1`.
+- [ ] If the service stores data, decide where the data volume lives (`local-lvm`, `pve1-storage`, TrueNAS dataset, `nas`).
+- [ ] If the service has a backend (Postgres, Redis), confirm the backend exists or stand it up first.
 
-### 4. Document
+## Document it
 
-- [ ] Add or update the service page under [Services](/services/core/reverse-proxy).
-- [ ] Link the service from [Service placement](/architecture/service-placement).
+- [ ] Add or update the matching page under [Services](/services/core/reverse-proxy).
+- [ ] Update the placement table in [Service placement](/architecture/service-placement).
+- [ ] Update the inventory page for VMs or LXCs.
 
-## Notes
+## Pending
 
-TODO: replace the manual steps above with a reference to an automation runbook once provisioning is scripted.
+- A scripted/Terraform/Ansible path for provisioning, if any, is **not captured here**. The procedure above describes the manual happy path.

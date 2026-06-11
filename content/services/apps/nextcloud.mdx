@@ -1,31 +1,46 @@
 ---
 title: Nextcloud
-description: File sync, share, and collaboration suite.
+description: Nextcloud stack inside a dedicated Docker host VM.
 ---
 
-## Purpose
+## Placement
 
-Personal cloud: files, calendar, contacts, optional collaboration apps.
+- VM `200` `ubuntu-nextcloud` on `pve1`.
+- Beszel label `Nextcloud`, IP `192.168.1.27`.
+- OS line reported by Beszel as `6.8.0-111-generic` (Linux kernel string).
 
-## Target state
+## Docker containers
 
-- **Host node:** `pve3`
-- **Role:** Application
-- **Storage:** Application data tier; user files may live on the bulk tier — see [Architecture > Storage](/architecture/storage)
-- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+| Container | Function |
+|-----------|----------|
+| `nextcloud-app` | Nextcloud application |
+| `nextcloud-db` | Database for Nextcloud |
+| `nextcloud-cron` | Background job runner |
+| `nextcloud-redis` | Cache / locking backend |
+| `collabora` | Collabora Online (document editing) |
+| `zerobyte` | Application present on the host; specific role not documented |
+| `portainer` | Container management UI |
+| `beszel-agent` | Monitoring agent |
 
-## Configuration
+`portainer` was reported as **restarting** at the last observation. Cause not investigated.
 
-TODO: deployment method (VM, LXC, Docker compose).
+## Dependencies
 
-## Backups
+- The Nextcloud stack is self-contained: database, cache, and document editor all run on the same host.
+- Ingress goes through the reverse-proxy layer on `pve1` — exact route not captured here.
+- Storage paths (whether user files live on the local VM disk, on `nas`, or on a TrueNAS share) are **not captured here**.
 
-TODO: separate backup paths for the database and the user data directory.
+## Operational notes
 
-## Restore
+- Stack uses standard Nextcloud images with a sidecar for cron. Restart order matters: `nextcloud-db` and `nextcloud-redis` come up before `nextcloud-app`.
 
-TODO: validate end-to-end restore from a cold node.
+## Failure impact
 
-## Notes
+- A `pve1` outage takes the Nextcloud host with it.
+- Loss of `nextcloud-db` data is the most critical risk; backup of this volume is essential and not documented here.
 
-Sensitive to clock drift and TLS misconfiguration — both must be solid before exposing.
+## Pending
+
+- Exact volume mounts for user data and database.
+- Backup path for the database and the data directory.
+- Hostname / DNS used by the reverse proxy to reach the stack.

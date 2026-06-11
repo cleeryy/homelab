@@ -1,31 +1,41 @@
 ---
 title: n8n
-description: Workflow automation.
+description: n8n workflow automation behind an internal Traefik.
 ---
 
-## Purpose
+## Placement
 
-Connect homelab services and external APIs through visual workflows.
+- VM `204` `ubuntu-n8n` on `pve1`.
+- Beszel label `n8n`, IP `192.168.1.13`.
+- Beszel reports the system hostname as `ntfy`, which does not match the Beszel label or the Proxmox VM name.
 
-## Target state
+## Docker containers
 
-- **Host node:** `pve3`
-- **Role:** Application
-- **Storage:** Application data tier
-- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+| Container | Function |
+|-----------|----------|
+| `n8n-compose-n8n-1` | n8n application |
+| `n8n-compose-traefik-1` | Internal reverse proxy in front of n8n |
+| `portainer` | Container management UI |
+| `watchtower` | Image auto-update |
+| `beszel-agent` | Monitoring agent |
 
-## Configuration
+## Dependencies
 
-TODO: deployment method, queue mode if needed.
+- The stack includes its own Traefik. Whether traffic enters this Traefik directly or first transits the cluster-level reverse proxy on `pve1` is **not captured here**.
+- n8n state (workflows, credentials) is stored locally in the n8n container's data directory.
 
-## Backups
+## Operational notes
 
-TODO: workflow definitions + credentials store.
+- `watchtower` periodically updates container images; recovery procedures should not assume image tags are pinned.
+- The hostname mismatch (`ntfy` vs. `n8n`) is recorded so operators do not misidentify the host when reading Beszel.
 
-## Restore
+## Failure impact
 
-TODO: validate restore with at least one trigger-based workflow.
+- A `pve1` outage takes the n8n host with it.
+- Workflows that integrate with external systems will fail silently if downstream APIs are not reachable.
 
-## Notes
+## Pending
 
-Credentials inside n8n are encrypted with an instance-level key — back up that key out-of-band.
+- Encryption key location and rotation procedure for n8n credentials.
+- Backup path for the n8n data volume.
+- Reason for the `ntfy` hostname.

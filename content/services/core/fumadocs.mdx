@@ -1,35 +1,28 @@
 ---
 title: Fumadocs (this wiki)
-description: The documentation site you are reading now.
+description: The canonical documentation site.
 ---
 
 ## Purpose
 
-Host the homelab wiki itself. The site is built from the `homelab-wiki` repository and deployed as a containerised Next.js application.
+This Fumadocs site is the canonical documentation surface for the homelab. It is deployed from the `homelab-wiki` repository.
 
-## Target state
+## Placement
 
-- **Host node:** `pve1`
-- **Role:** Core platform
-- **Deployment:** Docker image built from this repository's `Dockerfile`, deployed via Dokploy
-- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
-- **Port:** 3545
+- Hosted from the `homelab-wiki` repository.
+- Deployed as a containerised Next.js application; placement is **pending** confirmation against the live ingress.
 
-## Configuration
+## Relation to Docmost
 
-- Source lives in [Forgejo](/services/core/forgejo).
-- Build uses pnpm + Next.js standalone output.
-- Content is authored in MDX under `content/`.
+- Docmost runs as LXC `109` on `pve1` and is still present from the previous setup.
+- Fumadocs replaces Docmost as the canonical documentation layer. Migrating remaining content out of Docmost is tracked in the [migration plan](/architecture/migration-plan).
 
-## Backups
+## Build and run
 
-The site is stateless. Backups consist of the Git repository, which lives in Forgejo and is itself backed up.
+- Stack: Next.js 16 + Fumadocs v16, pnpm.
+- Build: `pnpm build`. Image is produced from the repository's `Dockerfile` (standalone Next.js output).
+- Local dev: `pnpm dev` on port `3545`.
 
-## Restore
+## Failure impact
 
-- Redeploy the image from the most recent main-branch build.
-- No data restore is required.
-
-## Notes
-
-Editorial conventions are in the homepage and in [Architecture > Principles](/architecture/principles).
+- The wiki is stateless. Content lives in Git. A site outage does not lose data.

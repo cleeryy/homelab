@@ -1,31 +1,39 @@
 ---
 title: qBittorrent
-description: Download client used by the media stack.
+description: Download client routed through Gluetun.
 ---
 
-## Purpose
+## Placement
 
-Download client managed by the [*arr stack](/services/media/servarr).
+- VM `302` `ubuntu-qbittorrent` on `pve3`.
+- Beszel label `QBittorrent`, IP `192.168.1.28`.
 
-## Target state
+## Docker containers
 
-- **Host node:** `pve3`
-- **Role:** Media
-- **Storage:** Bulk tier
-- **Ingress:** Internal only
+| Container | Function |
+|-----------|----------|
+| `qbittorrent` | Download client |
+| `gluetun` | VPN client wrapping the download traffic |
+| `portainer` | Container management UI |
+| `watchtower` | Image auto-update |
+| `beszel-agent` | Monitoring agent |
 
-## Configuration
+## Dependencies
 
-TODO: deployment method, VPN egress policy if applicable.
+- Downloads land on a shared volume consumed by the Servarr stack (`301`) and read by Jellyfin (`300`). The exact mount path on TrueNAS is **not captured here**.
+- `qbittorrent` is expected to share `gluetun`'s network namespace so that download traffic exits through the VPN; the exact compose wiring is not exported here.
 
-## Backups
+## Operational notes
 
-TODO: configuration is small and reproducible from the *arr stack. Decide whether it is worth backing up.
+- `gluetun` was reported as **unhealthy** at the last observation. This is the most common single failure for this host: when `gluetun` is unhealthy, `qbittorrent` either has no network or no internet egress depending on the compose mode.
 
-## Restore
+## Failure impact
 
-TODO: document recovery sequence.
+- A `pve3` outage takes qBittorrent, the Servarr stack, Jellyfin, and TrueNAS down together.
+- Loss of `gluetun` health stops downloads but leaves the rest of the media stack working from already-downloaded content.
 
-## Notes
+## Pending
 
-Network egress policy (direct vs. VPN-bound) is a security-relevant decision — record it in [Architecture > Security](/architecture/security) once chosen.
+- VPN provider details and key rotation.
+- Compose wiring between `qbittorrent` and `gluetun`.
+- Download volume location and capacity headroom.

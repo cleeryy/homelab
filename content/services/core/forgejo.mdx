@@ -1,31 +1,38 @@
 ---
 title: Forgejo
-description: Self-hosted Git forge.
+description: Git forge with a dedicated CI runner.
 ---
 
-## Purpose
+## Components
 
-Source of truth for all homelab code, configuration, and infrastructure manifests.
+| Kind | ID | Name | Host | Function |
+|------|----|------|------|----------|
+| LXC | `111` | `forgejo` | `pve1` | Git forge |
+| LXC | `124` | `forgejo-runner` | `pve3` | CI runner |
 
-## Target state
+## Placement
 
-- **Host node:** `pve1`
-- **Role:** Core platform
-- **Storage:** Application data tier per [Architecture > Storage](/architecture/storage)
-- **Ingress:** Through the [Reverse proxy](/services/core/reverse-proxy)
+- The forge lives on `pve1` (infrastructure node).
+- The runner lives on `pve3` (compute node). Keeping CI on `pve3` avoids loading the infra node with build work.
 
-## Configuration
+## Dependencies
 
-TODO: deployment method (VM, LXC, Docker).
+- Forgejo uses a database. The PostgreSQL LXC (`112`) on `pve1` is the most likely backend, but the exact database wiring is not exported into this documentation.
 
-## Backups
+## Storage
 
-TODO: define backup of repo data + database.
+- Forge data and runner caches live on the LXC root disks (`local-lvm` on the respective hosts). Whether additional volumes from `pve1-storage` or `nas` are mounted is not captured here.
 
-## Restore
+## Ingress
 
-TODO: document end-to-end restore on a fresh `pve1`.
+- Web UI is reachable via the reverse-proxy layer on `pve1`. The exact hostname / route is not captured here.
 
-## Notes
+## Operational notes
 
-This service is platform-critical: it must come up early in a disaster recovery scenario.
+- The runner depends on connectivity from `pve3` to the forge on `pve1`. A `pve1` outage halts CI even if `pve3` is up.
+
+## Pending
+
+- Database wiring details (which Postgres, schema name, credentials path).
+- Backup and restore path for `gitea`/`forgejo` data.
+- Runner labels and which repositories use the runner.

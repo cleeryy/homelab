@@ -1,24 +1,38 @@
 ---
 title: Storage assets
-description: Physical disks and their role in storage pools.
+description: Storage pools and the TrueNAS VM.
 ---
 
-## Purpose
+## Storage IDs from `/etc/pve/storage.cfg`
 
-Map physical disks to the pools and tiers defined in [Architecture > Storage](/architecture/storage).
+| Storage ID | Type | Path / source | Nodes | Content |
+|------------|------|---------------|-------|---------|
+| `local` | Directory | `/var/lib/vz` | `pve1`, `pve3` | `backup`, `iso`, `vztmpl` |
+| `local-lvm` | LVM-thin | Local LVM | `pve1`, `pve3` | `images`, `rootdir` |
+| `pve1-storage` | ZFS | Local ZFS on `pve1` | `pve1` | — |
+| `pve2-storage` | (defined) | — | `pve2` | Inactive; cluster artefact |
+| `nas` | NFS | `192.168.1.16:/data/pve` | `pve1`, `pve3` | `rootdir`, `iso`, `backup`, `images` |
 
-## Disks
+NFS-specific options for `nas`:
 
-| Node | Slot | Model | Size | Pool | Role |
-|------|------|-------|------|------|------|
-| TODO | TODO | TODO | TODO | TODO | TODO |
+- `prune-backups keep-all=1`
 
-## Pools
+## ZFS pools
 
-| Pool | Host node | Type | Members | Usable capacity |
-|------|-----------|------|---------|-----------------|
-| TODO | TODO | TODO | TODO | TODO |
+| Pool | Host | Role |
+|------|------|------|
+| `pve1-storage` | `pve1` | Application data on the infra node |
 
-## Notes
+`pve3` runs no native ZFS pool. The TrueNAS VM owns the ZFS layer on the production node via passed-through disks.
 
-TODO: include drive serial numbers if a disk-replacement runbook needs them. Otherwise keep this page lean.
+## TrueNAS
+
+- VM `127` `truenas` on `pve3`.
+- Multiple physical disks passed through.
+- Exposes datasets to the rest of the cluster (NFS/SMB are typical, exact share list not captured here).
+
+## Pending capture
+
+- Per-pool usable capacity for `pve1-storage`, `pve3` `local-lvm`, and the TrueNAS datasets.
+- Per-VM and per-LXC disk allocation against each pool.
+- Physical disk inventory (model, serial, size, slot) for both nodes.

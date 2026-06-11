@@ -1,33 +1,46 @@
 ---
 title: Reverse proxy
-description: Central HTTPS ingress for all user-facing services.
+description: HTTPS ingress for user-facing services.
 ---
 
-## Purpose
+## Components
 
-Single ingress point for HTTPS traffic into the homelab. Terminates TLS and routes to the appropriate backend.
+Two reverse-proxy VMs are visible on `pve1`:
 
-## Target state
+| VM ID | Name | Function |
+|-------|------|----------|
+| `100` | `ubuntu-nginx-proxy-manager` | Nginx Proxy Manager |
+| `105` | `ubuntu-nginxrpm` | Second reverse-proxy VM |
 
-- **Host node:** `pve1`
-- **Role:** Core platform
-- **Exposes:** All user-facing services in [Apps](/services/apps/nextcloud) and [Media](/services/media/jellyfin)
-- **Certificates:** TODO — choose between ACME and an internal CA
+In addition, an outbound tunnel runs as an LXC:
 
-## Configuration
+| CT ID | Name | Function |
+|-------|------|----------|
+| `103` | `cloudflared` | Outbound tunnel for selected services |
 
-- Routing config is version-controlled.
-- Each upstream service has a clearly labelled block.
-- Health checks fail closed.
+## Placement
 
-## Backups
+All three components live on `pve1`.
 
-TODO: confirm what needs to be backed up beyond the config repo.
+## Known facts
 
-## Restore
+- Both reverse-proxy VMs are running on the management LAN (`192.168.1.0/24`).
+- The user historically used an Apache-based reverse proxy as well; this documentation focuses on the components that are currently deployed.
+- Per-host certificates, ACME providers, and DNS validation are not exported into this documentation.
 
-TODO: document time-to-restore.
+## Operational notes
 
-## Notes
+- Ingress is the entry point for user-facing services; restarts must be planned with care.
+- A single canonical ingress path is **not confirmed**. Either `100` or `105` could be canonical, or each could front a different subset of services. This is tracked in the [migration plan](/architecture/migration-plan).
 
-TODO: pick the reverse-proxy implementation (Caddy, Traefik, Nginx, ...) and record the rationale here.
+## Failure impact
+
+- If both reverse-proxy VMs are down, all HTTPS-fronted services on the management LAN become unreachable from outside the LAN.
+- If `cloudflared` is down, services routed through the tunnel become unreachable from outside.
+- OPNsense (`401` on `pve3`) is the WAN/router layer and is upstream of all of the above; its failure has broader impact.
+
+## Pending
+
+- Definitive split between `100` and `105`.
+- Inventory of upstream services per reverse-proxy host.
+- TLS certificate sources.

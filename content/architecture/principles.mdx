@@ -1,26 +1,24 @@
 ---
 title: Principles
-description: Design principles the homelab is held to.
+description: How the homelab is organised and how this documentation is scoped.
 ---
 
-## Purpose
+## Documentation principles
 
-State the non-negotiable design principles. When a decision is contested, this page is the tiebreaker.
+- **Current state, not aspiration.** Pages describe what is actually running. In-flight transitions are noted explicitly on the [migration plan](/architecture/migration-plan).
+- **Don't invent.** When a value (VLAN ID, backup schedule, port, secret) is not in the source material, it is marked **unknown** or **pending validation**.
+- **Use real names.** VM, LXC, and container names are reproduced as they appear in Proxmox or Beszel. Display mismatches (e.g. Beszel hostname vs. system label) are called out, not silently reconciled.
+- **One source of truth.** Fumadocs is the canonical documentation surface. Docmost remains visible in the inventory because it is still deployed.
 
-## Principles
+## Operational framing
 
-- **Asymmetric nodes by design.** `pve3` carries production workloads, `pve1` carries the platform. Symmetry is not a goal.
-- **Target state is documented, not legacy state.** Pages describe the system as it should be. Migration is a separate concern, captured in the [migration plan](/architecture/migration-plan).
-- **One node, one role.** Apps and media go on `pve3`. Platform and ingress go on `pve1`. Cross-role placements need an explicit reason.
-- **Services are portable.** A workload should move between nodes with config changes only, not a redesign.
-- **Backups are a feature, not an afterthought.** Every stateful service has a documented backup and restore path before it is treated as production.
-- **Boring tech wins.** Prefer well-understood, widely-deployed components over novel ones.
-- **No undocumented decisions.** If a choice influences architecture or operations, it lives in the docs.
-- **Documentation has one home.** Fumadocs is the canonical layer. Docmost is transitional and will be retired.
+- **Asymmetric nodes.** `pve1` is the infrastructure and management node; `pve3` is the primary compute and production node. The cluster is not symmetric and HA failover between nodes is not configured.
+- **Three execution layers.** Proxmox host → VM/LXC → Docker stack. Documentation is structured accordingly.
+- **Shared NFS is shared.** The `nas` mount is reachable from both `pve1` and `pve3` and is configured for `rootdir`, `iso`, `backup`, and `images`.
+- **`pve2` is excluded.** It is not part of the active design. The `pve2-storage` entry exists for historical reasons.
 
 ## Non-goals
 
-- High availability across nodes. The platform is single-rack, single-region; designs assuming HA failover are out of scope.
-- Symmetric clustering. `pve3` and `pve1` are not interchangeable.
-- Bring-your-own-storage per service. Storage tiers are platform-managed.
-- Reviving `pve2` as an active node.
+- High availability across nodes.
+- Symmetry between `pve1` and `pve3`.
+- A single ingress path before the role of `ubuntu-nginx-proxy-manager` vs. `ubuntu-nginxrpm` is confirmed.
