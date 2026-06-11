@@ -1,36 +1,61 @@
 ---
 title: Patching
-description: How and when the platform and workloads are updated.
+description: How updates are applied to nodes, guests, and Docker stacks.
 ---
 
-## Purpose
+## Scope
 
-Define the patching cadence and method so updates do not surprise the platform.
+There are three patching surfaces:
 
-## Cadence
+1. **Proxmox hosts** (`pve1`, `pve3`).
+2. **VM and LXC guests** (Debian/Ubuntu).
+3. **Docker containers** inside the Ubuntu VMs.
 
-| Scope | Cadence | Window |
-|-------|---------|--------|
-| Proxmox VE nodes | TODO | TODO |
-| Platform services (`pve1`) | TODO | TODO |
-| Application services (`pve3`) | TODO | TODO |
-| Firmware / BIOS | TODO | TODO |
+Each has a different update mechanism.
 
-## Procedure
+## Proxmox hosts
 
-### Per-node
+- Manual `apt update && apt dist-upgrade` on each node.
+- Plan host reboots: a node reboot stops all guests on that node.
+- Cluster quorum is fine during a single-node reboot (the surviving node retains quorum on a 2-node cluster only when corosync is configured for it). Confirm quorum-related settings before the first planned reboot.
 
-- [ ] Check current cluster health and backup status.
-- [ ] Drain or pause non-essential workloads if needed.
-- [ ] Apply updates.
-- [ ] Reboot if required, validate platform afterwards.
+## VM and LXC guests
 
-### Per-service
+- Debian / Ubuntu: `apt update && apt upgrade` from inside the guest, or via the configured automation tool.
+- Reboot policy is per guest; high-impact guests (TrueNAS, OPNsense) need a scheduled window.
 
-- [ ] Snapshot or back up before updating.
-- [ ] Update through the documented mechanism for the service.
-- [ ] Smoke-test after update.
+## Docker containers
 
-## Notes
+- `watchtower` runs on most Docker host VMs and pulls newer images automatically.
+- Hosts with `watchtower`:
+  - `Beszel` (`202`).
+  - `n8n` (`204`).
+  - `QBittorrent` (`302`).
+  - `Servarr` (`301`).
+  - `web-apps` (`102`).
+- Hosts that do not visibly run `watchtower`:
+  - `Jelly` (`300`) — no `watchtower` container reported.
+  - `Nextcloud` (`200`) — no `watchtower` container reported. Nextcloud upgrades are typically version-sensitive and benefit from manual control.
 
-TODO: choose between automated and manual patching per tier. Document the trade-off here.
+Pinning policy per stack (which image tags are pinned vs. latest) is **not captured here**.
+
+## Special cases
+
+- **OPNsense** (`401`) — patched from its own UI; reboot interrupts WAN.
+- **TrueNAS** (`127`) — patched from its own UI; reboot interrupts shared datasets.
+
+## Operational notes
+
+- Order matters during a coordinated patch window. Suggested order:
+  1. Lab / pre-production LXCs.
+  2. Docker hosts with `watchtower` (already drifting).
+  3. Manual Docker host updates.
+  4. Critical infra LXCs (`forgejo`, `postgresql`).
+  5. Storage and edge VMs (`truenas`, `opnsense`).
+  6. Proxmox hosts.
+
+## Pending
+
+- A documented cadence per surface.
+- Image pinning policy for Docker stacks.
+- Whether unattended-upgrades runs on the Debian/Ubuntu guests.

@@ -1,28 +1,44 @@
 ---
 title: Networks
-description: Physical network assets and per-port mapping.
+description: Bridges, segments, and Docker host addresses.
 ---
 
-## Purpose
+## Bridges
 
-Physical view of the network: switches, NICs, ports, VLAN trunking, and inter-node links.
+| Bridge | Node | Address on host | Status |
+|--------|------|-----------------|--------|
+| `vmbr0` | `pve1` | `192.168.1.101/24` | Up |
+| `vmbr0` | `pve3` | `192.168.1.103/24` | Up |
+| `vmbr1` | `pve3` | `10.0.0.124` | Up |
+| `vmbr2` | `pve3` | `192.168.1.112` | **Down** |
 
-## Scope
+## Segments
 
-Hardware and port-level facts. Logical segmentation lives in [Architecture > Network](/architecture/network).
+| Segment | CIDR | Where it terminates | Status |
+|---------|------|---------------------|--------|
+| Management LAN | `192.168.1.0/24` | `vmbr0` on both nodes | Confirmed |
+| Internal / routed | `10.0.0.0/24` (at least) | `vmbr1` on `pve3`, via OPNsense `net1` | Confirmed at the host level |
+| VLANs | — | — | Pending validation |
 
-## Switches
+## Docker host addresses
 
-| Device | Ports | Management address | Role |
-|--------|-------|--------------------|------|
-| TODO | TODO | TODO | TODO |
+Reported by Beszel:
 
-## Node NICs
+| Beszel label | IP | Hostname (Beszel) | Proxmox VM | Node |
+|--------------|----|--------------------|------------|------|
+| `Beszel` | `192.168.1.25` | `beszel` | `202` `ubuntu-beszel` | `pve1` |
+| `Jelly` | `192.168.1.31` | `jelly` | `300` `ubuntu-jelly` | `pve3` |
+| `n8n` | `192.168.1.13` | `ntfy` | `204` `ubuntu-n8n` | `pve1` |
+| `Nextcloud` | `192.168.1.27` | `nextcloud` | `200` `ubuntu-nextcloud` | `pve1` |
+| `QBittorrent` | `192.168.1.28` | `qbittorrent` | `302` `ubuntu-qbittorrent` | `pve3` |
+| `Servarr` | `192.168.1.26` | `servarr` | `301` `ubuntu-servarr` | `pve3` |
+| `web-apps` | `192.168.1.23` | `ntfy` | `102` `ubuntu-small-webapps` | `pve1` |
 
-| Node | Interface | Speed | Connected to | VLANs |
-|------|-----------|-------|--------------|-------|
-| TODO | TODO | TODO | TODO | TODO |
+The Beszel hostname column reflects what Beszel reports — not necessarily the Proxmox VM name. Two hosts (`n8n` and `web-apps`) report the hostname `ntfy`; the cause is not documented.
 
-## Notes
+## Pending
 
-TODO: add a wiring diagram link once the physical layout is final.
+- LXC IP addresses.
+- VLAN IDs on each bridge.
+- Switch port mapping and inter-node link.
+- Cable-level wiring diagram.

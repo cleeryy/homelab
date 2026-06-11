@@ -1,46 +1,51 @@
 ---
 title: Overview
-description: High-level view of the target homelab architecture.
+description: Current architecture of the home cluster.
 ---
 
-## Purpose
+## Cluster
 
-Summarise the homelab as a single coherent system: which nodes exist, what each one is for, and how workloads, storage, and traffic flow between them.
+- Proxmox VE cluster `home`, two active nodes, quorum enabled.
+- `pve1` (`192.168.1.101`) is centered on infrastructure, management, ingress, and the database/code/wiki stack.
+- `pve3` (`192.168.1.103`) is centered on production workloads: storage VM (TrueNAS), media stack, edge router, lab containers.
+- `pve2` is referenced in cluster storage (`pve2-storage`) but is not active.
 
-## Scope
+The cluster is **asymmetric** by usage: `pve3` carries the heavier compute and disk workload (large `local-lvm` plus a TrueNAS VM with attached disks), while `pve1` carries the higher number of small services and shows higher memory pressure.
 
-A map of the platform, not a manual. Each topic links to its dedicated page.
+## Layers
 
-## Platform
+The homelab is organised in three execution layers:
 
-- Two-node Proxmox VE 9.2 cluster named `home`, with quorum enabled.
-- `pve3` (`192.168.1.103`) — primary compute and production node.
-- `pve1` (`192.168.1.101`) — infrastructure and management node.
-- `pve2` is retired in place; it remains visible in some Proxmox views but is not part of the active design.
+1. **Proxmox host** — bare metal, two Debian/PVE 9.x nodes.
+2. **VMs and LXC containers** — managed by Proxmox.
+3. **Docker stacks inside VMs** — most user-facing apps run inside an Ubuntu 24.04 VM that hosts a `docker compose` stack alongside `portainer`, `watchtower`, and `beszel-agent`.
 
-The cluster is **not symmetric**. `pve3` is the stronger node and carries the bulk of execution; `pve1` is the stable host for shared platform services. High availability across nodes is not in scope.
+This three-layer model is reflected in the documentation: Proxmox-level placement lives under [Architecture](/architecture/service-placement) and [Inventory](/inventory/virtual-machines); per-stack detail lives on each service page.
 
 ## Building blocks
 
-- **Edge / routing.** OPNsense runs as a VM on `pve3` and bridges the management LAN (`vmbr0`) with the routed internal network on `vmbr1`.
-- **Ingress.** Nginx Proxy Manager on `pve1` terminates HTTPS for user-facing services. A `cloudflared` LXC provides outbound tunneling for selected services.
-- **Source of truth for code.** Forgejo on `pve1`, with a Forgejo runner on `pve3` for CI compute.
-- **Documentation.** This Fumadocs site is becoming the canonical documentation surface, replacing Docmost (transitional).
-- **Storage.** TrueNAS on `pve3` owns the bulk and shared data tier via passed-through disks. A ZFS pool on `pve1` (`pve1-storage`) backs infra-side data. An NFS share (`nas`) is mounted on both nodes for shared assets.
-- **Observability.** Beszel collects host metrics across the cluster.
-- **Workloads.** Apps, media stack, and lab workloads live on `pve3`.
+- **Edge / routing.** OPNsense VM (`401`) on `pve3`, with `net0` on `vmbr0` (management LAN) and `net1` on `vmbr1` (internal `10.0.0.0/24`).
+- **Ingress.** Nginx Proxy Manager VM (`100`) on `pve1`. A second reverse-proxy VM `ubuntu-nginxrpm` (`105`) is also present on `pve1`; the exact split between the two is not fully confirmed.
+- **Egress / tunnel.** `cloudflared` LXC (`103`) on `pve1`.
+- **Code.** Forgejo LXC (`111`) on `pve1`, with the `forgejo-runner` LXC (`124`) on `pve3` for CI compute.
+- **Database.** PostgreSQL LXC (`112`) on `pve1`. A second PostgreSQL LXC (`113`) is defined but stopped.
+- **Storage.** TrueNAS VM (`127`) on `pve3` with multiple attached disks. Shared NFS `nas` from `192.168.1.16:/data/pve`. ZFS pool `pve1-storage` on `pve1`. `local-lvm` on each node for guest disks.
+- **Observability.** Beszel VM (`202`) on `pve1` with `beszel-agent` deployed on every Docker host.
+- **Application stacks.** Nextcloud, n8n, Jellyfin, the Servarr stack, qBittorrent, and a `web-apps` host — all are Ubuntu VMs running a Docker compose stack.
+- **Lab / experimentation.** Several LXCs on `pve3` for code, EDR testing, and pre-production work.
 
 ## Reading order
 
-1. [Principles](/architecture/principles) — what the design optimises for.
-2. [Node roles](/architecture/node-roles) — the responsibility split.
-3. [Network](/architecture/network) — segments, bridges, and routing.
-4. [Storage](/architecture/storage) — tiers and pools.
+1. [Principles](/architecture/principles) — how the homelab is structured and how the docs are scoped.
+2. [Node roles](/architecture/node-roles) — what each node carries.
+3. [Network](/architecture/network) — bridges, segments, ingress, edge.
+4. [Storage](/architecture/storage) — Proxmox storage pools, NAS, TrueNAS.
 5. [Service placement](/architecture/service-placement) — which workload runs where.
-6. [Backups](/architecture/backups) — the recovery posture.
+6. [Backups](/architecture/backups) — backup destinations and known policy.
 7. [Security](/architecture/security) — trust boundaries.
-8. [Migration plan](/architecture/migration-plan) — how the current state converges on the target.
+8. [Migration plan](/architecture/migration-plan) — observed in-flight transitions.
 
 ## Notes
 
-A topology diagram is pending. Capture it once VLAN segmentation on `vmbr1` is agreed.
+- Both active nodes monitor systemd via Beszel and show no failed services at the time of the last observation. `pve1` runs ~83 monitored services, `pve3` ~82.
+- A topology diagram is not included; the inventory and per-section tables are the source of truth.

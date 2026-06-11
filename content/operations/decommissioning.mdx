@@ -1,37 +1,48 @@
 ---
 title: Decommissioning
-description: How to retire a service, VM, container, or node.
+description: Procedure for retiring a service, guest, or node.
 ---
 
-## Purpose
+## Service inside a Docker host
 
-Retire workloads cleanly so the documentation, monitoring, and storage state stay consistent.
+- [ ] Stop the container in compose.
+- [ ] Remove the service block from the compose file.
+- [ ] Remove the volume if data is not preserved.
+- [ ] Commit the compose change to Forgejo.
+- [ ] Update the matching service page under [Services](/services/core/reverse-proxy).
 
-## Procedure
+## Standalone VM or LXC
 
-### Service
-
-- [ ] Confirm no other service depends on it (check [Service placement](/architecture/service-placement)).
+- [ ] Confirm no other service depends on it ([Service placement](/architecture/service-placement)).
 - [ ] Remove ingress and DNS entries.
-- [ ] Take a final backup if data must be preserved.
-- [ ] Stop and remove the workload.
-- [ ] Delete monitoring targets.
-- [ ] Remove the service page or move it to an archive section if historically relevant.
+- [ ] Take a final `vzdump` if data must be preserved.
+- [ ] Stop the guest.
+- [ ] Remove the guest from Proxmox.
+- [ ] Remove the host from Beszel monitoring.
+- [ ] Update [Inventory](/inventory/virtual-machines) and [Service placement](/architecture/service-placement).
 
-### VM / container
+## Node (`pve2`, future)
 
-- [ ] Confirm the hosted service is decommissioned first.
-- [ ] Remove from [Inventory](/inventory/virtual-machines).
-- [ ] Delete from the host node.
-- [ ] Release the VM/CT ID for reuse only after a cooldown period.
+- [ ] Confirm no workloads, snapshots, or storage references point at the node.
+- [ ] Remove the node from the cluster using the documented Proxmox procedure (out of scope here).
+- [ ] Remove the matching `<node>-storage` entry from `/etc/pve/storage.cfg`.
+- [ ] Update [Nodes](/inventory/nodes).
 
-### Node
+## Known decommissioning candidates
 
-- [ ] Migrate or decommission all workloads first.
-- [ ] Remove from the cluster.
-- [ ] Wipe storage.
-- [ ] Update [Inventory > Nodes](/inventory/nodes) and [Architecture > Node roles](/architecture/node-roles).
+These are currently visible in the live setup and have a decision pending. The decision itself is tracked on the [migration plan](/architecture/migration-plan).
 
-## Notes
+| Item | Type | Host | Status |
+|------|------|------|--------|
+| Docmost (`109`) | LXC | `pve1` | After content migration to Fumadocs |
+| PostgreSQL secondary (`113`) | LXC | `pve1` | Stopped; confirm role, then retire if unused |
+| `mint` (`10001`) | VM | `pve3` | Stopped; keep parked or remove |
+| `debian-test-edragent` (`331`) | LXC | `pve3` | Stopped; lab cleanup |
+| `debian-test-edragent2` (`332`) | LXC | `pve3` | Stopped; lab cleanup |
+| `pve2-storage` entry | Proxmox storage | — | Cleanup if `pve2` is formally removed |
+| `vmbr2` / `192.168.1.112` | Bridge | `pve3` | Cleanup if not repurposed |
 
-TODO: define the cooldown period for ID reuse.
+## Pending
+
+- Cooldown period before reusing a VM/CT ID.
+- Whether to keep parked items (e.g. `mint`) or remove them outright.

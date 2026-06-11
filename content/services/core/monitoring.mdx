@@ -1,35 +1,50 @@
 ---
 title: Monitoring
-description: Metrics, logs, and alerting for the homelab.
+description: Beszel server and per-host agents.
 ---
-
-## Purpose
-
-Observe the platform: node health, service health, storage, network. Drive incident response with real signal.
-
-## Target state
-
-- **Host node:** `pve1`
-- **Role:** Core platform
-- **Coverage:** All nodes, all services declared in [Service placement](/architecture/service-placement)
 
 ## Components
 
-TODO: choose the stack (e.g. Prometheus + Grafana + Loki, or alternative) and record the choice.
+| Kind | ID | Name | Host | Function |
+|------|----|------|------|----------|
+| VM | `202` | `ubuntu-beszel` | `pve1` | Beszel server (Docker host) |
 
-## Configuration
+The Beszel server VM runs the following Docker containers:
 
-- Targets are scraped via a documented service discovery mechanism, not hand-edited.
-- Dashboards live in the [Forgejo](/services/core/forgejo) repo and are loaded as code.
+| Container | Purpose |
+|-----------|---------|
+| `beszel` | Beszel server |
+| `beszel-agent` | Local agent on the Beszel host |
+| `portainer` | Container management UI |
+| `termix` | Application present on the host; specific role not documented |
+| `watchtower` | Image auto-update for containers |
 
-## Backups
+A `beszel-agent` container is also deployed on every Docker host VM. Proxmox hosts (`pve1`, `pve3`) report systemd-level metrics into Beszel as well.
 
-TODO: short retention is acceptable for raw metrics; dashboards and alert rules must be in Git.
+## Beszel host inventory
 
-## Restore
+| Beszel label | IP | Hostname (Beszel) | Backing Proxmox VM | Node |
+|--------------|----|--------------------|---------------------|------|
+| `Beszel` | `192.168.1.25` | `beszel` | `202` | `pve1` |
+| `Jelly` | `192.168.1.31` | `jelly` | `300` | `pve3` |
+| `n8n` | `192.168.1.13` | `ntfy` | `204` | `pve1` |
+| `Nextcloud` | `192.168.1.27` | `nextcloud` | `200` | `pve1` |
+| `QBittorrent` | `192.168.1.28` | `qbittorrent` | `302` | `pve3` |
+| `Servarr` | `192.168.1.26` | `servarr` | `301` | `pve3` |
+| `web-apps` | `192.168.1.23` | `ntfy` | `102` | `pve1` |
 
-TODO: confirm time-to-restore for the alerting plane.
+## Observed at the last snapshot
 
-## Notes
+- `pve1` and `pve3` both report no failed systemd services. `pve1` runs ~83 monitored services, `pve3` ~82.
+- `pve1` shows higher memory pressure than `pve3`.
+- `Jelly` reports high memory usage on the `jellyfin` container.
+- `QBittorrent` reports `gluetun` as **unhealthy**.
+- `Nextcloud` reports `portainer` as **restarting**.
 
-Monitoring must come up early in disaster recovery so we have visibility while restoring everything else.
+These are transient observations; they should not be used to draw long-term conclusions.
+
+## Pending
+
+- Beszel retention configuration.
+- Alerting / notification channels.
+- Whether the Proxmox-level metrics use the same Beszel server or a separate path.

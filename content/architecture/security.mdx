@@ -1,34 +1,43 @@
 ---
 title: Security
-description: Trust boundaries, access model, and security posture.
+description: Observed trust boundaries and exposure model.
 ---
 
-## Purpose
+## Trust boundaries
 
-Define where trust boundaries are drawn and how access to the homelab is controlled.
+- **WAN** — terminated by OPNsense (VM `401`) on `pve3`. WAN policy is defined inside OPNsense and is not exported into this documentation.
+- **Management LAN** — `192.168.1.0/24` on `vmbr0`. Proxmox hosts, Docker hosts, ingress VMs, and the NAS all sit on this segment.
+- **Internal / routed** — `10.0.0.0/24` (at least) on `vmbr1`, reached through OPNsense `net1` on `pve3`.
 
-## Scope
+The current segmentation is binary at the bridge level (management LAN vs. internal/routed). VLANs and finer-grained zones are not confirmed.
 
-Design intent and policy. Concrete credentials, keys, and per-service hardening live with each service page or out-of-band, never here.
+## Ingress
 
-## Target state
+- HTTPS termination is handled by reverse-proxy VMs on `pve1`:
+  - `ubuntu-nginx-proxy-manager` (`100`).
+  - `ubuntu-nginxrpm` (`105`).
+- A `cloudflared` LXC (`103`) on `pve1` provides outbound tunneling for selected services.
 
-- **Trust boundaries**
-  - Public internet → perimeter firewall → reverse proxy → service.
-  - Management plane is not reachable from user-facing networks.
-  - Lab workloads are isolated from production segments.
-- **Identity & access**
-  - SSH access is key-based; passwords are disabled where supported.
-  - Web services sit behind the reverse proxy with TLS terminated centrally.
-  - Administrative access is restricted to the management segment.
-- **Secrets**
-  - Stored out-of-band, never committed to the documentation repo.
-  - Rotation policy is documented per service.
-- **Patching**
-  - Cadence and method are defined in [Operations > Patching](/operations/patching).
+The split between the two reverse-proxy VMs is not confirmed and is a known piece of ambiguity in the ingress path.
 
-## Notes
+## Remote access
 
-Do not document specific credentials, ports, or hostnames in this page. Reference services and operations pages instead.
+- `apache-guacamole` (LXC `106`) on `pve3` is the visible remote-access gateway.
 
-TODO: enumerate non-obvious threat scenarios this design defends against, and the ones it explicitly does not.
+## Egress
+
+- `cloudflared` (LXC `103`) — tunnel egress for selected services.
+- Several Docker stacks include `gluetun` (VPN client) at the compose level:
+  - `Servarr` host.
+  - `QBittorrent` host.
+- The exact services routed through `gluetun` are managed inside each compose stack and not captured here.
+
+## Known operational observations
+
+- `gluetun` on the `QBittorrent` host was reported as **unhealthy** at the time of the last observation. This is a transient state, not a configuration finding, but worth flagging.
+
+## Out of scope for this page
+
+- Identity, account, secret, and credential management: not exported into this documentation.
+- Per-service TLS configuration: see each service page.
+- WAN-side firewall rules: live in OPNsense.

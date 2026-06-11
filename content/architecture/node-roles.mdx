@@ -1,51 +1,47 @@
 ---
 title: Node roles
-description: Responsibility split between the active Proxmox nodes.
+description: What each cluster node actually carries.
 ---
 
-## Purpose
+## `pve1` — infrastructure / management
 
-Define what each physical node is responsible for so workload placement is not improvised.
+- Proxmox VE 9.x, management address `192.168.1.101/24` on `vmbr0`.
+- Storage attached: `local`, `local-lvm`, `pve1-storage` (ZFS pool), `nas` (shared NFS).
+- Hosts the ingress layer, the code and database stack, monitoring, the transitional documentation app, and several application VMs that run Docker compose stacks.
+- Higher memory pressure than `pve3` at the time of observation.
 
-## Active nodes
+Notable workloads on `pve1`:
 
-### `pve3` — primary compute / production
+- Ingress: `ubuntu-nginx-proxy-manager` (`100`), `ubuntu-nginxrpm` (`105`), `cloudflared` (`103`).
+- Code / data: Forgejo (`111`), PostgreSQL (`112`), PostgreSQL stopped (`113`).
+- Documentation / IT: Docmost (`109`), GLPI (`1101`).
+- Utility LXCs: `alpine-rustypaste` (`101`), `bentopdf` (`104`), `elementsynapse` (`107`), `alpine-docker` (`108`), `debian` (`1005`).
+- Application VMs (Ubuntu 24.04 with Docker stacks): `ubuntu-small-webapps` (`102`), `ubuntu-nextcloud` (`200`), `ubuntu-beszel` (`202`), `ubuntu-n8n` (`204`).
 
-- Proxmox VE 9.2.x.
-- Management: `192.168.1.103/24` on `vmbr0`, gateway `192.168.1.1`.
-- Additional bridges: `vmbr1` carrying the routed internal network (host IP `10.0.0.124`), `vmbr2` currently down (holds `192.168.1.112`, purpose pending validation).
-- Storage profile: large `local-lvm` thin pool (~2.6 TB), shared `nas` (NFS), additional disks passed through to the TrueNAS VM. No active ZFS pool on the host itself.
-- Hosts:
-  - Production application VMs and containers.
-  - The media stack (Jellyfin, Servarr, qBittorrent) and the TrueNAS storage VM that backs it.
-  - The OPNsense edge VM.
-  - The Forgejo CI runner.
-  - Lab and pre-production workloads in a clearly separated namespace.
+## `pve3` — primary compute / production
 
-### `pve1` — infrastructure / management
+- Proxmox VE 9.x, management address `192.168.1.103/24` on `vmbr0`.
+- Additional bridges:
+  - `vmbr1` — host address `10.0.0.124`, internal/routed segment, used by OPNsense `net1`.
+  - `vmbr2` — holds `192.168.1.112`, currently **down**; purpose pending validation.
+- Storage attached: `local`, `local-lvm` (large LVM-thin pool), `nas` (shared NFS). Additional physical disks are passed through to the TrueNAS VM. No active ZFS pool on the host itself.
 
-- Proxmox VE 9.2.x.
-- Management: `192.168.1.101/24` on `vmbr0`, gateway `192.168.1.1`.
-- Storage profile: `local`, `local-lvm`, shared `nas` (NFS), and `pve1-storage` (ZFS pool, ~1.09 TB usable) for infra-side persistent data.
-- Hosts:
-  - Ingress (Nginx Proxy Manager, secondary Nginx) and `cloudflared` outbound tunnel.
-  - Forgejo (Git forge), Fumadocs (this wiki), PostgreSQL.
-  - Monitoring (Beszel), GLPI, transitional Docmost.
-  - Support utilities and a number of small webapps currently in transit toward `pve3`.
+Notable workloads on `pve3`:
 
-## Disabled
+- Storage / data: `truenas` (`127`) with attached disks.
+- Edge: `opnsense` (`401`).
+- Media VMs (Ubuntu 24.04 with Docker stacks): `ubuntu-jelly` (`300`), `ubuntu-servarr` (`301`), `ubuntu-qbittorrent` (`302`).
+- Lab / desktop: `mint` (`10001`, stopped).
+- LXCs: `apache-guacamole` (`106`), `discopanel` (`110`), `code` (`119`), `forgejo-runner` (`124`), `hermesagent` (`125`), `affine` (`126`), `prod-lockbits` (`310`), `preprod-lockbits` (`320`), `debian-test-edragent` (`331`, stopped), `debian-test-edragent2` (`332`, stopped), `debian-test-edragent3` (`333`).
 
-### `pve2`
+## `pve2`
 
-`pve2` is not part of the active design. It survives in cluster metadata for historical reasons and must not host new workloads. Any reference to `pve2` in service docs should be treated as a migration leftover. Its eventual removal from the cluster is tracked in the [migration plan](/architecture/migration-plan).
+`pve2` is **not active**. It is preserved in cluster metadata and a `pve2-storage` entry survives in `/etc/pve/storage.cfg` for historical reasons. It does not host workloads and is not considered when documenting placement.
 
-## Placement rules
+## Placement notes
 
-- A service is placed by **role**, not by convenience. Apps and media go on `pve3`. Platform, ingress, and observability go on `pve1`.
-- Cross-node dependencies (e.g. Beszel on `pve1` scraping a workload on `pve3`) are expected and not a violation of the role split.
-- Lab and pre-production workloads stay on `pve3` under a clearly separated namespace, never on `pve1`.
-- TrueNAS does not move from `pve3` — it owns the passed-through disks.
+- Several apps that fit the "compute" role (Nextcloud, n8n, BentoPDF, Element/Synapse, RustyPaste, small webapps) currently run on `pve1`, not on `pve3`. This is the observed state.
+- Apache Guacamole, an admin gateway that fits the "infra" role, currently runs on `pve3`.
+- The Forgejo runner is intentionally on `pve3` to keep CI compute off the infra node.
 
-## Notes
-
-Hardware specs (CPU model, RAM, disk slot map) are tracked in [Inventory > Nodes](/inventory/nodes), not here.
+These observations are captured in [Service placement](/architecture/service-placement) and are not interpreted as design errors here — they are the live placement.
