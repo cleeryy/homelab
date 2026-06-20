@@ -1,35 +1,108 @@
 ---
 title: Network
-description: Bridges, segments, edge, and ingress.
+description: Sites, addressing scheme, VLANs, edge devices, and DNS.
 ---
 
-## Segments
+## Sites
 
-| Segment | CIDR | Role | Status |
-|---------|------|------|--------|
-| Management LAN | `192.168.1.0/24` | Proxmox management, Docker hosts, ingress | Confirmed |
-| Internal / routed | `10.0.0.0/24` (at least) | Carried on `vmbr1` via OPNsense `net1` | Confirmed at the host level; exact CIDR boundary pending |
-| Additional VLANs | — | — | Unknown / pending validation |
+The homelab spans two physical sites:
 
-The host gateway for both Proxmox nodes is `192.168.1.1`.
+| Site ID | Location | Edge device | Role |
+|---------|----------|-------------|------|
+| `1` | mamie (server site) | OPNsense VM `401` on `pve3` | Carries the Proxmox cluster and all server workloads |
+| `2` | home | Fortigate 81E (present, **not configured**) | Carries a Raspberry Pi running home-oriented services (Home Assistant, AdGuard Home, iSponsorBlock) |
 
-## Bridges
+The two sites are not yet interconnected at the routing layer. No site-to-site tunnel is configured today.
 
-| Bridge | Node | Address | Notes |
-|--------|------|---------|-------|
-| `vmbr0` | `pve1` | `192.168.1.101/24` | Management LAN |
-| `vmbr0` | `pve3` | `192.168.1.103/24` | Management LAN |
-| `vmbr1` | `pve3` | `10.0.0.124` (host side) | Internal/routed segment, used by OPNsense `net1` |
-| `vmbr2` | `pve3` | `192.168.1.112`, **down** | Purpose pending validation |
+## Addressing scheme
 
-## Edge — OPNsense
+All routed networks follow the convention:
 
-OPNsense runs as VM `401` on `pve3`:
+```
+10.<site>.<vlan>.0/24
+```
 
-- `net0` on `vmbr0` — management LAN side.
-- `net1` on `vmbr1` — internal/routed side.
+The gateway for each subnet is `.1`. Site `1` is mamie; site `2` is reserved for home.
 
-OPNsense is the firewall/router and the boundary between WAN, management LAN, and the internal/routed segment.
+## VLAN plan — site 1 (mamie)
+
+Defined on the OPNsense edge. The parent interface is `vtnet1` (OPNsense LAN-side virtual NIC); VLANs are tagged sub-interfaces `vlan0.<tag>`.
+
+| VLAN | Tag | Name | CIDR | Gateway | DHCP |
+|------|-----|------|------|---------|------|
+| — | (untagged) | LAN | `10.1.1.0/24` | `10.1.1.1` | — |
+| 10 | 10 | Admin | `10.1.10.0/24` | `10.1.10.1` | `.100`–`.199` (dnsmasq) |
+| 20 | 20 | Production | `10.1.20.0/24` | `10.1.20.1` | — |
+| 25 | 25 | Preproduction | `10.1.25.0/24` | `10.1.25.1` | — |
+| 30 | 30 | IoT | `10.1.30.0/24` | `10.1.30.1` | — |
+| 40 | 40 | Guest | `10.1.40.0/24` | `10.1.40.1` | `.10`–`.199` (dnsmasq) |
+| 50 | 50 | Management | `10.1.50.0/24` | `10.1.50.1` | — |
+| 60 | 60 | Home | `10.1.60.0/24` | `10.1.60.1` | `.10`–`.199` (dnsmasq) |
+
+VLANs without a DHCP range are not currently serving DHCP from OPNsense.
+
+## Edge — OPNsense (site 1)
+
+- VM `401` on `pve3`, hostname `opnsense-mamini`, domain `internal`.
+- WAN: `vtnet0`, DHCP from the upstream ISP, public IPv4 dynamic.
+- LAN trunk: `vtnet1`, carries the untagged LAN plus all seven VLANs.
+- DNS: Unbound on `:53` is the primary resolver; the `.internal` zone is forwarded to dnsmasq on `127.0.0.1:53053`, which serves DHCP-registered names. Upstream resolvers: `9.9.9.9`, `1.1.1.1`.
+- Timezone `Europe/Paris`. NTP from the OPNsense pool.
+- IDS/IPS: disabled. Traffic shaping: not configured. HA sync: not configured.
+
+### Firewall posture (current)
+
+Per-interface "allow all out" rules exist on the LAN, Admin, Production, WireGuard, and VPN interfaces. There is no inter-VLAN isolation policy in place yet. Several rules carry `[DEV]` or `TEMP` markers in their descriptions, indicating they are not the final intended state.
+
+### Site-to-site VPN
+
+IPsec is enabled in OPNsense but no Swanctl connections, locals, or remotes are defined — the site-to-site VPN between mamie and home is not yet configured.
+
+## Remote access — WireGuard (site 1)
+
+OPNsense runs a WireGuard server for road-warrior access:
+
+| Setting | Value |
+|---------|-------|
+| Listen | `udp/51920` on WAN |
+| Tunnel network | `10.1.90.0/24` |
+| Server address | `10.1.90.1` |
+| Peer DNS pushed | `94.140.14.14`, `94.140.15.15` (AdGuard public DNS) |
+
+Two peers are configured:
+
+| Peer | Tunnel IP |
+|------|-----------|
+| `m4-air` | `10.1.90.3/32` |
+| `iphone15` | `10.1.90.2/32` |
+
+Public keys and pre-shared keys are stored in the OPNsense configuration backup and are deliberately not reproduced here.
+
+## Edge — Fortigate (site 2)
+
+A Fortigate 81E is present at the home site. It has not been configured. The Raspberry Pi at home currently sits directly on the upstream ISP router; its addressing is whatever the ISP CPE hands out.
+
+## Legacy network on site 1
+
+The Proxmox hosts and all Docker application VMs still run on the older flat network rather than on the new VLAN plan:
+
+| Segment | CIDR | Status |
+|---------|------|--------|
+| Management LAN | `192.168.1.0/24` | In use by `pve1`, `pve3`, OPNsense `net0`, NPM, all Docker VMs |
+| Internal / routed | `10.0.0.0/24` (at least) | In use on `vmbr1` (`pve3`) via OPNsense `net1` |
+
+Host gateway for both Proxmox nodes is `192.168.1.1`. The new VLAN plan above lives on the OPNsense edge but the workloads are not migrated onto it.
+
+## Bridges (Proxmox, site 1)
+
+| Bridge | Node | Address on host | Status |
+|--------|------|-----------------|--------|
+| `vmbr0` | `pve1` | `192.168.1.101/24` | Up |
+| `vmbr0` | `pve3` | `192.168.1.103/24` | Up |
+| `vmbr1` | `pve3` | `10.0.0.124` | Up |
+| `vmbr2` | `pve3` | `192.168.1.112` | **Down** |
+
+OPNsense VM `401` attaches `net0` to `vmbr0` (management LAN) and `net1` to `vmbr1` (`10.0.0.0/24`). The VLAN trunk on `vtnet1` described above is configured inside OPNsense but is not yet carrying any guest traffic.
 
 ## Ingress
 
@@ -38,13 +111,13 @@ Two reverse-proxy VMs are present on `pve1`:
 - `ubuntu-nginx-proxy-manager` (`100`) — Nginx Proxy Manager.
 - `ubuntu-nginxrpm` (`105`) — second reverse-proxy VM.
 
-Both are visible on the management LAN. The canonical ingress split (which traffic goes through which) is **not confirmed**; this is documented in the [migration plan](/architecture/migration-plan) for resolution.
+Both are visible on the management LAN. The canonical ingress split is not confirmed; this is tracked in the [migration plan](/architecture/migration-plan).
 
-A `cloudflared` LXC (`103`) on `pve1` provides outbound tunneling for selected services. The scope of services fronted by this tunnel is not captured here.
+A `cloudflared` LXC (`103`) on `pve1` provides outbound tunneling for selected services.
 
-## Docker host addresses
+## Docker host addresses (site 1, legacy network)
 
-Application VMs running Docker stacks all hold IPs on the management LAN. Addresses as reported by Beszel:
+Reported by Beszel:
 
 | Host (Beszel label) | IP | Proxmox VM | Node |
 |---------------------|----|------------|------|
@@ -69,7 +142,9 @@ The cause is not documented. The mismatch is recorded so that operators reading 
 
 ## Pending
 
-- VLAN IDs on the management LAN and on the internal segment.
-- The exact CIDR boundary of the `10.0.0.0/?` segment.
+- VLAN trunk wiring from the Proxmox bridges to the OPNsense `vtnet1` interface (the VLAN plan is configured in OPNsense but no guest currently lives on it).
+- Inter-VLAN firewall policy on OPNsense (current rules are open).
+- Fortigate 81E base configuration at site 2.
+- Site-to-site VPN between site 1 and site 2.
 - The role split between `ubuntu-nginx-proxy-manager` and `ubuntu-nginxrpm`.
 - The purpose of `vmbr2` / `192.168.1.112`.

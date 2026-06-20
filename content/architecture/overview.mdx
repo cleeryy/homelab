@@ -3,6 +3,15 @@ title: Overview
 description: Current architecture of the home cluster.
 ---
 
+## Sites
+
+The homelab spans two physical sites:
+
+- **Site 1 — mamie.** Server site. Hosts the Proxmox cluster and all server workloads. Edge: OPNsense VM `401` on `pve3`.
+- **Site 2 — home.** Hosts a Raspberry Pi running Home Assistant, AdGuard Home, and iSponsorBlock. A Fortigate 81E is present but not configured; the RPi currently sits on the ISP CPE. No site-to-site link is configured today.
+
+See [Network](/architecture/network) for the addressing scheme and VLAN plan.
+
 ## Cluster
 
 - Proxmox VE cluster `home`, two active nodes, quorum enabled.
