@@ -5,6 +5,8 @@ description: Backup destinations and known policy.
 
 Last synced with live infrastructure: **September 2026**. Last restore test: booted successfully on **10/09/2026**.
 
+This page used to describe a HiFive and a prayer — an NFS share with pruning disabled and no schedules. It now describes a real backup system, rebuilt in September 2026 around Proxmox Backup Server with scheduled jobs, retention policies, an encrypted off-site copy, and a restore drill that actually booted. The practical section at the bottom is still the most important paragraph in this wiki: identical hardware, identical node, identical fate — the off-site copy is the only thing standing between a `pve3` failure and a very bad week.
+
 ## Backup platform — Proxmox Backup Server
 
 | Setting | Value |

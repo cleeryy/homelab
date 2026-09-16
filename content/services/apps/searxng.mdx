@@ -5,6 +5,8 @@ description: Private metasearch on the production VLAN.
 
 Last synced with live infrastructure: **September 2026**.
 
+A search box that answers to nobody. SearXNG forwards your queries to a spread of upstream engines and mixes the results, so no single provider gets the full picture of what you look for. There is no account, no history worth stealing, and nothing to back up — the whole service is disposable by design. If it ever misbehaves, the fix is measured in minutes: check the engine list for a blocked upstream, or just redeploy it.
+
 ## Placement
 
 - LXC `132` `searxng` on `pve3` (production VLAN, `10.1.20.46` tag; 2 GB RAM).

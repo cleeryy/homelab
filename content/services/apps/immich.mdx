@@ -5,6 +5,8 @@ description: Photo management on the production VLAN.
 
 Last synced with live infrastructure: **September 2026**.
 
+Years of photos are the least replaceable data in this homelab — movies can be re-downloaded, pictures cannot. Immich is the self-hosted photo library that keeps them on local disks instead of somebody else's cloud, with mobile apps for backup and a web UI for browsing. Because the data is irreplaceable, the interesting question on this page is never the route (it is a plain Caddy proxy) but the storage and backup posture underneath it, both still to be fully documented.
+
 ## Placement
 
 - LXC `276` `immich` on `pve3` (production VLAN, `10.1.20.76` tag; 6 GB RAM).

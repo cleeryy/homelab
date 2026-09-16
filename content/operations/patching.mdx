@@ -3,6 +3,8 @@ title: Patching
 description: How updates are applied to nodes, guests, and Docker stacks.
 ---
 
+Nothing here patches itself except the containers Watchtower is allowed to touch — everything else updates when a human decides it does. That makes patching a scheduling problem more than a technical one: three surfaces (hosts, guests, containers), each with its own blast radius, plus two special snowflakes (OPNsense and TrueNAS) whose reboots take down the network and the storage. The order below exists so a routine update window cannot cascade into an outage; follow it top to bottom and the worst case stays boring.
+
 ## Scope
 
 There are three patching surfaces:

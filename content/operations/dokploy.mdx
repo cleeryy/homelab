@@ -5,6 +5,8 @@ description: Container deployment plane on `obiwan`.
 
 Last synced with live infrastructure: **September 2026**.
 
+Dokploy is how new things get built here. Instead of hand-assembling containers on a VM, you point Dokploy at a Git repository and it builds, runs, and keeps alive a containerised app on the `obiwan` host — with Caddy in front for the public face. The wiki itself ships this way, so this page is both documentation and dogfood: every lesson below was learned deploying this very site, including the two traps (unpublished ports, start-first updates) that each cost an evening.
+
 ## Components
 
 | Kind | ID | Name | Host | Function |

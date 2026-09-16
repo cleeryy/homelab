@@ -5,6 +5,8 @@ description: Technitium authoritative DNS + OPNsense resolvers.
 
 Last synced with live infrastructure: **September 2026**.
 
+Names are the glue of this homelab. Nothing here is reached by raw IP in normal operation: Caddy routes to short service names, SSH uses short hostnames, and Technitium is what turns those names into addresses. OPNsense still handles the raw resolving and DHCP, but the moment a query ends in `internal.cleeryy.cloud` it is handed to Technitium. That split is deliberate — network plumbing stays on the firewall, while the human-facing namespace lives in a service that is easy to edit and back up. Lose Technitium and the whole place goes blind even though every machine is still running, which is why it is in the critical backup set.
+
 ## Components
 
 | Kind | ID | Name | Host | Function |

@@ -5,6 +5,8 @@ description: NetBird mesh, AirVPN egress, and WireGuard road-warrior.
 
 Last synced with live infrastructure: **September 2026**. All three terminate on OPNsense (VM `501`).
 
+Three different networks answer three different questions. NetBird is the always-on management mesh: how do I reach the firewall and key hosts even when DNS or the ISP path is having a bad day. AirVPN is the privacy egress: how does selected VLAN traffic leave for the internet without carrying the home IP, and with a guarantee it never leaks onto clearnet if the tunnel drops. WireGuard road-warrior is the personal on-ramp: how does a laptop or phone join the homelab network directly. All three terminate on OPNsense, which makes the firewall the single place where remote-access policy lives — and the single box whose backup actually matters for connectivity.
+
 ## NetBird mesh
 
 | Setting | Value |

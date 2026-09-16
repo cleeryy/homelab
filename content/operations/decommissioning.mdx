@@ -3,6 +3,8 @@ title: Decommissioning
 description: Procedure for retiring a service, guest, or node.
 ---
 
+Deleting things is a skill, and this homelab has gotten good at it — the migration plan's resolved list is proof. Decommissioning has a procedure for the same reason provisioning does: a guest removed without cleaning its DNS, ingress, monitoring, and documentation entries leaves ghosts that confuse the next incident response. Retire things completely or not at all, take the final backup when data matters, and update the wiki in the same motion so the inventory stays honest.
+
 ## Service inside a Docker host
 
 - [ ] Stop the container in compose.

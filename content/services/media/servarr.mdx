@@ -3,6 +3,8 @@ title: "*arr stack"
 description: Sonarr, Radarr, Prowlarr, Bazarr, and supporting containers.
 ---
 
+The *arr stack is the librarian: it watches for wanted shows and movies, finds them through indexers, hands them to the download client, then files and renames the results into the shared library. It is the cleverest and most moving part of the media chain — Sonarr, Radarr, Prowlarr, Bazarr, and their helpers all cooperating — and also the part most sensitive to the outside world, since indexer traffic may need the VPN and Cloudflare challenges need solving. When something fails to appear in Jellyfin, the Servarr host is where the trail starts.
+
 ## Placement
 
 - VM `301` `ubuntu-servarr` on `pve3`.

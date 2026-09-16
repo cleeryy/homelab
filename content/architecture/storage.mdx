@@ -5,6 +5,8 @@ description: Proxmox storage pools, shared NFS, and the TrueNAS VM.
 
 Last synced with live infrastructure: **September 2026**.
 
+Storage here is a patchwork with a history: local disks for speed, a ZFS pool inherited from the infra node era, NFS shares for the things both nodes need, TrueNAS for the bulk, and a backup server that finally gave the whole thing a safety net. The tier table below is the mental model to keep — when provisioning asks "where does this volume live", the answer should always be one of these rows, never "wherever fits". Anything that does not fit the tiers is a sign the model needs updating, not an excuse for a one-off mount.
+
 ## Proxmox storage from `/etc/pve/storage.cfg`
 
 | Storage ID | Type | Path / source | Nodes | Content |

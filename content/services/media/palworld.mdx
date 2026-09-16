@@ -5,6 +5,8 @@ description: Dedicated game server with NAT-published ports.
 
 Last synced with live infrastructure: **September 2026**.
 
+Unlike everything else on this site, Palworld does not speak HTTP at all. Game clients talk raw UDP to dedicated ports that the firewall forwards straight to the container — Caddy never sees this traffic, and none of the usual HTTPS tooling applies. That also makes it the noisiest guest on the network: expect unsolicited scans on those ports within hours of opening them, and keep an eye on CrowdSec. The world saves live on local disk, so the only ritual that matters is snapshotting before every game update.
+
 ## Placement
 
 - LXC `4001` `palworld` on `pve3` (production VLAN, `10.1.20.143`; 32 GB RAM allocated).

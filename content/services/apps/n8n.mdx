@@ -3,6 +3,8 @@ title: n8n
 description: n8n workflow automation behind an internal Traefik.
 ---
 
+n8n is where the homelab stops being a collection of apps and starts behaving like a system: workflows that glue services together, react to events, and run while everybody sleeps. That power comes with two obligations documented nowhere else on this site. First, the credential store — every API key n8n holds, protected by an encryption key that must survive host rebuilds. Second, silent failure: a broken workflow does not page anybody, it just stops doing its job. If something "used to happen automatically" and doesn't anymore, look here first.
+
 ## Placement
 
 - VM `204` `ubuntu-n8n` on `pve1`.

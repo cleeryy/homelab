@@ -3,6 +3,8 @@ title: Nextcloud
 description: Nextcloud stack inside a dedicated Docker host VM.
 ---
 
+Nextcloud is the private cloud of the homelab: files, calendar, contacts, and collaborative document editing without trusting a third party. It is also the most stateful thing on the legacy side — application, database, cache, background jobs, and office suite all on one host — which makes its database volume the single most important backup target among the Docker VMs. Treat this host with more respect than the others: upgrade it deliberately (no Watchtower here, on purpose), snapshot before major versions, and never let the database volume fill up.
+
 ## Placement
 
 - VM `200` `ubuntu-nextcloud` on `pve1`.

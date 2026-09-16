@@ -3,6 +3,8 @@ title: Provisioning
 description: Procedure for bringing a new VM, LXC, or Docker stack online.
 ---
 
+Bringing up something new should feel routine, not adventurous. This procedure exists so the tenth deployment looks like the first: pick the right layer, take a free ID in the right range, wire DNS and ingress the same way every time, and leave the wiki updated behind you. Skip steps and the homelab accumulates exactly the kind of mystery this documentation was written to kill.
+
 ## Decide where it goes
 
 - **Containerised app / website** → Dokploy on `obiwan` (`205`), exposed through Caddy. See [Dokploy](/operations/dokploy).

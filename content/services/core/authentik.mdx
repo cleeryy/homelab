@@ -5,6 +5,8 @@ description: SSO identity provider.
 
 Last synced with live infrastructure: **September 2026**.
 
+Every login in the homelab flows through here. Authentik is the single identity provider: humans authenticate once, and services either redirect to it or ask Caddy to check with it on every request. That design means adding SSO to a new service is a five-line Caddy change instead of a per-app user database — which is why the migration plan pushes for SSO-by-default. If Authentik is down, every gated route fails closed, so it sits in the critical backup job alongside the edge and DNS.
+
 ## Components
 
 | Kind | ID | Name | Host | Function |

@@ -3,6 +3,8 @@ title: qBittorrent
 description: Download client routed through Gluetun.
 ---
 
+qBittorrent does exactly one job — download — wrapped in exactly one protection: all of its traffic is forced through a VPN client, so that a tunnel failure means silence rather than exposure. That wrapper is also its chronic illness: `gluetun` going unhealthy is the most common single failure in the entire homelab, and every time it happens downloads stall while everything else looks green. If the media pipeline dries up, check the VPN container before anything else.
+
 ## Placement
 
 - VM `302` `ubuntu-qbittorrent` on `pve3`.

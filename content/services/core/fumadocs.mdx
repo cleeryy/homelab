@@ -5,6 +5,8 @@ description: The canonical documentation site.
 
 Last synced with live infrastructure: **September 2026**.
 
+This page describes the site you are standing in. The wiki is deliberately boring infrastructure: a static Next.js export built from Markdown files in Git, deployed through the same Dokploy pipeline as any other app, holding no state of its own. That boringness is the point. Documentation that depends on a database, a login, or somebody's memory rots; documentation that rebuilds from `main` on every push stays alive almost by accident. If this site ever disappears, the recovery procedure is one sentence long: redeploy from Git.
+
 ## Purpose
 
 This Fumadocs site is the canonical documentation surface for the homelab. It is deployed from the `cleeryy/homelab` repository (`homelab-wiki` package).

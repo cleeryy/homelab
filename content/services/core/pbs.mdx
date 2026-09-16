@@ -5,6 +5,8 @@ description: Central backup platform + encrypted off-site sync.
 
 Last synced with live infrastructure: **September 2026**.
 
+This is the box that decides whether an outage is a bad evening or a catastrophe. Every scheduled backup in the homelab lands here, on a dedicated datastore, and from here an encrypted copy leaves for Google Drive every night. The design accepts an uncomfortable truth — PBS shares a physical node with most of what it protects — and compensates with that off-site copy plus mandatory restore drills. The rule written on the architecture page bears repeating: a backup that has never been restore-tested does not exist.
+
 ## Components
 
 | Kind | ID | Name | Host | Function |

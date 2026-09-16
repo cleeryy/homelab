@@ -5,6 +5,8 @@ description: Pre-production project hosts on `pve3`.
 
 Last synced with live infrastructure: **September 2026**.
 
+Preproduction is where experiments live before they earn the right to touch real data. The deal is simple: anything here may break, may be wiped, and must never be depended on by a production service. The preproduction VLAN exists precisely to make that promise enforceable at the network layer, even though today only one guest actually lives on it. If you are about to test something risky, this is where it goes — not on the production VLAN next to Immich and Nextcloud.
+
 ## Components
 
 | Kind | ID | Name | Host | Status | Notes |

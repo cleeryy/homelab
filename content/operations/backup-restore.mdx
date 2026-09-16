@@ -5,6 +5,8 @@ description: Procedures for taking and restoring backups.
 
 Last synced with live infrastructure: **September 2026**. Last restore drill: booted successfully on **10/09/2026**.
 
+Backups are the one procedure you never want to improvise. Everything below assumes the PBS platform described in [Architecture > Backups](/architecture/backups): scheduled jobs already run, the off-site copy already leaves nightly, and your job is the exception path — the manual backup before surgery, and the restore when something is already broken. Read the restore section *before* you need it; nobody absorbs checklists well during an outage.
+
 ## Backup platform
 
 All scheduled backups go to **Proxmox Backup Server** (LXC `578`, `10.1.50.78:8007`, datastore `backupstore` ~600 GB), declared as the `pbs` storage on both nodes.

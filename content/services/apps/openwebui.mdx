@@ -5,6 +5,8 @@ description: LLM frontend on the production VLAN.
 
 Last synced with live infrastructure: **September 2026**.
 
+This is the friendly face over whatever language models the homelab talks to: one chat UI in the browser instead of API keys scattered across laptops. The frontend itself is stateless and boring; all the security and cost questions live in the backend provider it points at — which model, whose API key, who gets billed. That is why the pending list on this page is dominated by provider wiring and SSO rather than by the container, which more or less runs itself.
+
 ## Placement
 
 - LXC `131` `openwebui` on `pve3` (production VLAN, `10.1.20.31` tag; 8 GB RAM).

@@ -5,6 +5,8 @@ description: Git forge with a dedicated CI runner.
 
 Last synced with live infrastructure: **September 2026**.
 
+All the code that runs this homelab — including the wiki you are reading — lives here. Forgejo is the private Git forge: it stores the repositories, and its runner on the compute node executes CI so builds never steal resources from the infrastructure node. The split is intentional and worth preserving. If the forge is down, nothing running breaks, but nothing new can ship either: no wiki redeploys, no CI. That makes Forgejo quiet but load-bearing.
+
 ## Components
 
 | Kind | ID | Name | Host | Function |

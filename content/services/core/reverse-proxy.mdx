@@ -5,6 +5,8 @@ description: Caddy — the canonical HTTPS ingress.
 
 Last synced with live infrastructure: **September 2026**.
 
+Every public hostname in the homelab ends its journey here. Caddy is the single front door: it holds the wildcard certificates, decides — by hostname — which internal service answers, and optionally demands a login via Authentik before proxying a single byte. That centralisation is what makes the rest of the setup manageable. Services never deal with certificates, ports 80/443 are forwarded exactly once at the firewall, and exposing something new is a small config file rather than a network change. If Caddy is down, everything behind it looks down too, even though all the apps are still healthy — always check here before restarting application containers.
+
 ## Components
 
 | Kind | ID | Name | Host | Function |

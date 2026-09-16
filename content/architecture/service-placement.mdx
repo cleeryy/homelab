@@ -7,6 +7,8 @@ Last synced with live infrastructure: **September 2026**.
 
 This is a flat view of where services live today. It is descriptive — not aspirational. Group is the role family, host is the Proxmox node, kind is VM or LXC.
 
+Read it as a map, not a verdict. The two clear patterns are worth naming: everything new lands on `pve3` as an LXC on a VLAN, while the legacy Docker VMs stay parked on `pve1` and the old flat LAN. Nothing here implies a service *should* move — moves are tracked as migrations, and until one is decided the observed placement is simply the truth to operate against.
+
 ## Edge and ingress
 
 | Service | Kind | ID | Host | Notes |

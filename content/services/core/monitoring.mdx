@@ -5,6 +5,8 @@ description: Prometheus + Grafana stack (Beszel legacy).
 
 Last synced with live infrastructure: **September 2026**.
 
+You cannot run what you cannot see, and this homelab is mid-migration between two ways of seeing. Beszel was the first answer: a lightweight server with an agent on every Docker host, great for glancing at CPU graphs but blind to everything else. Prometheus and Grafana are the second answer: real metrics collection with the Proxmox exporter and *arr exporters feeding in, aimed at dashboards and eventually alerts. Both run today. Until Grafana is declared canonical and Beszel is switched off, check Grafana first for platform questions and Beszel for the legacy Docker VMs.
+
 ## Components
 
 | Kind | ID | Name | Host | Function |

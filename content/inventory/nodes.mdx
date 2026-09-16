@@ -5,6 +5,8 @@ description: Physical Proxmox nodes.
 
 Last synced with live infrastructure: **September 2026**.
 
+Two machines, two personalities. `pve1` is the old workhorse — modest, lightly loaded, carrying the legacy VMs nobody has had a reason to move. `pve3` is where everything happens now: twice the threads, nearly triple the RAM, and the load average to prove it, hosting the firewall, the platform services, and the media stack all at once. That imbalance is intentional but worth watching; if `pve3` ever looks full, the answer is not "add a third node" but "finish moving the legacy VMs off `pve1`'s shadow".
+
 ## Active nodes
 
 | Node | Role | Proxmox VE | Management | Gateway |

@@ -5,6 +5,8 @@ description: SSO SSH bastion — the only SSH entry point.
 
 Last synced with live infrastructure: **September 2026**.
 
+There is exactly one door into this infrastructure over SSH, and this is it. Warpgate exists so that no guest ever needs its port 22 reachable from the internet: the firewall forwards WAN SSH to Warpgate alone, Warpgate verifies who you are against Authentik, and only then proxies you to the target machine. Day to day that means one SSH key, short hostnames, and per-user policies instead of scattered `authorized_keys` files. If you are debugging at 2 AM and SSH hangs, check these two things in order: is Warpgate itself up, and can it still talk to Authentik.
+
 ## Components
 
 | Kind | ID | Name | Host | Function |

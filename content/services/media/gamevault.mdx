@@ -5,6 +5,8 @@ description: Game library backend (intentionally unprotected).
 
 Last synced with live infrastructure: **September 2026**.
 
+Gamevault is the elephant in the cluster: a single guest holding over a terabyte of game data, bigger than everything else combined. It gets its own page for exactly one reason — to record, loudly, that it is excluded from backups on purpose. Backing up 1.2 TB of re-downloadable binaries every night would drown the backup server for zero benefit, so the recovery plan is reinstallation, not restoration. If disk pressure ever forces a conversation about what gets deleted first, start here: nothing on this host is precious.
+
 ## Placement
 
 - LXC `258` `gamevault` on `pve3` (production VLAN, `10.1.20.58` tag; 4 GB RAM, ~1.2 TB of ~1.8 TB disk in use — the largest single guest on the cluster).

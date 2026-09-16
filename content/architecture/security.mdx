@@ -5,6 +5,8 @@ description: Observed trust boundaries and exposure model.
 
 Last synced with live infrastructure: **September 2026**.
 
+Security here is layered but honest about its gaps. The perimeter is genuinely tight — a firewall with a minimal set of forwarded ports, one ingress proxy, one SSH door, no service naked on the internet. Inside the perimeter it gets looser: VLANs exist but do not yet isolate, most public routes have no login, and detection is young. That is a defensible posture for a homelab *as long as it is written down*, which is what this page does. Every "pending" below is a known debt, not a surprise.
+
 ## Trust boundaries
 
 - **WAN** — terminated by OPNsense (VM `501`) on `pve3`, behind the ISP CPE (double NAT). Inbound ports are limited to the NAT forwards listed in [Network](/architecture/network): Caddy 80/443, Warpgate SSH, Palworld UDP, WireGuard `udp/51920`, NetBird P2P `udp/51825`.

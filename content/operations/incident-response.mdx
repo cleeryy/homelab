@@ -3,6 +3,8 @@ title: Incident response
 description: Triage and recovery procedure when something breaks.
 ---
 
+Something is broken. This page is the order of operations for that moment: figure out which layer failed, apply the smallest fix that restores service, then write down what happened so the next incident is shorter. It is deliberately mechanical — triage before treatment, treatment before postmortem — because under pressure humans skip steps, and skipped steps are how small outages become big ones. The constraints section is the cheat sheet: the three single points of failure that explain most homelab-wide symptoms.
+
 ## Triage
 
 - [ ] Identify the affected layer: Proxmox host, VM/LXC, Docker container, or external dependency.
