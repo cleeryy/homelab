@@ -1,0 +1,32 @@
+---
+title: DNS
+description: Technitium authoritative DNS + OPNsense resolvers.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Components
+
+| Kind | ID | Name | Host | Function |
+|------|----|------|------|----------|
+| LXC | `553` | `technitium` | `pve3` | Internal DNS, `10.1.50.53` |
+
+## Architecture
+
+- **OPNsense Unbound** on `:53` is the network resolver for all VLANs. Override: the `internal.cleeryy.cloud` zone → `10.1.50.53` (Technitium).
+- **Technitium** is authoritative for `internal.cleeryy.cloud`: every platform host has a short name and an FQDN (`caddy`, `obiwan`, `authentik`, `pbs`, `technitium`, `pve1`, `pve3`, `warpgate`, …). Caddy upstreams use these short names.
+- **DHCP** is served by dnsmasq on OPNsense (Admin, Guest, Home ranges); IoT is bound without a range.
+- Admin UI: `dns.home.cleeryy.cloud` → Caddy → `technitium:5380` (private zone).
+
+Technitium is in the critical backup job (02:00, keep-last 7) — losing DNS blinds Caddy upstreams and SSH short names.
+
+## Failure impact
+
+- Technitium down → `.internal.cleeryy.cloud` stops resolving: Caddy cannot route to short-name upstreams, SSH shortcuts fail. Unbound still resolves external names.
+- Unbound down → all LAN DNS fails; the VLANs lose name resolution entirely.
+
+## Pending
+
+- Full zone dump / record inventory.
+- Upstream resolver policy (which roots/DoT, DNSSEC posture).
+- DHCP reservations inventory.

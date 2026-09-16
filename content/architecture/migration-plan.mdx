@@ -3,7 +3,17 @@ title: Migration plan
 description: In-flight transitions observed in the current setup.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 This page captures **transitions that are already visible** in the live setup, not aspirational moves. It is short by design.
+
+## Resolved since June 2026
+
+- **Cluster `pve2`.** Fully removed — no member, no `pve2-storage` entry. Closed.
+- **Network `vmbr2`.** The bridge no longer exists on `pve3`. Closed.
+- **Ingress NPM.** Nginx Proxy Manager (VM `100`) decommissioned; **Caddy (`2010`) is the canonical ingress**. Remaining: confirm or repurpose `ubuntu-nginxrpm` (`105`).
+- **Lab containers.** `prod-lockbits` (`310`), `preprod-lockbits` (`320`), and all three `debian-test-edragent` containers (`331`–`333`) deleted. `postgresql` secondary (`113`), `debian` (`1005`), GLPI (`1101`) deleted. Closed.
+- **Wiki deployment.** This site now deploys via Dokploy on `obiwan` and is exposed at `homelab.cleeryy.cloud` through Caddy. See [Operations > Dokploy](/operations/dokploy).
 
 ## Documentation: Docmost → Fumadocs
 
@@ -11,31 +21,35 @@ This page captures **transitions that are already visible** in the live setup, n
 - This Fumadocs site is the canonical documentation surface going forward.
 - Action: migrate any surviving Docmost content into Fumadocs, then decide whether to keep Docmost online for archive access or decommission the LXC.
 
-## Cluster: `pve2`
+## Ingress: remaining `ubuntu-nginxrpm` (`105`)
 
-- `pve2` is not active but `pve2-storage` is still defined in `/etc/pve/storage.cfg`.
-- Action: confirm whether `pve2` should be formally removed from the cluster and whether the `pve2-storage` entry should be cleaned up.
+- VM `105` still runs on `pve1`. Its role next to Caddy is not confirmed.
+- Action: confirm whether anything still routes through it; decommission or repurpose.
 
-## Ingress: two reverse-proxy VMs
+## Network: finish the VLAN migration
 
-- `ubuntu-nginx-proxy-manager` (VM `100`) and `ubuntu-nginxrpm` (VM `105`) both live on `pve1`.
-- The split between them is not confirmed.
-- Action: decide which is the canonical ingress and either decommission or repurpose the other.
+- Production (20) and Management (50) carry the platform; Admin (10) is lightly used; Preproduction (25), IoT (30), Guest (40), Home (60) are configured but near idle.
+- Legacy guests (all `pve1` Docker VMs, TrueNAS, NAS) still sit on `192.168.1.0/24`.
+- Action: move remaining guests onto the VLAN plan, then write the inter-VLAN firewall policy (current `[DEV]`/`TEMP` allow-all rules are not final).
 
-## Network: `vmbr2`
+## Security: SSO coverage
 
-- `vmbr2` on `pve3` holds `192.168.1.112` but is currently **down**.
-- Action: decide whether this bridge is required, repurpose it, or remove it from the configuration.
+- Authentik `forward_auth` protects selected Caddy routes (e.g. `code`). Most public routes, including this wiki, are currently open.
+- Action: decide the default posture (SSO-by-default vs. explicit public list) and roll `forward_auth` out per route.
+
+## Monitoring: Beszel → Prometheus/Grafana
+
+- Prometheus (`566`) + Grafana (`567`) + PVE exporter (`576`) are live on the private zone; Beszel (`202`) still runs.
+- Action: confirm Grafana as canonical, define alerting/notification channels, then decommission Beszel.
 
 ## Stopped systems pending decision
 
 | Item | Kind | Status | Action |
 |------|------|--------|--------|
 | `mint` (`10001`) | VM on `pve3` | Stopped | Keep as parked lab desktop or remove |
-| `postgresql` (`113`) | LXC on `pve1` | Stopped | Confirm role of the secondary Postgres and either restart or decommission |
-| `debian-test-edragent` (`331`) | LXC on `pve3` | Stopped | EDR test cleanup or revival |
-| `debian-test-edragent2` (`332`) | LXC on `pve3` | Stopped | EDR test cleanup or revival |
-| `hermesagent` (`125`) | LXC on `pve3` | Documented as lab agent | Status to confirm |
+| `lune-pve1` (`6001`) / `lune-pve2` (`6002`) | VMs on `pve3` | Stopped POCs | Remove if the POC is over (512 GB disk each) |
+| `esgi-debian` (`15001`) | LXC on `pve3` | Stopped | Lab cleanup or revival |
+| `hermesagent` (`125`) | LXC on `pve3` | Running lab agent | Confirm owner/purpose |
 
 ## Out of scope
 

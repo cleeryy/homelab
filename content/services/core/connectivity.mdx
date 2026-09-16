@@ -1,0 +1,49 @@
+---
+title: Connectivity
+description: NetBird mesh, AirVPN egress, and WireGuard road-warrior.
+---
+
+Last synced with live infrastructure: **September 2026**. All three terminate on OPNsense (VM `501`).
+
+## NetBird mesh
+
+| Setting | Value |
+|---------|-------|
+| OPNsense interface | `wt0`, `100.121.135.95/16` |
+| Plugin | `os-netbird` 1.3_3 |
+| Peers | 7 online at last observation (relay + direct: production hosts, `pve1`, VPS) |
+| WAN rule | Allow NetBird P2P `udp/51825` (logged) |
+| Outbound NAT | Static-port mapping for NetBird traffic |
+
+NetBird is the always-on management mesh: it reaches the firewall and key hosts even when the ISP-facing path or local DNS is degraded.
+
+## AirVPN privacy egress
+
+| Setting | Value |
+|---------|-------|
+| OPNsense interface | `wg1` (`AirVPN-NL3`), `10.130.184.82/32` + IPv6 ULA |
+| Peer | `AirVPN-NL3-peer`, online, 15 s keepalive (~14 GB RX / ~353 GB TX lifetime at last observation) |
+| Gateway | `AIRVPN_GW` (`10.128.0.1`), online |
+| Policy | `INTERNAL` group → gateway `AIRVPN_GW`, with a **kill-switch** block rule beneath |
+
+If the tunnel drops, affected traffic is blocked rather than leaking to WAN. Tunnel credentials live in the OPNsense configuration backup and are not reproduced here.
+
+## WireGuard road-warrior
+
+| Setting | Value |
+|---------|-------|
+| OPNsense interface | `wg0`, server `10.1.90.1/24`, listen `udp/51920` on WAN |
+| Peers | `m4-air` (`.90.3`), `iphone15` (`.90.2`), `windaube` (`.90.4`) — all offline at last observation |
+| Pushed DNS | `94.140.14.14`, `94.140.15.15` (AdGuard public) |
+
+WAN rule allows WireGuard access (`udp/51920`, logged). Keys live in the OPNsense configuration backup and are not reproduced here.
+
+## Cloudflare tunnels
+
+- `cloudflared` (LXC `103`, `pve1`) and `cloudflared-opnsense` (LXC `511`, `pve3`) provide Cloudflare tunnel egress for selected services.
+
+## Pending
+
+- Which VLANs/hosts are members of the `INTERNAL` AirVPN-routed group (full member list).
+- NetBird peer inventory with owners and ACL policy.
+- Whether the road-warrior peers are still needed (all offline at last observation).

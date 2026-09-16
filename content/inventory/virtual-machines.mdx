@@ -3,35 +3,41 @@ title: Virtual machines
 description: All Proxmox VMs by host node.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 ## `pve1`
 
 | VM ID | Name | Function | Status | Notes |
 |-------|------|----------|--------|-------|
-| `100` | `ubuntu-nginx-proxy-manager` | Reverse proxy / ingress | Running | Nginx Proxy Manager |
-| `102` | `ubuntu-small-webapps` | Docker host for the `web-apps` stack | Running | Beszel IP `192.168.1.23` |
-| `105` | `ubuntu-nginxrpm` | Reverse proxy (second) | Running | Role overlap with `100` pending validation |
-| `200` | `ubuntu-nextcloud` | Docker host for Nextcloud | Running | Beszel IP `192.168.1.27` |
-| `202` | `ubuntu-beszel` | Docker host for Beszel + Portainer + Watchtower + Termix | Running | Beszel IP `192.168.1.25` |
-| `204` | `ubuntu-n8n` | Docker host for n8n + internal Traefik | Running | Beszel IP `192.168.1.13`; Beszel system hostname displayed as `ntfy` |
+| `102` | `ubuntu-small-webapps` | Docker host for the `web-apps` stack | Running | 4 GB RAM, IP `192.168.1.23` |
+| `105` | `ubuntu-nginxrpm` | Legacy reverse proxy | Running | 2 GB RAM; role next to Caddy pending validation |
+| `200` | `ubuntu-nextcloud` | Docker host for Nextcloud | Running | 12 GB RAM, IP `192.168.1.27` |
+| `202` | `ubuntu-beszel` | Docker host for Beszel + Portainer + Watchtower + Termix | Running | 2 GB RAM, IP `192.168.1.25` |
+| `204` | `ubuntu-n8n` | Docker host for n8n + internal Traefik | Running | 4 GB RAM, IP `192.168.1.13`; Beszel system hostname displayed as `ntfy` |
+
+Nginx Proxy Manager (`100`) has been decommissioned.
 
 ## `pve3`
 
 | VM ID | Name | Function | Status | Notes |
 |-------|------|----------|--------|-------|
-| `127` | `truenas` | Storage VM with passed-through disks | Running | Does not move |
-| `300` | `ubuntu-jelly` | Docker host for Jellyfin + Seerr | Running | Beszel IP `192.168.1.31` |
-| `301` | `ubuntu-servarr` | Docker host for the Servarr stack | Running | Beszel IP `192.168.1.26` |
-| `302` | `ubuntu-qbittorrent` | Docker host for qBittorrent + Gluetun | Running | Beszel IP `192.168.1.28` |
-| `401` | `opnsense` | Edge router / firewall | Running | Dual-homed `vmbr0` + `vmbr1` |
-| `10001` | `mint` | Lab desktop | Stopped | Decision pending |
+| `127` | `truenas` | Storage VM with passed-through disks | Running | 8 GB RAM, `192.168.1.74`; does not move |
+| `300` | `ubuntu-jelly` | Docker host for Jellyfin + Seerr | Running | 12 GB RAM, IP `192.168.1.31` |
+| `301` | `ubuntu-servarr` | Docker host for the Servarr stack | Running | 8 GB RAM, IP `192.168.1.26` |
+| `302` | `ubuntu-qbittorrent` | Docker host for qBittorrent + Gluetun | Running | 24 GB RAM, IP `192.168.1.28` |
+| `501` | `opnsense` | Edge router / firewall | Running | 16 GB RAM; WAN `192.168.1.250`, LAN trunk + VLANs |
+| `6001` | `lune-pve1` | POC | **Stopped** | 24 GB RAM, 512 GB disk |
+| `6002` | `lune-pve2` | POC | **Stopped** | 24 GB RAM, 512 GB disk |
+| `10001` | `mint` | Lab desktop | **Stopped** | Decision pending |
 
 ## ID ranges currently in use
 
-- `100–199` — ingress and small platform VMs.
+- `100–199` — legacy VMs (one remaining: `105`).
 - `200–299` — Docker host VMs for application workloads.
 - `300–399` — Docker host VMs for the media stack.
-- `400–499` — edge / network.
+- `500–599` — edge / network (`501` OPNsense).
 - `127` — historical, outside the per-role ranges (TrueNAS).
+- `6000+` — POC VMs.
 - `10000+` — lab desktops.
 
 ## OS notes

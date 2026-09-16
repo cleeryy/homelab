@@ -3,45 +3,47 @@ title: Node roles
 description: What each cluster node actually carries.
 ---
 
+Last synced with live infrastructure: **September 2026** (PVE 9.2.11 on both nodes).
+
 ## `pve1` — infrastructure / management
 
-- Proxmox VE 9.x, management address `192.168.1.101/24` on `vmbr0`.
-- Storage attached: `local`, `local-lvm`, `pve1-storage` (ZFS pool), `nas` (shared NFS).
-- Hosts the ingress layer, the code and database stack, monitoring, the transitional documentation app, and several application VMs that run Docker compose stacks.
-- Higher memory pressure than `pve3` at the time of observation.
+- Proxmox VE 9.2.11 (kernel `7.0.14-8-pve`), management address `192.168.1.101/24` on `vmbr0`. Hardware: 2x Xeon E5-2450v2, 64 GB RAM. Lightly loaded at last observation (loadavg ~2.7).
+- Storage attached: `local`, `local-lvm`, `pve1-storage` (ZFS pool), `nas` + `truenas` (shared NFS), `pbs` (Proxmox Backup Server).
+- Hosts legacy application VMs (Ubuntu 24.04 Docker hosts), the code/database stack, the transitional documentation app, and utility LXCs.
 
-Notable workloads on `pve1`:
+Notable workloads on `pve1` (5 VMs, 8 CTs — verified September 2026):
 
-- Ingress: `ubuntu-nginx-proxy-manager` (`100`), `ubuntu-nginxrpm` (`105`), `cloudflared` (`103`).
-- Code / data: Forgejo (`111`), PostgreSQL (`112`), PostgreSQL stopped (`113`).
-- Documentation / IT: Docmost (`109`), GLPI (`1101`).
-- Utility LXCs: `alpine-rustypaste` (`101`), `bentopdf` (`104`), `elementsynapse` (`107`), `alpine-docker` (`108`), `debian` (`1005`).
-- Application VMs (Ubuntu 24.04 with Docker stacks): `ubuntu-small-webapps` (`102`), `ubuntu-nextcloud` (`200`), `ubuntu-beszel` (`202`), `ubuntu-n8n` (`204`).
+- Application VMs (Ubuntu 24.04 with Docker stacks): `ubuntu-small-webapps` (`102`), `ubuntu-nginxrpm` (`105`, role to be confirmed), `ubuntu-nextcloud` (`200`), `ubuntu-beszel` (`202`), `ubuntu-n8n` (`204`).
+- Code / data: Forgejo (`111`), PostgreSQL (`112`).
+- Documentation: Docmost (`109`, transitional — Fumadocs is canonical).
+- Utility LXCs: `alpine-rustypaste` (`101`), `cloudflared` (`103`), `bentopdf` (`104`), `elementsynapse` (`107`), `alpine-docker` (`108`).
+- Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (`1101`), Nginx Proxy Manager VM (`100`).
 
 ## `pve3` — primary compute / production
 
-- Proxmox VE 9.x, management address `192.168.1.103/24` on `vmbr0`.
-- Additional bridges:
-  - `vmbr1` — host address `10.0.0.124`, internal/routed segment, used by OPNsense `net1`.
-  - `vmbr2` — holds `192.168.1.112`, currently **down**; purpose pending validation.
-- Storage attached: `local`, `local-lvm` (large LVM-thin pool), `nas` (shared NFS). Additional physical disks are passed through to the TrueNAS VM. No active ZFS pool on the host itself.
+- Proxmox VE 9.2.11 (kernel `7.0.14-15-pve`), management address `192.168.1.103/24` on `vmbr0`. Hardware: 2x Xeon Silver 4208 (32 threads), ~172 GiB RAM. Heavily loaded at last observation (loadavg 34–51, ~103 GB RAM used, ~1.1 GB swap used).
+- Only `vmbr0` remains as host bridge (`vmbr1`/`vmbr2` are gone). Static route `10.1.0.0/16 via 10.1.50.1` persists on the host for reaching the VLANs.
+- Storage attached: `local`, `local-lvm` (large LVM-thin pool), `nas` + `truenas` (shared NFS), `pbs`. Additional physical disks are passed through to the TrueNAS VM. No active ZFS pool on the host itself.
 
-Notable workloads on `pve3`:
+Notable workloads on `pve3` (verified September 2026):
 
+- Edge: `opnsense` (`501`, 16 GB RAM).
 - Storage / data: `truenas` (`127`) with attached disks.
-- Edge: `opnsense` (`401`).
+- Ingress / platform: `caddy` (`2010`), `technitium` (`553`, DNS), `authentik` (`130`, SSO), `warpgate` (`222`, bastion), `pbs` (`578`, backups), `wazuh` (`129`, SIEM), `prometheus` (`566`), `grafana` (`567`), `prometheus-pve-exporter` (`576`), `scraparr` (`577`), `cloudflared-opnsense` (`511`).
 - Media VMs (Ubuntu 24.04 with Docker stacks): `ubuntu-jelly` (`300`), `ubuntu-servarr` (`301`), `ubuntu-qbittorrent` (`302`).
-- Lab / desktop: `mint` (`10001`, stopped).
-- LXCs: `apache-guacamole` (`106`), `discopanel` (`110`), `code` (`119`), `forgejo-runner` (`124`), `hermesagent` (`125`), `affine` (`126`), `prod-lockbits` (`310`), `preprod-lockbits` (`320`), `debian-test-edragent` (`331`, stopped), `debian-test-edragent2` (`332`, stopped), `debian-test-edragent3` (`333`).
+- Platform / app LXCs: `apache-guacamole` (`106`), `discopanel` (`110`), `code` (`119`), `forgejo-runner` (`124`), `hermesagent` (`125`), `affine` (`126`), `sure` (`128`), `openwebui` (`131`), `searxng` (`132`), `dynacat` (`151`), `obiwan` (`205`, Dokploy host), `projet-paul` (`257`), `gamevault` (`258`), `immich` (`276`), `palworld` (`4001`), `esgi-docker` (`15002`).
+- Stopped / parked: `mint` (`10001`, lab desktop), `lune-pve1` (`6001`) and `lune-pve2` (`6002`, stopped POC VMs), `esgi-debian` (`15001`, stopped).
+- Deleted since June 2026: `prod-lockbits` (`310`), `preprod-lockbits` (`320`), `debian-test-edragent` (`331`), `debian-test-edragent2` (`332`), `debian-test-edragent3` (`333`).
 
 ## `pve2`
 
-`pve2` is **not active**. It is preserved in cluster metadata and a `pve2-storage` entry survives in `/etc/pve/storage.cfg` for historical reasons. It does not host workloads and is not considered when documenting placement.
+`pve2` has been **fully removed** from the cluster: it is not a member, hosts no workloads, and the `pve2-storage` entry is gone from `/etc/pve/storage.cfg`.
 
 ## Placement notes
 
-- Several apps that fit the "compute" role (Nextcloud, n8n, BentoPDF, Element/Synapse, RustyPaste, small webapps) currently run on `pve1`, not on `pve3`. This is the observed state.
-- Apache Guacamole, an admin gateway that fits the "infra" role, currently runs on `pve3`.
+- Several apps that fit the "compute" role (Nextcloud, n8n, BentoPDF, Element/Synapse, RustyPaste, small webapps) still run on `pve1`, not on `pve3`. This is the observed state.
+- Newer platform services (identity, DNS, backups, monitoring, SIEM, ingress) all run on `pve3` on the production/management VLANs.
 - The Forgejo runner is intentionally on `pve3` to keep CI compute off the infra node.
+- Dokploy (`obiwan`, `205`) is the deployment plane for containerised apps; see [Operations > Dokploy](/operations/dokploy).
 
 These observations are captured in [Service placement](/architecture/service-placement) and are not interpreted as design errors here — they are the live placement.

@@ -3,11 +3,13 @@ title: Networks
 description: Sites, bridges, VLANs, segments, and host addresses.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 ## Sites
 
 | ID | Name | Edge | Notes |
 |----|------|------|-------|
-| `1` | mamie | OPNsense VM `401` (on `pve3`) | Server site, full Proxmox cluster |
+| `1` | mamie | OPNsense VM `501` (on `pve3`) | Server site, full Proxmox cluster |
 | `2` | home | Fortigate 81E | Present but not configured; RPi services sit on the ISP CPE |
 
 Routed networks follow `10.<site>.<vlan>.0/24`; the gateway is always `.1`.
@@ -16,7 +18,7 @@ Routed networks follow `10.<site>.<vlan>.0/24`; the gateway is always `.1`.
 
 | Role | OPNsense iface | Underlying | Address | Notes |
 |------|----------------|-----------|---------|-------|
-| WAN | `wan` | `vtnet0` | DHCP | Public IPv4 dynamic |
+| WAN | `wan` | `vtnet0` | `192.168.1.250/24` (gw `192.168.1.1`) | Behind ISP CPE (double NAT) |
 | LAN | `lan` | `vtnet1` | `10.1.1.1/24` | Untagged on the trunk |
 | Admin | `opt1` | `vlan0.10` | `10.1.10.1/24` | VLAN 10 |
 | Production | `opt2` | `vlan0.20` | `10.1.20.1/24` | VLAN 20 |
@@ -26,6 +28,8 @@ Routed networks follow `10.<site>.<vlan>.0/24`; the gateway is always `.1`.
 | Management | `opt6` | `vlan0.50` | `10.1.50.1/24` | VLAN 50 |
 | Home | `opt7` | `vlan0.60` | `10.1.60.1/24` | VLAN 60 |
 | VPN (WireGuard) | `opt8` | `wg0` | `10.1.90.1/24` | Road-warrior server |
+| AirVPN | `opt9` | `wg1` | `10.130.184.82/32` | Privacy egress client |
+| NetBird | `opt10` | `wt0` | `100.121.135.95/16` | Mesh VPN |
 
 ## DHCP ranges (site 1, served by dnsmasq)
 
@@ -37,14 +41,39 @@ Routed networks follow `10.<site>.<vlan>.0/24`; the gateway is always `.1`.
 
 IoT (`opt4`) is bound by dnsmasq but no DHCP range is defined; the other VLANs do not run DHCP from OPNsense.
 
-## WireGuard peers (site 1)
+## WireGuard road-warrior peers (site 1)
 
 | Peer | Tunnel IP |
 |------|-----------|
 | `m4-air` | `10.1.90.3/32` |
 | `iphone15` | `10.1.90.2/32` |
+| `windaube` | `10.1.90.4/32` |
 
-Listen `udp/51920` on WAN, tunnel `10.1.90.0/24`, peer DNS pushed `94.140.14.14`, `94.140.15.15`.
+Listen `udp/51920` on WAN, tunnel `10.1.90.0/24`, peer DNS pushed `94.140.14.14`, `94.140.15.15`. All peers showed offline at the last observation.
+
+## AirVPN client (site 1)
+
+Interface `wg1`, address `10.130.184.82/32` (+ IPv6 ULA), peer `AirVPN-NL3-peer` online with 15 s keepalive. Gateway `AIRVPN_GW` (`10.128.0.1`) online. The `INTERNAL` group policy-routes outbound traffic through it with a kill-switch beneath.
+
+## NetBird mesh (site 1)
+
+Interface `wt0`, address `100.121.135.95`. Seven peers online at the last observation (relay + direct, including production hosts and `pve1`).
+
+## Key guest addresses (confirmed bindings)
+
+| Guest | Address | How confirmed |
+|-------|---------|---------------|
+| Caddy (`2010`) | `10.1.20.10` | OPNsense NAT target for 80/443 |
+| Warpgate (`222`) | `10.1.20.22` | OPNsense NAT target for SSH (`:2222`) |
+| Palworld (`4001`) | `10.1.20.143` | OPNsense NAT target (UDP 8211/8212/27015) |
+| PBS (`578`) | `10.1.50.78` | PVE `pbs` storage + `:8007` |
+| Technitium (`553`) | `10.1.50.53` | Unbound override for `internal.cleeryy.cloud` |
+| Dokploy host (`obiwan`, `205`) | `10.1.20.5` | Internal DNS + Caddy upstream |
+| TrueNAS (`127`) | `192.168.1.74` | PVE `truenas` NFS storage |
+| NAS | `192.168.1.16` | PVE `nas` NFS storage |
+| `projet-paul` (`257`) | `10.1.25.7` | Preproduction tag |
+
+Other LXC addresses follow the Proxmox tag convention and are indicative until confirmed by a binding above, a DNS record, or DHCP.
 
 ## Bridges (Proxmox, site 1)
 
@@ -52,23 +81,18 @@ Listen `udp/51920` on WAN, tunnel `10.1.90.0/24`, peer DNS pushed `94.140.14.14`
 |--------|------|-----------------|--------|
 | `vmbr0` | `pve1` | `192.168.1.101/24` | Up |
 | `vmbr0` | `pve3` | `192.168.1.103/24` | Up |
-| `vmbr1` | `pve3` | `10.0.0.124` | Up |
-| `vmbr2` | `pve3` | `192.168.1.112` | **Down** |
+
+`vmbr1` and `vmbr2` no longer exist on `pve3`.
 
 ## Legacy segments (site 1)
 
-The Proxmox hosts and the Docker VMs run on the legacy flat network, not on the VLAN plan above.
+Proxmox management and the legacy Docker VMs run on the flat network, not on the VLAN plan above.
 
 | Segment | CIDR | Where it terminates |
 |---------|------|---------------------|
 | Management LAN | `192.168.1.0/24` | `vmbr0` on both nodes |
-| Internal / routed | `10.0.0.0/24` (at least) | `vmbr1` on `pve3`, via OPNsense `net1` |
-
-OPNsense VM `401` connects `net0` to `vmbr0` and `net1` to `vmbr1`.
 
 ## Docker host addresses (site 1, legacy network)
-
-Reported by Beszel:
 
 | Beszel label | IP | Hostname (Beszel) | Proxmox VM | Node |
 |--------------|----|--------------------|------------|------|
@@ -89,7 +113,6 @@ Two hosts (`n8n` and `web-apps`) report the hostname `ntfy`; the cause is not do
 
 ## Pending
 
-- LXC IP addresses.
 - Switch port mapping and inter-node link at site 1.
 - Cable-level wiring diagram.
 - Fortigate base configuration and any VLAN plan at site 2.

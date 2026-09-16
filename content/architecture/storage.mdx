@@ -3,6 +3,8 @@ title: Storage
 description: Proxmox storage pools, shared NFS, and the TrueNAS VM.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 ## Proxmox storage from `/etc/pve/storage.cfg`
 
 | Storage ID | Type | Path / source | Nodes | Content |
@@ -10,16 +12,23 @@ description: Proxmox storage pools, shared NFS, and the TrueNAS VM.
 | `local` | Directory | `/var/lib/vz` | `pve1`, `pve3` | `backup`, `iso`, `vztmpl` |
 | `local-lvm` | LVM-thin | local LVM | `pve1`, `pve3` | `images`, `rootdir` |
 | `pve1-storage` | ZFS pool | local ZFS on `pve1` | `pve1` | Application data on the infra node |
-| `pve2-storage` | (defined) | — | `pve2` | Not part of the active design |
 | `nas` | NFS | `192.168.1.16:/data/pve` | `pve1`, `pve3` | `rootdir`, `iso`, `backup`, `images` (`prune-backups keep-all=1`) |
+| `truenas` | NFS | `192.168.1.74:/mnt/raw/pve` | `pve1`, `pve3` | `rootdir`, `images` |
+| `pbs` | Proxmox Backup Server | `10.1.50.78`, datastore `backupstore` | `pve1`, `pve3` | `backup` |
 
-`pve3` has **no native ZFS pool on the host**. Its persistent data lives on `local-lvm`, on TrueNAS datasets, or on the shared `nas`.
+The `pve2-storage` entry is gone — `pve2` has been fully removed from the cluster. `pve3` has **no native ZFS pool on the host**. Its persistent data lives on `local-lvm`, on TrueNAS datasets, or on the shared NFS mounts.
 
 ## TrueNAS VM
 
-- VM `127` `truenas` runs on `pve3` with multiple physical disks passed through.
-- It exposes datasets (NFS/SMB) to the rest of the cluster.
+- VM `127` `truenas` runs on `pve3` (~8.5 GB RAM in use) with multiple physical disks passed through, reachable at `192.168.1.74`.
+- It exposes datasets over NFS (`/mnt/raw/pve`, mounted as the `truenas` storage on both nodes) and serves SMB shares to the LAN.
 - Dataset-level layout, snapshot schedule, and replication targets are **not captured here**; this page will be extended once the TrueNAS configuration is exported.
+
+## Proxmox Backup Server
+
+- LXC `578` `pbs` on `pve3` (`10.1.50.78:8007`), datastore `backupstore` (~600 GB).
+- Declared as the `pbs` storage on both nodes (token auth `pve@pbs!pve`, DatastoreAdmin on the datastore only).
+- See [Backups](/architecture/backups) for schedules, retention, and off-site sync.
 
 ## Tier model
 
@@ -31,10 +40,9 @@ This is how the storage layer is used in practice:
 | Application data (infra) | `pve1-storage` (ZFS on `pve1`) | Persistent data for infra-side workloads |
 | Application data (compute) | `local-lvm` on `pve3`, TrueNAS datasets | Persistent data for production workloads |
 | Bulk / shared | TrueNAS datasets, `nas` | Media library, large archives, cross-node assets |
-| Backup | `nas` (configured), local Proxmox backups in `local` | See [Backups](/architecture/backups) |
+| Backup | `pbs` (`backupstore`), `nas` (legacy `vzdump` target) | See [Backups](/architecture/backups) |
 
 ## Pending
 
 - TrueNAS dataset enumeration and capacity per pool.
 - Approximate usable capacity for `pve1-storage`, `pve3` `local-lvm`, and `nas`.
-- Whether `pve2-storage` should be removed from `storage.cfg`.

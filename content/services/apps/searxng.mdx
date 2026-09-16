@@ -1,0 +1,27 @@
+---
+title: SearXNG
+description: Private metasearch on the production VLAN.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Placement
+
+- LXC `132` `searxng` on `pve3` (production VLAN, `10.1.20.46` tag; 2 GB RAM).
+
+## Ingress
+
+`search.cleeryy.cloud` → Caddy → `searxng:8888`. No SSO gate currently.
+
+## Dependencies
+
+- Upstream search engines (declared in the SearXNG settings); rate-limiting or engine blocks degrade results without taking the service down.
+
+## Failure impact
+
+- A `pve3` outage takes SearXNG down; stateless — nothing to lose.
+
+## Pending
+
+- Engine list and any private-engine credentials.
+- SSO gate decision (low priority — no user data at rest).

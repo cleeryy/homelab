@@ -1,0 +1,35 @@
+---
+title: Warpgate
+description: SSO SSH bastion — the only SSH entry point.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Components
+
+| Kind | ID | Name | Host | Function |
+|------|----|------|------|----------|
+| LXC | `222` | `warpgate` | `pve3` | SSO SSH bastion, `10.1.20.22` (4 GB RAM) |
+
+## Access paths
+
+| Path | Route | Auth |
+|------|-------|------|
+| SSH from WAN | OPNsense NAT `:22` → `10.1.20.22:2222` | SSO (Authentik) — no raw keys |
+| HTTPS admin | `warpgate.cleeryy.cloud` → Caddy → `https://warpgate:8888` | SSO |
+
+Direct SSH to guests from WAN is denied by design; everything passes through Warpgate policies. Local SSH access uses `~/.ssh/warpgate_ed25519` via the `ssh.cleeryy.cloud` bastion endpoint with short hostnames (`pve3`, `pbs`, `caddy`, …), non-interactive flags, and 30 s keepalives (see the operator runbook, not this wiki).
+
+## Role
+
+Warpgate is the single SSH entry point for the whole homelab: Proxmox nodes (via `pct`/`qm` from the node shell), LXCs, and any SSH-enabled guest. It is in the critical backup job (02:00, keep-last 7).
+
+## Failure impact
+
+- Warpgate down → no SSH access from WAN until it is restored (local console via Proxmox still works).
+- Authentik down → Warpgate SSO validation fails; same effect.
+
+## Pending
+
+- Policy inventory (which SSO users/groups reach which targets).
+- Session logging/auditing posture.

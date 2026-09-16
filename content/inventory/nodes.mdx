@@ -3,37 +3,39 @@ title: Nodes
 description: Physical Proxmox nodes.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 ## Active nodes
 
 | Node | Role | Proxmox VE | Management | Gateway |
 |------|------|-----------|------------|---------|
-| `pve1` | Infrastructure and management | 9.x | `192.168.1.101/24` on `vmbr0` | `192.168.1.1` |
-| `pve3` | Primary compute and production | 9.x | `192.168.1.103/24` on `vmbr0` | `192.168.1.1` |
+| `pve1` | Infrastructure and management | 9.2.11 (kernel `7.0.14-8-pve`) | `192.168.1.101/24` on `vmbr0` | `192.168.1.1` |
+| `pve3` | Primary compute and production | 9.2.11 (kernel `7.0.14-15-pve`) | `192.168.1.103/24` on `vmbr0` | `192.168.1.1` |
 
 ### `pve1`
 
+- Hardware: 2x Intel Xeon E5-2450 v2 @ 2.50 GHz (32 threads), 64 GB RAM. Legacy BIOS boot.
 - Bridges: `vmbr0` (management LAN).
-- Storage attached: `local`, `local-lvm`, `pve1-storage` (ZFS), `nas` (shared NFS).
-- Hosts ingress, code/database/wiki stack, monitoring, application VMs running Docker stacks.
-- Beszel reports ~83 systemd services monitored, no failed services at the last observation.
-- Memory pressure reported higher than `pve3`.
+- Storage attached: `local`, `local-lvm`, `pve1-storage` (ZFS), `nas` + `truenas` (shared NFS), `pbs`.
+- Hosts legacy application VMs running Docker stacks, the code/database stack, and utility LXCs.
+- Lightly loaded at last observation (loadavg ~2.7, ~37 GB RAM used). Uptime ~15 days.
 
 ### `pve3`
 
-- Bridges: `vmbr0` (management LAN), `vmbr1` (`10.0.0.124`, internal/routed), `vmbr2` (`192.168.1.112`, **down**).
-- Storage attached: `local`, `local-lvm` (large LVM-thin pool), `nas` (shared NFS).
+- Hardware: 2x Intel Xeon Silver 4208 @ 2.10 GHz (32 threads), ~172 GiB RAM. EFI boot.
+- Bridges: `vmbr0` only (`vmbr1`/`vmbr2` are gone). Static route `10.1.0.0/16 via 10.1.50.1` persists for reaching the VLANs.
+- Storage attached: `local`, `local-lvm` (large LVM-thin pool), `nas` + `truenas` (shared NFS), `pbs`.
 - Additional physical disks passed through to the TrueNAS VM (`127`).
 - No active ZFS pool on the host.
-- Beszel reports ~82 systemd services monitored, no failed services at the last observation.
+- Heavily loaded at last observation (loadavg 34–51, ~103 GB RAM used, ~1.1 GB swap used). Uptime ~3.8 days.
 
-## Inactive
+## Removed
 
 | Node | Status | Notes |
 |------|--------|-------|
-| `pve2` | Inactive | Not part of the active design. `pve2-storage` entry survives in `/etc/pve/storage.cfg`. |
+| `pve2` | Removed | Ejected from the cluster; no workloads, no storage entry. |
 
 ## Pending capture
 
-- CPU model, core count, and RAM size per node.
 - Disk slot map per node, including which physical disks are passed to TrueNAS.
 - BIOS/firmware levels.

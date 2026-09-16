@@ -1,0 +1,31 @@
+---
+title: Gamevault
+description: Game library backend (intentionally unprotected).
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Placement
+
+- LXC `258` `gamevault` on `pve3` (production VLAN, `10.1.20.58` tag; 4 GB RAM, ~1.2 TB of ~1.8 TB disk in use — the largest single guest on the cluster).
+
+## Ingress
+
+`gamevault.cleeryy.cloud` (public) plus downloader route; served through Caddy like other apps.
+
+## Dependencies
+
+- Backend storage for the game library lives on the LXC disk. Exact mount/volume layout not captured here.
+
+## Backup posture
+
+**Deliberately excluded** from all PBS jobs: ~1.2 TB of replaceable game data. Re-download, don't restore. This exclusion is by design, not an oversight.
+
+## Failure impact
+
+- A `pve3` outage takes Gamevault down. Recovery is re-deployment + re-download, potentially slow on large libraries.
+
+## Pending
+
+- Volume layout and library paths.
+- Re-seed procedure and time estimate.

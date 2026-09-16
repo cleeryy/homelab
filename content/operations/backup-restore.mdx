@@ -3,25 +3,34 @@ title: Backup & restore
 description: Procedures for taking and restoring backups.
 ---
 
-## Configured destinations
+Last synced with live infrastructure: **September 2026**. Last restore drill: booted successfully on **10/09/2026**.
 
-- `local` (`/var/lib/vz`) on each node — accepts `backup`, `iso`, `vztmpl`.
-- `nas` (`192.168.1.16:/data/pve`, NFS) — accepts `rootdir`, `iso`, `backup`, `images`. `prune-backups keep-all=1`.
+## Backup platform
+
+All scheduled backups go to **Proxmox Backup Server** (LXC `578`, `10.1.50.78:8007`, datastore `backupstore` ~600 GB), declared as the `pbs` storage on both nodes.
+
+| Job | Time | Retention | Scope |
+|-----|------|-----------|-------|
+| Critical | 02:00 | keep-last 7 | `130`, `222`, `553`, `2010`, `501` |
+| General | 04:00 | keep-last 3 | All guests except `258` (Gamevault) and `578` (PBS itself) |
+
+Off-site: encrypted rclone sync (`crypt` → Google Drive, `gdrive-crypt:backupstore` + `pbs-config`) daily at 06:00 from CT `578` under `flock` — never run two syncs in parallel. Weekly GC + monthly verify via the PBS UI.
 
 ## Known building blocks
 
-- **Proxmox `vzdump`** for VM and LXC archives.
+- **PBS** for scheduled VM and LXC backups (primary path).
+- **Proxmox `vzdump`** for manual one-off archives (to `local` or `nas`).
 - **ZFS snapshots** on `pve1-storage` for infra-side application data.
 - **TrueNAS snapshots** for the datasets backing media and bulk data.
-- **Docker volumes** for application state on the Docker host VMs — captured by `vzdump` of the host VM, not by a Docker-aware backup.
+- **Docker volumes** for application state on the legacy Docker host VMs — captured by the guest-level backup, not by a Docker-aware backup.
 
 ## Backup procedure (manual)
 
-### `vzdump` for a VM or LXC
+### One-off `vzdump` for a VM or LXC
 
-- [ ] Pick the target storage (`local` or `nas`).
+- [ ] Pick the target storage (`pbs` preferred; `local` or `nas` for scratch copies).
 - [ ] Trigger from the Proxmox UI or `vzdump <vmid> --storage <storage>` on the node hosting the guest.
-- [ ] Confirm the archive landed and its size is consistent with previous runs.
+- [ ] Confirm the backup appears in PBS (or the archive landed) and its size is consistent with previous runs.
 
 ### ZFS snapshot on `pve1-storage`
 
@@ -33,20 +42,23 @@ description: Procedures for taking and restoring backups.
 - [ ] Snapshot the dataset from the TrueNAS UI.
 - [ ] Consider TrueNAS-native replication to an off-chassis target (**pending**).
 
-Schedules and retention values are **not captured here**. Only `prune-backups keep-all=1` on `nas` is documented (no pruning).
+### Dokploy applications
+
+- Application code and images rebuild from Git; what needs backup is the Dokploy state (managed by the PBS backup of `obiwan` / `205`) plus any persistent volumes declared on the app.
+- [ ] When adding a Dokploy app with a volume, record the volume and its restore path on the app's service page.
 
 ## Restore procedure
 
-### Single VM / LXC from `vzdump`
+### Single VM / LXC from PBS
 
-- [ ] Identify the archive (date, source storage, checksum if available).
-- [ ] On the destination node: `qmrestore` for VMs, `pct restore` for LXCs.
+- [ ] Identify the backup (date, guest, datastore `backupstore`).
+- [ ] Restore from the PBS UI or the Proxmox UI onto the destination node.
 - [ ] If the guest holds application data on a separate volume (e.g. `pve1-storage` dataset, TrueNAS share), restore that volume from its snapshot.
 - [ ] Boot and validate end-to-end before swapping ingress / DNS.
 
 ### Docker host application data
 
-- The `vzdump` archive of the host VM captures whatever lives inside the VM at the time of backup, including Docker volumes (assuming they live on the VM disk).
+- The guest-level backup captures whatever lives inside the VM at backup time, including Docker volumes (assuming they live on the VM disk).
 - Application-specific dumps (e.g. `nextcloud-db` SQL dump) are **not** automated by this procedure. Per-service dump steps belong on each service page.
 
 ### Whole-node failure
@@ -54,25 +66,24 @@ Schedules and retention values are **not captured here**. Only `prune-backups ke
 #### `pve1` down
 
 - [ ] Stand up replacement `pve1` (or repair it).
-- [ ] Restore ingress first: `100` Nginx Proxy Manager, `105` `ubuntu-nginxrpm`, `103` `cloudflared`.
 - [ ] Restore `forgejo` (`111`) and `postgresql` (`112`).
-- [ ] Restore `beszel` (`202`).
-- [ ] Restore remaining platform services.
+- [ ] Restore `beszel` (`202`) if still canonical, else confirm Prometheus/Grafana coverage.
+- [ ] Restore remaining guests (`102`, `105`, `200`, `204`, utility LXCs).
 
 #### `pve3` down
 
 - [ ] Stand up replacement `pve3` (or repair it).
-- [ ] Restore `opnsense` (`401`) first if WAN is lost.
+- [ ] Restore `opnsense` (`501`) first if WAN is lost.
+- [ ] Restore `caddy` (`2010`) to bring ingress back.
+- [ ] Restore identity/DNS/backups plane: `130`, `553`, `578` (PBS config + datastore recovery may need the off-site copy).
 - [ ] Restore `truenas` (`127`) and re-attach the passed-through disks; verify pool import on the TrueNAS side.
-- [ ] Restore media stack (`300`, `301`, `302`).
-- [ ] Restore lab and supporting LXCs.
+- [ ] Restore media stack (`300`, `301`, `302`) and remaining LXCs.
 
 ## Test cadence
 
-Restore drills are **not documented**. At least one workload per tier should be exercised; the cadence is to be defined.
+Restore drills are the proof that backups exist. At least one workload per tier should be exercised after any major change; the last successful drill booted on 10/09/2026.
 
 ## Pending
 
-- Per-guest backup schedules and retention.
-- Off-chassis backup target.
-- Documented restore drills.
+- Application-level dump jobs for stateful Docker stacks (Nextcloud DB, n8n).
+- Off-chassis TrueNAS replication target.

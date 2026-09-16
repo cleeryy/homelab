@@ -5,27 +5,33 @@ description: Architecture and operational reference for the home Proxmox cluster
 
 This site is the internal architecture reference for the homelab. It documents the cluster, the workloads currently running on it, the storage and network layout, and the operational notes that go with them.
 
+Last synced with live infrastructure: **September 2026**.
+
 ## Platform at a glance
 
-- Proxmox VE cluster `home`, 9.x line, two active nodes, quorate.
-  - `pve1` at `192.168.1.101/24` — infrastructure and management node.
-  - `pve3` at `192.168.1.103/24` — primary compute and production node.
-- `pve2` is defined in cluster artefacts (including a `pve2-storage` entry) but is not part of the active design.
-- Shared storage: NFS share `nas` from `192.168.1.16:/data/pve`, mounted on both active nodes.
-- Edge router: OPNsense VM (`401`) on `pve3`, dual-homed on `vmbr0` and `vmbr1`.
-- Ingress: Nginx Proxy Manager VM (`100`) and an additional reverse-proxy VM `ubuntu-nginxrpm` (`105`) on `pve1`; a `cloudflared` LXC (`103`) on `pve1` for tunneling.
-- Observability: Beszel VM (`202`) on `pve1` collects host and Docker metrics.
-- Documentation: this Fumadocs site. Docmost (LXC `109`) is still present from the previous setup.
+- Proxmox VE cluster `home`, 9.2.x, two active nodes (`pve1`, `pve3`), quorate.
+  - `pve1` at `192.168.1.101/24` — infrastructure and management node (Xeon E5-2450v2, 64 GB RAM).
+  - `pve3` at `192.168.1.103/24` — primary compute and production node (2x Xeon Silver 4208, ~172 GiB RAM).
+- `pve2` has been fully removed from the cluster (no workloads, no storage entry).
+- Storage: Proxmox Backup Server (`pbs`, CT `578` at `10.1.50.78`), NFS shares `nas` (`192.168.1.16`) and `truenas` (`192.168.1.74`), ZFS pool `pve1-storage` on `pve1`, TrueNAS VM (`127`) on `pve3`.
+- Edge router: OPNsense VM (`501`) on `pve3`, firmware 26.1.x — VLAN trunk, WireGuard road-warrior, AirVPN client with kill-switch, NetBird mesh, CrowdSec + Suricata.
+- Ingress: Caddy LXC (`2010` at `10.1.20.10`) — wildcard `*.cleeryy.cloud` (public) and `*.home.cleeryy.cloud` (private) via Cloudflare DNS-01. Nginx Proxy Manager (VM `100`) has been decommissioned.
+- Identity: Authentik (CT `130`) is the SSO provider; Warpgate (CT `222` at `10.1.20.22`) is the SSO bastion for SSH.
+- DNS: Technitium (CT `553` at `10.1.50.53`) serves `internal.cleeryy.cloud`; Unbound on OPNsense remains the network resolver.
+- Observability: Prometheus (`566`) + Grafana (`567`) + PVE exporter (`576`); Beszel VM (`202`) still runs as legacy monitoring.
+- Deployment: Dokploy v0.30.x on `obiwan` (CT `205` at `10.1.20.5`). This wiki deploys from GitHub via Dokploy and is exposed at `homelab.cleeryy.cloud` through Caddy.
+- Documentation: this Fumadocs site is canonical. Docmost (LXC `109`) is still present pending content migration.
 
 ## Sections
 
 - **[Architecture](/architecture/overview)** — nodes, network, storage, service placement, backups, security.
 - **[Inventory](/inventory/nodes)** — node, VM, LXC, storage, and network assets.
-- **[Operations](/operations/provisioning)** — day-2 procedures.
+- **[Operations](/operations/provisioning)** — day-2 procedures, including Dokploy deployments.
 - **[Services](/services/core/reverse-proxy)** — per-service detail, including Docker stacks inside VMs.
 
 ## Conventions
 
 - Pages describe what is actually running. Where a fact is not in the source material it is marked **unknown** or **pending validation**, never invented.
 - IDs and names match Proxmox exactly: VM and LXC IDs are integers, names are reproduced as displayed.
+- Proxmox tags encode the guest IP: prefix `1.` = `192.168.1.0/24` (legacy LAN), `20.` = `10.1.20.0/24` (production), `25.` = `10.1.25.0/24` (preproduction), `50.` = `10.1.50.0/24` (management). IPs derived from tags alone are treated as indicative until confirmed by DNS, DHCP, or a service binding.
 - Docker workloads are documented as services running **inside their VMs**, not at the Proxmox level.

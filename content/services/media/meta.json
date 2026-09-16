@@ -1,5 +1,5 @@
 {
   "title": "Media",
-  "description": "Media library and acquisition stack",
-  "pages": ["jellyfin", "servarr", "qbittorrent"]
+  "description": "Media library, acquisition, and game servers",
+  "pages": ["jellyfin", "servarr", "qbittorrent", "palworld", "gamevault"]
 }

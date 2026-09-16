@@ -35,12 +35,11 @@ These are currently visible in the live setup and have a decision pending. The d
 | Item | Type | Host | Status |
 |------|------|------|--------|
 | Docmost (`109`) | LXC | `pve1` | After content migration to Fumadocs |
-| PostgreSQL secondary (`113`) | LXC | `pve1` | Stopped; confirm role, then retire if unused |
+| `ubuntu-nginxrpm` (`105`) | VM | `pve1` | After confirming nothing routes through it |
+| Beszel (`202`) | VM | `pve1` | After Grafana coverage is confirmed |
 | `mint` (`10001`) | VM | `pve3` | Stopped; keep parked or remove |
-| `debian-test-edragent` (`331`) | LXC | `pve3` | Stopped; lab cleanup |
-| `debian-test-edragent2` (`332`) | LXC | `pve3` | Stopped; lab cleanup |
-| `pve2-storage` entry | Proxmox storage | — | Cleanup if `pve2` is formally removed |
-| `vmbr2` / `192.168.1.112` | Bridge | `pve3` | Cleanup if not repurposed |
+| `lune-pve1` (`6001`) / `lune-pve2` (`6002`) | VMs | `pve3` | Stopped POCs; remove if the POC is over |
+| `esgi-debian` (`15001`) | LXC | `pve3` | Stopped; lab cleanup |
 
 ## Pending
 

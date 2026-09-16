@@ -1,0 +1,37 @@
+---
+title: Authentik
+description: SSO identity provider.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Components
+
+| Kind | ID | Name | Host | Function |
+|------|----|------|------|----------|
+| LXC | `130` | `authentik` | `pve3` | SSO provider (8 GB RAM) |
+
+## Ingress
+
+- `authentik.cleeryy.cloud` → Caddy → `https://authentik:9443` (`tls_insecure_skip_verify`, self-signed backend).
+- Outpost endpoint `authentik:9000` serves Caddy `forward_auth` (`/outpost.goauthentik.io/auth/caddy`), currently wired on `code.cleeryy.cloud` with `X-Authentik-*` headers forwarded.
+
+## Role
+
+Authentik is the identity provider for humans (SSO logins) and for services (Caddy `forward_auth` gates, Warpgate bastion authentication). It is in the critical backup job (02:00, keep-last 7) — losing it locks out every gated route.
+
+## Dependencies
+
+- Reachable from Caddy (`2010`) and from gated upstreams over the production VLAN.
+- Database backend: not exported into this documentation (likely the shared PostgreSQL `112`; pending validation).
+
+## Failure impact
+
+- Authentik down → SSO logins fail and every `forward_auth` route returns 401/403. Ungated public routes are unaffected.
+- A `pve3` outage takes Authentik with it.
+
+## Pending
+
+- Database wiring confirmation.
+- Provider/factor inventory (which sources, MFA policy).
+- SSO-by-default rollout plan (see the [migration plan](/architecture/migration-plan)).

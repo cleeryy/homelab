@@ -3,32 +3,55 @@ title: Backups
 description: Backup destinations and known policy.
 ---
 
-## Configured destinations
+Last synced with live infrastructure: **September 2026**. Last restore test: booted successfully on **10/09/2026**.
 
-| Destination | Type | Where | Content allowed | Policy |
-|-------------|------|-------|-----------------|--------|
-| `local` | Directory on each node | `/var/lib/vz` on `pve1` and `pve3` | `backup`, `iso`, `vztmpl` | Default Proxmox retention |
-| `nas` | NFS | `192.168.1.16:/data/pve` | `rootdir`, `iso`, `backup`, `images` | `prune-backups keep-all=1` |
+## Backup platform — Proxmox Backup Server
 
-`prune-backups keep-all=1` on `nas` means the configured pruning does not delete any backups. Retention on `local` is whatever the per-job Proxmox configuration sets — **not captured here**.
+| Setting | Value |
+|---------|-------|
+| Host | LXC `578` `pbs` on `pve3`, `10.1.50.78:8007` |
+| Datastore | `backupstore`, ~600 GB |
+| PVE storage | Declared as `pbs` on both nodes (token `pve@pbs!pve`, DatastoreAdmin on the datastore only) |
+| Maintenance | Weekly garbage collection + monthly verify (via PBS UI) |
+
+## Schedules (PVE backup jobs → PBS)
+
+| Job | Time | Retention | Scope |
+|-----|------|-----------|-------|
+| Critical | 02:00 | keep-last 7 | `130` (Authentik), `222` (Warpgate), `553` (Technitium), `2010` (Caddy), `501` (OPNsense) |
+| General | 04:00 | keep-last 3 | All guests **except** `258` (Gamevault, excluded — ~1.2 TB of replaceable game data) and `578` (PBS itself, excluded by design) |
+
+## Off-site copy
+
+- rclone `crypt` remote → Google Drive: `gdrive-crypt:backupstore` + `pbs-config`.
+- Runs daily at 06:00 from CT `578` under `flock` (never run two syncs in parallel).
+
+## Legacy / secondary destinations
+
+| Destination | Type | Content | Policy |
+|-------------|------|---------|--------|
+| `local` | Directory on each node (`/var/lib/vz`) | `backup`, `iso`, `vztmpl` | Per-job Proxmox retention |
+| `nas` | NFS `192.168.1.16:/data/pve` | `rootdir`, `iso`, `backup`, `images` | `prune-backups keep-all=1` (no pruning) |
+
+`nas` is a legacy `vzdump` target, not the primary backup path anymore.
 
 ## Snapshot capabilities
 
+- **PBS snapshots** — the primary restore path for all guests in scope.
 - **ZFS snapshots** on `pve1-storage` (`pve1`) for infra-side application data.
 - **TrueNAS snapshots** for datasets backing media and bulk data on `pve3`.
 
 Snapshots are a recovery feature, not an off-host backup.
 
-## Unknown / pending
-
-- Per-VM and per-LXC backup schedule (cadence, retention).
-- Whether `vzdump` runs against `nas`, `local`, or both for each guest.
-- Whether TrueNAS replicates datasets to an off-site or off-chassis target.
-- Whether the Docker hosts' application data (Nextcloud `nextcloud-db`, n8n state, Servarr config, qBittorrent state) is backed up by an additional path on top of the VM-level `vzdump`.
-
-These items are not documented in the source material and are not guessed at here. See [Operations > Backup & restore](/operations/backup-restore) for procedures.
-
 ## Practical implications
 
-- The `nas` NFS share is the only off-host backup target visible in the storage configuration. It is hosted on `192.168.1.16`, which is on the same management LAN as the rest of the cluster — it is not on a separate failure domain.
-- The TrueNAS VM lives on `pve3`. A `pve3` failure affects both the production workload and a large fraction of the storage layer.
+- A backup that has never been restore-tested does not exist: re-run a restore drill after any major change (last successful drill 10/09/2026).
+- The TrueNAS VM lives on `pve3`. A `pve3` failure affects both the production workload and a large fraction of the storage layer — PBS on the same node shares that fate, which is why the encrypted off-site copy matters.
+- Gamevault (`258`) is intentionally unprotected: re-download, don't restore.
+
+## Pending
+
+- Whether the Docker hosts' application data (Nextcloud `nextcloud-db`, n8n state, Servarr config) gets an additional application-level dump on top of the guest-level PBS backup.
+- Whether TrueNAS replicates datasets to an off-chassis target.
+
+See [Operations > Backup & restore](/operations/backup-restore) for procedures.

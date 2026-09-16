@@ -15,9 +15,11 @@ description: Triage and recovery procedure when something breaks.
 ## Mitigate
 
 - [ ] Apply the smallest change that restores service: restart the container, restart the guest, or restart the host service.
-- [ ] If WAN is lost: check OPNsense (VM `401` on `pve3`).
-- [ ] If ingress is lost: check `100` `ubuntu-nginx-proxy-manager`, `105` `ubuntu-nginxrpm`, and `103` `cloudflared` (all on `pve1`).
-- [ ] If storage is unreachable: check `truenas` (`127`) and the `nas` mount on each affected node.
+- [ ] If WAN is lost: check OPNsense (VM `501` on `pve3`), then the `WAN_GW` / `AIRVPN_GW` gateway status.
+- [ ] If ingress is lost: check `caddy` (`2010` on `pve3`, `10.1.20.10`) and the OPNsense NAT forwards for 80/443.
+- [ ] If SSH is lost: check `warpgate` (`222`) and Authentik (`130`).
+- [ ] If DNS is broken internally: check `technitium` (`553`) and Unbound on OPNsense.
+- [ ] If storage is unreachable: check `truenas` (`127`) and the `nas`/`truenas` mounts on each affected node.
 
 ## Recover
 
@@ -31,9 +33,9 @@ description: Triage and recovery procedure when something breaks.
 
 ## Useful constraints
 
-- Both reverse-proxy VMs live on `pve1`. A `pve1` host outage takes ingress down even if `pve3` is healthy.
-- TrueNAS lives on `pve3`. A `pve3` host outage takes the media stack, lab containers, and a large portion of storage with it.
-- OPNsense lives on `pve3`. A `pve3` host outage takes WAN with it.
+- Caddy (`2010`) is the single ingress. A `pve3` host outage takes ingress, WAN (OPNsense `501`), TrueNAS, and most platform LXCs down at once — triage in that order.
+- TrueNAS lives on `pve3`. A `pve3` host outage takes the media stack and a large portion of storage with it.
+- PBS (`578`) also lives on `pve3`: during a `pve3` outage, restores depend on a fresh PBS or the off-site copy.
 
 ## Pending
 
