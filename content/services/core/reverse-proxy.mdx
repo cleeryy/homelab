@@ -1,46 +1,46 @@
 ---
 title: Reverse proxy
-description: HTTPS ingress for user-facing services.
+description: Caddy — the canonical HTTPS ingress.
 ---
+
+Last synced with live infrastructure: **September 2026**.
 
 ## Components
 
-Two reverse-proxy VMs are visible on `pve1`:
+| Kind | ID | Name | Host | Function |
+|------|----|------|------|----------|
+| LXC | `2010` | `caddy` | `pve3` | Canonical reverse proxy, `10.1.20.10` |
 
-| VM ID | Name | Function |
-|-------|------|----------|
-| `100` | `ubuntu-nginx-proxy-manager` | Nginx Proxy Manager |
-| `105` | `ubuntu-nginxrpm` | Second reverse-proxy VM |
+Nginx Proxy Manager (VM `100`) has been decommissioned. `ubuntu-nginxrpm` (VM `105`) still runs on `pve1` but is no longer the ingress path; its remaining role is tracked in the [migration plan](/architecture/migration-plan).
 
-In addition, an outbound tunnel runs as an LXC:
+## TLS
 
-| CT ID | Name | Function |
-|-------|------|----------|
-| `103` | `cloudflared` | Outbound tunnel for selected services |
+- Wildcard certificates via Cloudflare DNS-01 (`acme_dns cloudflare`), covering `cleeryy.cloud`, `*.cleeryy.cloud`, and `*.home.cleeryy.cloud`.
+- Cloudflare proxy sits in front (public hostnames resolve to Cloudflare Anycast); OPNsense NAT-forwards 80/443 to `10.1.20.10`.
+- Upstreams with self-signed certificates (Authentik, Wazuh, TrueNAS, n8n, Warpgate, PBS, Proxmox UIs) use `tls_insecure_skip_verify` on the Caddy side — TLS is still end-to-end, Caddy just does not validate the backend chain.
 
-## Placement
+## Zones
 
-All three components live on `pve1`.
+Routes live in `/etc/caddy/sites/` on the Caddy host, split in two files trees imported by the main `Caddyfile`:
 
-## Known facts
+- **Public** (`sites/public/`, `*.cleeryy.cloud`): user services. Verified routes include `homelab` → `obiwan:3545` (this wiki), `dokploy` → `obiwan:3000`, `authentik` → `https://authentik:9443`, `code` → `code:8680` (behind Authentik `forward_auth`), `wazuh` → `https://wazuh:443`, `guacamole` → `apache-guacamole:8080`, `immich` → `immich:2283`, `chat` → `openwebui:8080`, `search` → `searxng:8888`, `dashboard` → `dynacat:8080`, `sure` → `sure:3000`, `affine` → `affine:3010`, `mc-dashboard` → `discopanel:8080`, `nextcloud` → `192.168.1.27:8080`, `n8n` → `https://192.168.1.13:443`, `jellyfin`/`jelly` → `192.168.1.31:8096`, `jellyseerr` → `192.168.1.31:5055`, `git` → `192.168.1.69:3000`, `matrix` → `192.168.1.67:8008`, `truenas` → `https://192.168.1.74`, `warpgate` → `https://warpgate:8888`. Unknown hosts get a `404`.
+- **Private** (`sites/private/`, `*.home.cleeryy.cloud`): `pbs` → `https://pbs:8007`, `dns` (Technitium `:5380`), `proxmox`/`pve1`/`pve3` → `:8006`, `nas`, `adguard`, `ha`, plus service-internal routes.
+- Caddy resolves service short names (`obiwan`, `authentik`, `code`, …) via internal DNS (Technitium, `.internal.cleeryy.cloud`).
 
-- Both reverse-proxy VMs are running on the management LAN (`192.168.1.0/24`).
-- The user historically used an Apache-based reverse proxy as well; this documentation focuses on the components that are currently deployed.
-- Per-host certificates, ACME providers, and DNS validation are not exported into this documentation.
+## Adding a route
 
-## Operational notes
-
-- Ingress is the entry point for user-facing services; restarts must be planned with care.
-- A single canonical ingress path is **not confirmed**. Either `100` or `105` could be canonical, or each could front a different subset of services. This is tracked in the [migration plan](/architecture/migration-plan).
+- [ ] Add a `<name>.caddy` file under `sites/public/` (or `sites/private/` for internal-only) following the existing `@name host … / handle @name { reverse_proxy … }` pattern.
+- [ ] If the route must require login, add the Authentik `forward_auth` block (copy from `code.caddy`).
+- [ ] `systemctl reload caddy` (validate via systemd env — a bare `caddy validate` fails on the Cloudflare token outside the service environment).
+- [ ] Test from the Caddy host with a Host header, then over TLS, then from the public internet.
+- [ ] Document the route on the service's wiki page.
 
 ## Failure impact
 
-- If both reverse-proxy VMs are down, all HTTPS-fronted services on the management LAN become unreachable from outside the LAN.
-- If `cloudflared` is down, services routed through the tunnel become unreachable from outside.
-- OPNsense (`401` on `pve3`) is the WAN/router layer and is upstream of all of the above; its failure has broader impact.
+- If Caddy is down, all HTTPS-fronted services become unreachable from outside (and Cloudflare has nothing to talk to).
+- OPNsense (`501` on `pve3`) is upstream of Caddy; its failure has broader impact (WAN + VLAN routing + VPN).
 
 ## Pending
 
-- Definitive split between `100` and `105`.
-- Inventory of upstream services per reverse-proxy host.
-- TLS certificate sources.
+- SSO-by-default decision for public routes (most are currently open; see the [migration plan](/architecture/migration-plan)).
+- Final role or decommission of `ubuntu-nginxrpm` (`105`).

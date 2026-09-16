@@ -3,31 +3,51 @@ title: Service placement
 description: Where each workload currently runs.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 This is a flat view of where services live today. It is descriptive — not aspirational. Group is the role family, host is the Proxmox node, kind is VM or LXC.
 
 ## Edge and ingress
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
-| OPNsense | VM | `401` | `pve3` | Edge router, dual-homed `vmbr0` + `vmbr1` |
-| Nginx Proxy Manager | VM | `100` | `pve1` | `ubuntu-nginx-proxy-manager` |
-| Nginx (secondary) | VM | `105` | `pve1` | `ubuntu-nginxrpm`, role overlap with `100` pending validation |
+| OPNsense | VM | `501` | `pve3` | Edge router, FW 26.1.x — WAN `192.168.1.250`, LAN trunk + 7 VLANs |
+| Caddy | LXC | `2010` | `pve3` | Canonical ingress, `10.1.20.10` — public + private wildcard zones |
+| Nginx (legacy) | VM | `105` | `pve1` | `ubuntu-nginxrpm`, role to be confirmed |
 | cloudflared | LXC | `103` | `pve1` | Outbound tunnel |
+| cloudflared-opnsense | LXC | `511` | `pve3` | Tunnel for edge-adjacent services |
+
+Nginx Proxy Manager (VM `100`) has been decommissioned.
+
+## Identity and access
+
+| Service | Kind | ID | Host | Notes |
+|---------|------|----|------|-------|
+| Authentik (SSO) | LXC | `130` | `pve3` | SSO provider, `authentik.cleeryy.cloud` |
+| Warpgate (bastion) | LXC | `222` | `pve3` | SSO SSH bastion, `10.1.20.22` |
+| Apache Guacamole | LXC | `106` | `pve3` | Remote access gateway |
+| Technitium (DNS) | LXC | `553` | `pve3` | Internal DNS, `10.1.50.53` |
 
 ## Infrastructure / management
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
-| Forgejo | LXC | `111` | `pve1` | Git forge |
+| Forgejo | LXC | `111` | `pve1` | Git forge, `git.cleeryy.cloud` |
 | Forgejo runner | LXC | `124` | `pve3` | CI compute |
 | PostgreSQL | LXC | `112` | `pve1` | Shared database |
-| PostgreSQL (stopped) | LXC | `113` | `pve1` | Currently stopped |
-| Beszel | VM | `202` | `pve1` | Monitoring (ports inside Docker) |
-| GLPI | LXC | `1101` | `pve1` | IT asset management |
+| PBS (backups) | LXC | `578` | `pve3` | Proxmox Backup Server, `10.1.50.78:8007` |
+| Prometheus | LXC | `566` | `pve3` | Metrics (private zone) |
+| Grafana | LXC | `567` | `pve3` | Dashboards (private zone) |
+| PVE exporter | LXC | `576` | `pve3` | Proxmox metrics for Prometheus |
+| Scraparr | LXC | `577` | `pve3` | Exporter for the *arr stack |
+| Wazuh (SIEM) | LXC | `129` | `pve3` | Security monitoring, `wazuh.cleeryy.cloud` |
+| Beszel | VM | `202` | `pve1` | Legacy monitoring (ports inside Docker) |
 | Docmost | LXC | `109` | `pve1` | Transitional documentation; Fumadocs is canonical |
-| Apache Guacamole | LXC | `106` | `pve3` | Remote access gateway |
+| Dokploy host (`obiwan`) | LXC | `205` | `pve3` | Deployment plane, `10.1.20.5` |
 
-## Applications (Docker stacks inside Ubuntu VMs)
+Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (`1101`).
+
+## Applications (Docker stacks inside Ubuntu VMs — legacy)
 
 | Service | Kind | ID | Host | Beszel label | IP |
 |---------|------|----|------|--------------|----|
@@ -35,15 +55,22 @@ This is a flat view of where services live today. It is descriptive — not aspi
 | n8n | VM | `204` | `pve1` | `n8n` | `192.168.1.13` |
 | Small webapps | VM | `102` | `pve1` | `web-apps` | `192.168.1.23` |
 
-## Applications (Proxmox LXCs)
+## Applications (Proxmox LXCs — production VLAN)
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
+| Immich | LXC | `276` | `pve3` | Photo management, `10.1.20.76` |
+| OpenWebUI | LXC | `131` | `pve3` | LLM frontend, `chat.cleeryy.cloud` |
+| SearXNG | LXC | `132` | `pve3` | Private search, `search.cleeryy.cloud` |
 | AFFiNE | LXC | `126` | `pve3` | Collaborative workspace |
+| Dynacat | LXC | `151` | `pve3` | Dashboard, `dashboard.cleeryy.cloud` |
+| Sure | LXC | `128` | `pve3` | Finance app, `sure.cleeryy.cloud` |
+| Code server | LXC | `119` | `pve3` | Dev environment, behind Authentik |
+| Hermes agent | LXC | `125` | `pve3` | Agent host, `10.1.20.41` |
+| Discopanel | LXC | `110` | `pve3` | Game panel, `mc-dashboard.cleeryy.cloud` |
 | BentoPDF | LXC | `104` | `pve1` | PDF utility |
 | RustyPaste | LXC | `101` | `pve1` | Pastebin utility |
 | Element / Synapse | LXC | `107` | `pve1` | Matrix homeserver / client host |
-| Discopanel | LXC | `110` | `pve3` | Application; exact role not documented |
 | Docker host | LXC | `108` | `pve1` | `alpine-docker`, generic Docker host |
 
 ## Media (Docker stacks inside Ubuntu VMs)
@@ -54,32 +81,33 @@ This is a flat view of where services live today. It is descriptive — not aspi
 | Servarr host | VM | `301` | `pve3` | `Servarr` | `192.168.1.26` |
 | qBittorrent host | VM | `302` | `pve3` | `QBittorrent` | `192.168.1.28` |
 
+## Media / games (Proxmox LXCs)
+
+| Service | Kind | ID | Host | Notes |
+|---------|------|----|------|-------|
+| Palworld | LXC | `4001` | `pve3` | Game server, `10.1.20.143`, NAT-published UDP |
+| Gamevault | LXC | `258` | `pve3` | Game library, ~1.2 TB used, excluded from backups |
+
 ## Storage
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
-| TrueNAS | VM | `127` | `pve3` | Passed-through disks; does not move |
+| TrueNAS | VM | `127` | `pve3` | `192.168.1.74`, passed-through disks; does not move |
 
 ## Lab / pre-production / testing
 
 | Service | Kind | ID | Host | Status |
 |---------|------|----|------|--------|
-| `code` | LXC | `119` | `pve3` | Code / dev environment |
-| `prod-lockbits` | LXC | `310` | `pve3` | Lab namespace |
-| `preprod-lockbits` | LXC | `320` | `pve3` | Lab namespace |
-| `hermesagent` | LXC | `125` | `pve3` | Lab agent |
-| `debian-test-edragent` | LXC | `331` | `pve3` | EDR test (stopped) |
-| `debian-test-edragent2` | LXC | `332` | `pve3` | EDR test (stopped) |
-| `debian-test-edragent3` | LXC | `333` | `pve3` | EDR test |
-| `mint` | VM | `10001` | `pve3` | Lab desktop (stopped) |
+| `projet-paul` | LXC | `257` | `pve3` | Running on preproduction (`10.1.25.7`) |
+| `esgi-docker` | LXC | `15002` | `pve3` | Running |
+| `esgi-debian` | LXC | `15001` | `pve3` | **Stopped** |
+| `lune-pve1` | VM | `6001` | `pve3` | **Stopped** POC |
+| `lune-pve2` | VM | `6002` | `pve3` | **Stopped** POC |
+| `mint` | VM | `10001` | `pve3` | **Stopped** lab desktop |
 
-## Utility / parked
-
-| Service | Kind | ID | Host | Status |
-|---------|------|----|------|--------|
-| `debian` | LXC | `1005` | `pve1` | Generic; purpose pending validation |
+Deleted since June 2026: `prod-lockbits` (`310`), `preprod-lockbits` (`320`), all three `debian-test-edragent` containers (`331`–`333`).
 
 ## Notes
 
-- "Beszel label" and "IP" come from Beszel's host list and apply only to the Docker host VMs. LXC IPs are not captured here.
+- "Beszel label" and "IP" come from Beszel's host list and apply only to the Docker host VMs. LXC IPs follow the tag convention (`20.x` → `10.1.20.x`, `50.x` → `10.1.50.x`, `1.x` → `192.168.1.x`) and are confirmed only where a service binding, NAT rule, or DNS record pins them.
 - This table is observed placement, not target placement. There is no implied recommendation to move any service in this view; see the [migration plan](/architecture/migration-plan) for in-flight transitions.

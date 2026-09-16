@@ -3,6 +3,7 @@
   "description": "Day-2 procedures",
   "pages": [
     "provisioning",
+    "dokploy",
     "backup-restore",
     "patching",
     "incident-response",

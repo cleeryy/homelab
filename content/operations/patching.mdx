@@ -15,7 +15,7 @@ Each has a different update mechanism.
 
 ## Proxmox hosts
 
-- Manual `apt update && apt dist-upgrade` on each node.
+- Both nodes run PVE 9.2.11. Manual `apt update && apt dist-upgrade` on each node.
 - Plan host reboots: a node reboot stops all guests on that node.
 - Cluster quorum is fine during a single-node reboot (the surviving node retains quorum on a 2-node cluster only when corosync is configured for it). Confirm quorum-related settings before the first planned reboot.
 
@@ -39,9 +39,14 @@ Each has a different update mechanism.
 
 Pinning policy per stack (which image tags are pinned vs. latest) is **not captured here**.
 
+## Dokploy applications
+
+- Dokploy apps (e.g. this wiki) update by **rebuild + redeploy** from Git, not by Watchtower.
+- After changing an app's configuration (ports, env, volumes) a redeploy is required — saving alone does not recreate the swarm service.
+
 ## Special cases
 
-- **OPNsense** (`401`) — patched from its own UI; reboot interrupts WAN.
+- **OPNsense** (`501`) — patched from its own UI (currently 26.1.x); reboot interrupts WAN, VLAN routing, VPN, and NetBird.
 - **TrueNAS** (`127`) — patched from its own UI; reboot interrupts shared datasets.
 
 ## Operational notes

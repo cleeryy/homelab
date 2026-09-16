@@ -16,6 +16,11 @@ description: Jellyfin stack on the media host.
 | `seerr` | Request management (Jellyseerr / Overseerr family) |
 | `beszel-agent` | Monitoring agent |
 
+## Ingress
+
+- `jellyfin.cleeryy.cloud` (alias `jelly.cleeryy.cloud`) → Caddy → `192.168.1.31:8096`.
+- Requests: `jellyseerr.cleeryy.cloud` → Caddy → `192.168.1.31:5055`.
+
 ## Dependencies
 
 - The media library is expected to live on TrueNAS datasets and to be mounted into the Jellyfin container. The exact mount path is **not captured here**.

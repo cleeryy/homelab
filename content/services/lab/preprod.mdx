@@ -1,31 +1,34 @@
 ---
 title: Pre-production
-description: Pre-production lab containers on `pve3`.
+description: Pre-production project hosts on `pve3`.
 ---
+
+Last synced with live infrastructure: **September 2026**.
 
 ## Components
 
-| Kind | ID | Name | Host | Status |
-|------|----|------|------|--------|
-| LXC | `320` | `preprod-lockbits` | `pve3` | Running |
-| LXC | `310` | `prod-lockbits` | `pve3` | Running |
+| Kind | ID | Name | Host | Status | Notes |
+|------|----|------|------|--------|-------|
+| LXC | `257` | `projet-paul` | `pve3` | Running | On the preproduction VLAN (`10.1.25.7`) |
+| LXC | `15002` | `esgi-docker` | `pve3` | Running | Project Docker host (`10.1.20.152` tag) |
+| LXC | `15001` | `esgi-debian` | `pve3` | **Stopped** | Lab cleanup or revival |
 
-`prod-lockbits` is documented alongside `preprod-lockbits` because they are part of the same lab namespace.
+The old `lockbits` preproduction/production containers (`310`, `320`) have been deleted.
 
 ## Purpose
 
-These containers are part of a `lockbits` lab namespace. The specific functional purpose is **not captured here**.
+Project-specific hosts that are not part of the production data path. `projet-paul` is the only guest currently living on the preproduction VLAN, which otherwise sits idle.
 
 ## Placement
 
-- Both run on `pve3` under the lab namespace.
+- All pre-production workloads live on `pve3`, separated from production stacks by VLAN (for `257`) or by convention.
 
 ## Operational notes
 
 - These are lab workloads. They are not part of the production data path and should not be relied on by user-facing services.
+- Backup posture: covered by the general PBS job; per-guest restore priority is best-effort.
 
 ## Pending
 
-- Functional description of each `lockbits` container.
-- Network reachability and exposure model.
-- Backup posture (likely none — lab workloads are typically ephemeral).
+- Functional description of `projet-paul` and `esgi-docker`.
+- Network reachability and exposure model for each.

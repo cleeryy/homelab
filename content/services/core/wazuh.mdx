@@ -1,0 +1,31 @@
+---
+title: Wazuh
+description: SIEM for security monitoring.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Components
+
+| Kind | ID | Name | Host | Function |
+|------|----|------|------|----------|
+| LXC | `129` | `wazuh` | `pve3` | SIEM (8 GB RAM) |
+
+## Ingress
+
+`wazuh.cleeryy.cloud` → Caddy → `https://wazuh:443` (`tls_insecure_skip_verify`). No SSO gate currently — hardening tracked in the [migration plan](/architecture/migration-plan).
+
+## Role
+
+Central security monitoring alongside OPNsense Suricata/CrowdSec. Agent deployment across internal hosts is the expected next step; the enrolled-agent inventory is pending.
+
+## Failure impact
+
+- Wazuh down → loss of centralised security visibility; no production traffic impact.
+
+## Pending
+
+- Enrolled agent inventory (which hosts, which agent versions).
+- Alert rules and notification channels.
+- Indexer retention policy.
+- SSO gate for the dashboard.

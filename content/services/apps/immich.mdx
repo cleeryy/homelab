@@ -1,0 +1,29 @@
+---
+title: Immich
+description: Photo management on the production VLAN.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Placement
+
+- LXC `276` `immich` on `pve3` (production VLAN, `10.1.20.76` tag; 6 GB RAM).
+
+## Ingress
+
+`immich.cleeryy.cloud` → Caddy → `immich:2283`. No SSO gate currently.
+
+## Dependencies
+
+- Object storage / database live on the LXC root disk (`local-lvm` on `pve3`); exact volume layout not captured here.
+- Covered by the general PBS job; application-level backup posture (libraries, thumbnails, ML data) is pending.
+
+## Failure impact
+
+- A `pve3` outage takes Immich down with the rest of the production VLAN.
+
+## Pending
+
+- Storage layout and library volume location.
+- Backup/restore path for the photo library and database.
+- SSO gate decision.

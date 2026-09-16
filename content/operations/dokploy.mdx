@@ -1,0 +1,41 @@
+---
+title: Dokploy
+description: Container deployment plane on `obiwan`.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Components
+
+| Kind | ID | Name | Host | Function |
+|------|----|------|------|----------|
+| LXC | `205` | `obiwan` | `pve3` | Dokploy host, `10.1.20.5` (4 GB RAM) |
+
+Dokploy v0.30.x runs in Docker Swarm mode on `obiwan`: `dokploy` (`:3000`), `dokploy-postgres` (`:5432` internal), and its own `dokploy-traefik` (binds `:80`/`:443` on the host for Dokploy-managed domains).
+
+## Ingress model
+
+WAN → Cloudflare → OPNsense NAT (`:80`/`:443` → `10.1.20.10`) → **Caddy** → Dokploy apps. Caddy stays the single ingress: Dokploy's Traefik is left alone (internal use), and each app is exposed with a Caddy route to the published host port on `obiwan`.
+
+- Dokploy UI: `dokploy.cleeryy.cloud` → Caddy → `obiwan:3000`.
+- This wiki: `homelab.cleeryy.cloud` → Caddy → `obiwan:3545`.
+
+## Deploying an app (learned the hard way)
+
+1. Create the application in the Dokploy UI (from the Git repository), configure build + environment.
+2. **Publish the port**: add a port mapping (host → container, TCP) in the app's Ports section. A Dokploy swarm service with no published port is reachable only inside the overlay network — Caddy will get connection-refused.
+3. **Redeploy** (saving alone does not recreate the swarm service).
+4. Verify on `obiwan`: `docker ps` shows `0.0.0.0:<port>-><port>` and `curl http://localhost:<port>/` returns `200`.
+5. Add the Caddy route (`/etc/caddy/sites/public/<app>.caddy`, `reverse_proxy obiwan:<port>`), `systemctl reload caddy`.
+6. Test Host-header → TLS → public URL, then document the route on the app's wiki page.
+
+## Failure impact
+
+- `obiwan` down → all Dokploy apps down, including this wiki (stateless — rebuild from Git once the host is back).
+- Dokploy's own state (apps, volumes) is covered by the general PBS backup of CT `205`. When adding an app with a persistent volume, record the volume and its restore path on the app's page.
+
+## Pending
+
+- Persistent-volume inventory across Dokploy apps.
+- Whether Dokploy-managed domains (Traefik) should ever be used directly instead of Caddy (current answer: no).
+- Dokploy backup/restore drill for the platform itself.

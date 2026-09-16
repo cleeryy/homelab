@@ -3,6 +3,8 @@ title: Storage assets
 description: Storage pools and the TrueNAS VM.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 ## Storage IDs from `/etc/pve/storage.cfg`
 
 | Storage ID | Type | Path / source | Nodes | Content |
@@ -10,8 +12,9 @@ description: Storage pools and the TrueNAS VM.
 | `local` | Directory | `/var/lib/vz` | `pve1`, `pve3` | `backup`, `iso`, `vztmpl` |
 | `local-lvm` | LVM-thin | Local LVM | `pve1`, `pve3` | `images`, `rootdir` |
 | `pve1-storage` | ZFS | Local ZFS on `pve1` | `pve1` | — |
-| `pve2-storage` | (defined) | — | `pve2` | Inactive; cluster artefact |
-| `nas` | NFS | `192.168.1.16:/data/pve` | `pve1`, `pve3` | `rootdir`, `iso`, `backup`, `images` |
+| `nas` | NFS | `192.168.1.16:/data/pve` | `pve1`, `pve3` | `rootdir`, `iso`, `backup`, `images` (`prune-backups keep-all=1`) |
+| `truenas` | NFS | `192.168.1.74:/mnt/raw/pve` | `pve1`, `pve3` | `rootdir`, `images` |
+| `pbs` | PBS | `10.1.50.78`, datastore `backupstore` | `pve1`, `pve3` | `backup` |
 
 NFS-specific options for `nas`:
 
@@ -27,9 +30,10 @@ NFS-specific options for `nas`:
 
 ## TrueNAS
 
-- VM `127` `truenas` on `pve3`.
+- VM `127` `truenas` on `pve3` (`192.168.1.74`), ~8.5 GB RAM in use.
 - Multiple physical disks passed through.
-- Exposes datasets to the rest of the cluster (NFS/SMB are typical, exact share list not captured here).
+- Exposes `/mnt/raw/pve` over NFS (mounted as the `truenas` storage on both nodes) and serves SMB shares to the LAN.
+- The exact share/dataset list is not captured here.
 
 ## Pending capture
 

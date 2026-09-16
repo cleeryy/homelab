@@ -1,0 +1,28 @@
+---
+title: OpenWebUI
+description: LLM frontend on the production VLAN.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Placement
+
+- LXC `131` `openwebui` on `pve3` (production VLAN, `10.1.20.31` tag; 8 GB RAM).
+
+## Ingress
+
+`chat.cleeryy.cloud` → Caddy → `openwebui:8080`. No SSO gate currently — SSO is recommended for any AI frontend holding API keys.
+
+## Dependencies
+
+- Backend model provider (local inference vs. hosted API) is not captured here; the backing provider determines the real failure domain.
+
+## Failure impact
+
+- A `pve3` outage takes the frontend down; hosted-model usage from other clients is unaffected.
+
+## Pending
+
+- Backend provider wiring and key management/rotation.
+- SSO gate decision.
+- Backup posture for chats/settings volume.

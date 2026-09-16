@@ -27,7 +27,7 @@ description: Nextcloud stack inside a dedicated Docker host VM.
 ## Dependencies
 
 - The Nextcloud stack is self-contained: database, cache, and document editor all run on the same host.
-- Ingress goes through the reverse-proxy layer on `pve1` — exact route not captured here.
+- Ingress: `nextcloud.cleeryy.cloud` → Caddy → `192.168.1.27:8080`.
 - Storage paths (whether user files live on the local VM disk, on `nas`, or on a TrueNAS share) are **not captured here**.
 
 ## Operational notes

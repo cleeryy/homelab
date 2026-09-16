@@ -3,11 +3,13 @@ title: Forgejo
 description: Git forge with a dedicated CI runner.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 ## Components
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
-| LXC | `111` | `forgejo` | `pve1` | Git forge |
+| LXC | `111` | `forgejo` | `pve1` | Git forge, `192.168.1.69` |
 | LXC | `124` | `forgejo-runner` | `pve3` | CI runner |
 
 ## Placement
@@ -25,14 +27,15 @@ description: Git forge with a dedicated CI runner.
 
 ## Ingress
 
-- Web UI is reachable via the reverse-proxy layer on `pve1`. The exact hostname / route is not captured here.
+- Web UI at `git.cleeryy.cloud` → Caddy → `192.168.1.69:3000`. No SSO gate currently.
 
 ## Operational notes
 
 - The runner depends on connectivity from `pve3` to the forge on `pve1`. A `pve1` outage halts CI even if `pve3` is up.
+- The forge hosts the `homelab` wiki repository that Dokploy builds; a `pve1` outage blocks wiki redeploys (the running site is unaffected).
 
 ## Pending
 
 - Database wiring details (which Postgres, schema name, credentials path).
-- Backup and restore path for `gitea`/`forgejo` data.
+- Backup and restore path for Forgejo data (covered by the general PBS job; application-level dump status unknown).
 - Runner labels and which repositories use the runner.

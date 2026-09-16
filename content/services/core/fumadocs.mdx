@@ -3,14 +3,18 @@ title: Fumadocs (this wiki)
 description: The canonical documentation site.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 ## Purpose
 
-This Fumadocs site is the canonical documentation surface for the homelab. It is deployed from the `homelab-wiki` repository.
+This Fumadocs site is the canonical documentation surface for the homelab. It is deployed from the `cleeryy/homelab` repository (`homelab-wiki` package).
 
 ## Placement
 
-- Hosted from the `homelab-wiki` repository.
-- Deployed as a containerised Next.js application; placement is **pending** confirmation against the live ingress.
+- **Built** by Dokploy on `obiwan` (CT `205`) from the `main` branch.
+- **Run** as the Dokploy swarm service `homelab-documentation-homelabdocsapp`, with host port `3545` published → container `3545`.
+- **Exposed** at `homelab.cleeryy.cloud` via Caddy (`reverse_proxy obiwan:3545`). No SSO (deliberate, public documentation).
+- See [Operations > Dokploy](/operations/dokploy) for the deployment procedure. Key lesson: a Dokploy app is unreachable from Caddy until its port is explicitly published and the app redeployed.
 
 ## Relation to Docmost
 
@@ -19,10 +23,11 @@ This Fumadocs site is the canonical documentation surface for the homelab. It is
 
 ## Build and run
 
-- Stack: Next.js 16 + Fumadocs v16, pnpm.
-- Build: `pnpm build`. Image is produced from the repository's `Dockerfile` (standalone Next.js output).
-- Local dev: `pnpm dev` on port `3545`.
+- Stack: Next.js 16 + Fumadocs v16, pnpm 9.
+- Local dev: `pnpm install && pnpm dev` on port `3545`.
+- Production: `pnpm build` → standalone output; the repo `Dockerfile` produces the image Dokploy builds.
+- CI: GitHub Actions runs install, lint, and build on every push/PR.
 
 ## Failure impact
 
-- The wiki is stateless. Content lives in Git. A site outage does not lose data.
+- The wiki is stateless. Content lives in Git; the Dokploy host holds no unique data. A site outage loses no data — rebuild from `main`.

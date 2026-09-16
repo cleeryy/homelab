@@ -1,0 +1,33 @@
+---
+title: Palworld
+description: Dedicated game server with NAT-published ports.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Placement
+
+- LXC `4001` `palworld` on `pve3` (production VLAN, `10.1.20.143`; 32 GB RAM allocated).
+
+## Ingress
+
+Dedicated game ports via OPNsense NAT (all UDP → `10.1.20.143`): `8211`, `8212`, `27015`. No Caddy involvement — raw game traffic. Source-IP restriction is recommended but not confirmed in place.
+
+## Dependencies
+
+- Save data lives on the LXC disk; covered by the general PBS job. Save-restore procedure is not documented here.
+
+## Failure impact
+
+- A `pve3` outage takes the game server down. Worlds persist on disk.
+
+## Operational notes
+
+- Game servers attract unsolicited WAN traffic; watch OPNsense/CrowdSec logs after any player-slot change.
+- Updates wipe no data in the standard layout, but snapshot before updating anyway.
+
+## Pending
+
+- Save-data backup/restore drill.
+- Source-IP restriction status.
+- Update procedure.

@@ -1,0 +1,44 @@
+---
+title: Proxmox Backup Server
+description: Central backup platform + encrypted off-site sync.
+---
+
+Last synced with live infrastructure: **September 2026**.
+
+## Components
+
+| Kind | ID | Name | Host | Function |
+|------|----|------|------|----------|
+| LXC | `578` | `pbs` | `pve3` | Proxmox Backup Server, `10.1.50.78:8007` |
+
+Datastore `backupstore` (~600 GB). Declared as the `pbs` storage on both Proxmox nodes (token `pve@pbs!pve`, DatastoreAdmin on the datastore only).
+
+## Schedules
+
+| Job | Time | Retention | Scope |
+|-----|------|-----------|-------|
+| Critical | 02:00 | keep-last 7 | `130`, `222`, `553`, `2010`, `501` |
+| General | 04:00 | keep-last 3 | All guests except `258` (Gamevault) and `578` (itself) |
+
+## Off-site
+
+Encrypted rclone `crypt` sync to Google Drive (`gdrive-crypt:backupstore` + `pbs-config`), daily 06:00 from CT `578` under `flock`. Never run two syncs in parallel.
+
+## Maintenance and proof
+
+- Weekly garbage collection + monthly verify via the PBS UI.
+- Last restore drill booted successfully on **10/09/2026**. Re-drill after any major change — an untested backup does not exist.
+
+## Admin UI
+
+`pbs.home.cleeryy.cloud` → Caddy → `https://pbs:8007` (private zone).
+
+## Failure impact
+
+- PBS down → scheduled backups stop; existing backups remain on the datastore but are not taken. The off-site copy continues to reflect the last successful sync.
+- PBS shares a node (`pve3`) with most of what it protects — the encrypted off-site copy is the real disaster-recovery path.
+
+## Pending
+
+- Datastore usage headroom and growth trend.
+- GC/verify job history export.

@@ -21,7 +21,7 @@ description: n8n workflow automation behind an internal Traefik.
 
 ## Dependencies
 
-- The stack includes its own Traefik. Whether traffic enters this Traefik directly or first transits the cluster-level reverse proxy on `pve1` is **not captured here**.
+- The stack includes its own Traefik. Traffic enters via Caddy (`n8n.cleeryy.cloud` → `https://192.168.1.13:443`, backend certificate not validated) and then hits this internal Traefik.
 - n8n state (workflows, credentials) is stored locally in the n8n container's data directory.
 
 ## Operational notes

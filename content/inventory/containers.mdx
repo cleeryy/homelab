@@ -3,7 +3,9 @@ title: Containers
 description: All Proxmox LXCs by host node.
 ---
 
-## `pve1`
+Last synced with live infrastructure: **September 2026** (`pct list` on both nodes).
+
+## `pve1` (8 containers)
 
 | CT ID | Name | Function | Status |
 |-------|------|----------|--------|
@@ -15,28 +17,46 @@ description: All Proxmox LXCs by host node.
 | `109` | `docmost` | Transitional documentation | Running |
 | `111` | `forgejo` | Git forge | Running |
 | `112` | `postgresql` | Shared database | Running |
-| `113` | `postgresql` | Secondary database | **Stopped** |
-| `1005` | `debian` | Generic utility | Running; purpose pending validation |
-| `1101` | `glpi` | IT asset management | Running |
 
-## `pve3`
+Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (`1101`).
+
+## `pve3` (28 containers)
 
 | CT ID | Name | Function | Status |
 |-------|------|----------|--------|
 | `106` | `apache-guacamole` | Remote access gateway | Running |
-| `110` | `discopanel` | Application; exact role not documented | Running |
+| `110` | `discopanel` | Game panel | Running |
 | `119` | `code` | Code / dev environment | Running |
 | `124` | `forgejo-runner` | Forgejo CI runner | Running |
 | `125` | `hermesagent` | Lab agent | Running |
 | `126` | `affine` | AFFiNE collaborative workspace | Running |
-| `310` | `prod-lockbits` | Lab namespace | Running |
-| `320` | `preprod-lockbits` | Lab namespace | Running |
-| `331` | `debian-test-edragent` | EDR test | **Stopped** |
-| `332` | `debian-test-edragent2` | EDR test | **Stopped** |
-| `333` | `debian-test-edragent3` | EDR test | Running |
+| `128` | `sure` | Finance app | Running |
+| `129` | `wazuh` | SIEM | Running |
+| `130` | `authentik` | SSO provider | Running |
+| `131` | `openwebui` | LLM frontend | Running |
+| `132` | `searxng` | Private search | Running |
+| `151` | `dynacat` | Dashboard | Running |
+| `205` | `obiwan` | Dokploy host | Running |
+| `222` | `warpgate` | SSO SSH bastion | Running |
+| `257` | `projet-paul` | Project host (preproduction) | Running |
+| `258` | `gamevault` | Game library | Running |
+| `276` | `immich` | Photo management | Running |
+| `511` | `cloudflared-opnsense` | Outbound tunnel | Running |
+| `553` | `technitium` | Internal DNS | Running |
+| `566` | `prometheus` | Metrics | Running |
+| `567` | `grafana` | Dashboards | Running |
+| `576` | `prometheus-pve-exporter` | Proxmox metrics | Running |
+| `577` | `scraparr` | *arr exporter | Running |
+| `578` | `pbs` | Proxmox Backup Server | Running |
+| `2010` | `caddy` | Reverse proxy / ingress | Running |
+| `4001` | `palworld` | Game server | Running |
+| `15002` | `esgi-docker` | Project Docker host | Running |
+| `15001` | `esgi-debian` | Project host | **Stopped** |
+
+Deleted since June 2026: `prod-lockbits` (`310`), `preprod-lockbits` (`320`), `debian-test-edragent` (`331`), `debian-test-edragent2` (`332`), `debian-test-edragent3` (`333`).
 
 ## Notes
 
-- LXCs are used for single-purpose system services. Multi-container application stacks are deployed inside the Ubuntu VMs documented under [Virtual machines](/inventory/virtual-machines), not directly on Proxmox.
-- LXC IPs are not captured here.
+- LXCs are the dominant pattern for platform services. Multi-container application stacks are still deployed inside the Ubuntu VMs documented under [Virtual machines](/inventory/virtual-machines), not directly on Proxmox.
+- LXC IPs follow the tag convention (`1.x` → `192.168.1.x`, `20.x` → `10.1.20.x`, `25.x` → `10.1.25.x`, `50.x` → `10.1.50.x`); see [Networks](/inventory/networks).
 - `108` `alpine-docker` is documented as a generic Docker host; its specific workloads, if any, are not captured.

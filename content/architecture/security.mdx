@@ -3,41 +3,45 @@ title: Security
 description: Observed trust boundaries and exposure model.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 ## Trust boundaries
 
-- **WAN** — terminated by OPNsense (VM `401`) on `pve3`. WAN policy is defined inside OPNsense and is not exported into this documentation.
-- **Management LAN** — `192.168.1.0/24` on `vmbr0`. Proxmox hosts, Docker hosts, ingress VMs, and the NAS all sit on this segment.
-- **Internal / routed** — `10.0.0.0/24` (at least) on `vmbr1`, reached through OPNsense `net1` on `pve3`.
-
-The current segmentation is binary at the bridge level (management LAN vs. internal/routed). VLANs and finer-grained zones are not confirmed.
+- **WAN** — terminated by OPNsense (VM `501`) on `pve3`, behind the ISP CPE (double NAT). Inbound ports are limited to the NAT forwards listed in [Network](/architecture/network): Caddy 80/443, Warpgate SSH, Palworld UDP, WireGuard `udp/51920`, NetBird P2P `udp/51825`.
+- **Public services** — TLS-terminated by Caddy (`2010`) with Cloudflare-managed wildcard certificates. No service is exposed directly; everything public goes through Caddy routes.
+- **Private services** — `*.home.cleeryy.cloud` zone on the same Caddy (PBS, Proxmox UIs, Technitium, NAS). Reachable from WAN through the same NAT forwards; network-level restriction to VPN/management networks is **pending**.
+- **VLANs** — Admin (10), Production (20), Preproduction (25), IoT (30), Guest (40), Management (50), Home (60) exist at the OPNsense layer, but inter-VLAN isolation policy is **not in place yet** (allow-all rules with `[DEV]`/`TEMP` markers persist).
+- **Legacy LAN** — `192.168.1.0/24`: Proxmox management, legacy Docker VMs, NAS, TrueNAS. Flat, no segmentation.
 
 ## Ingress
 
-- HTTPS termination is handled by reverse-proxy VMs on `pve1`:
-  - `ubuntu-nginx-proxy-manager` (`100`).
-  - `ubuntu-nginxrpm` (`105`).
-- A `cloudflared` LXC (`103`) on `pve1` provides outbound tunneling for selected services.
+- HTTPS termination is handled exclusively by **Caddy** (LXC `2010` at `10.1.20.10`). Nginx Proxy Manager (VM `100`) has been decommissioned.
+- Selected routes (e.g. `code.cleeryy.cloud`) enforce Caddy `forward_auth` against Authentik. The wiki and most services are currently **public without SSO** — a deliberate temporary state, tracked in the [migration plan](/architecture/migration-plan).
+- `cloudflared` LXCs (`103`, `511`) provide Cloudflare tunnel egress for selected services.
 
-The split between the two reverse-proxy VMs is not confirmed and is a known piece of ambiguity in the ingress path.
+## Identity and remote access
 
-## Remote access
+- **Authentik** (LXC `130`) is the SSO provider for humans and for Caddy `forward_auth`.
+- **Warpgate** (LXC `222` at `10.1.20.22`) is the only SSH entry point: WAN `:22` NAT-forwards to Warpgate `:2222`, authenticated via SSO. Direct SSH to guests from WAN is denied by design.
+- **Guacamole** (LXC `106`) remains as a browser-based remote-access gateway behind Caddy.
 
-- `apache-guacamole` (LXC `106`) on `pve3` is the visible remote-access gateway.
+## Egress and privacy
 
-## Egress
+- The `INTERNAL` interface group on OPNsense routes outbound traffic via the **AirVPN** WireGuard client, with a **kill-switch** block rule beneath it — tunnel down means no egress, not clearnet leakage.
+- Several media-stack Docker containers route through `gluetun` at the compose level (Servarr host, qBittorrent host).
 
-- `cloudflared` (LXC `103`) — tunnel egress for selected services.
-- Several Docker stacks include `gluetun` (VPN client) at the compose level:
-  - `Servarr` host.
-  - `QBittorrent` host.
-- The exact services routed through `gluetun` are managed inside each compose stack and not captured here.
+## Detection
+
+- **Suricata** (IDS) runs on OPNsense; **CrowdSec** is active (6 recent alerts at last observation, including port-scan bans — one set names the Caddy host itself, likely proxy log-noise; rule tuning is pending).
+- **Wazuh** (LXC `129`, `wazuh.cleeryy.cloud`) is the SIEM; agents on internal hosts are pending inventory.
 
 ## Known operational observations
 
-- `gluetun` on the `QBittorrent` host was reported as **unhealthy** at the time of the last observation. This is a transient state, not a configuration finding, but worth flagging.
+- `gluetun` on the `QBittorrent` host has been reported **unhealthy** more than once. When `gluetun` is unhealthy, `qbittorrent` loses egress. This is the most common single failure on that host.
+- `portainer` on the `Nextcloud` host has been observed in a restarting loop without taking Nextcloud itself down (transient).
 
 ## Out of scope for this page
 
 - Identity, account, secret, and credential management: not exported into this documentation.
 - Per-service TLS configuration: see each service page.
-- WAN-side firewall rules: live in OPNsense.
+- Full WAN-side firewall rules: live in OPNsense; summary in [Network](/architecture/network).

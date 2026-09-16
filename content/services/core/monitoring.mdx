@@ -1,27 +1,23 @@
 ---
 title: Monitoring
-description: Beszel server and per-host agents.
+description: Prometheus + Grafana stack (Beszel legacy).
 ---
+
+Last synced with live infrastructure: **September 2026**.
 
 ## Components
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
-| VM | `202` | `ubuntu-beszel` | `pve1` | Beszel server (Docker host) |
+| LXC | `566` | `prometheus` | `pve3` | Metrics collection (private zone) |
+| LXC | `567` | `grafana` | `pve3` | Dashboards (private zone) |
+| LXC | `576` | `prometheus-pve-exporter` | `pve3` | Proxmox metrics for Prometheus |
+| LXC | `577` | `scraparr` | `pve3` | Exporter for the *arr stack |
+| VM | `202` | `ubuntu-beszel` | `pve1` | Legacy Beszel server (to be decommissioned) |
 
-The Beszel server VM runs the following Docker containers:
+Prometheus/Grafana are the current monitoring path; Beszel is legacy and still runs on `pve1` (`192.168.1.25`) with a `beszel-agent` on every legacy Docker host VM. The canonical cutover is tracked in the [migration plan](/architecture/migration-plan).
 
-| Container | Purpose |
-|-----------|---------|
-| `beszel` | Beszel server |
-| `beszel-agent` | Local agent on the Beszel host |
-| `portainer` | Container management UI |
-| `termix` | Application present on the host; specific role not documented |
-| `watchtower` | Image auto-update for containers |
-
-A `beszel-agent` container is also deployed on every Docker host VM. Proxmox hosts (`pve1`, `pve3`) report systemd-level metrics into Beszel as well.
-
-## Beszel host inventory
+## Beszel host inventory (legacy)
 
 | Beszel label | IP | Hostname (Beszel) | Backing Proxmox VM | Node |
 |--------------|----|--------------------|---------------------|------|
@@ -33,18 +29,19 @@ A `beszel-agent` container is also deployed on every Docker host VM. Proxmox hos
 | `Servarr` | `192.168.1.26` | `servarr` | `301` | `pve3` |
 | `web-apps` | `192.168.1.23` | `ntfy` | `102` | `pve1` |
 
+Two hosts (`n8n`, `web-apps`) report the hostname `ntfy`; the cause is not documented.
+
 ## Observed at the last snapshot
 
-- `pve1` and `pve3` both report no failed systemd services. `pve1` runs ~83 monitored services, `pve3` ~82.
-- `pve1` shows higher memory pressure than `pve3`.
-- `Jelly` reports high memory usage on the `jellyfin` container.
-- `QBittorrent` reports `gluetun` as **unhealthy**.
-- `Nextcloud` reports `portainer` as **restarting**.
+- `QBittorrent` reports `gluetun` as **unhealthy** (recurring; kills download egress).
+- `Nextcloud` has reported `portainer` restarting (transient).
+- `Jelly` reports high memory usage on the `jellyfin` container during transcoding (transient).
+- CrowdSec on OPNsense shows port-scan bans including the Caddy host itself — likely proxy log-noise; rule tuning pending.
 
 These are transient observations; they should not be used to draw long-term conclusions.
 
 ## Pending
 
-- Beszel retention configuration.
-- Alerting / notification channels.
-- Whether the Proxmox-level metrics use the same Beszel server or a separate path.
+- Grafana retention, dashboards-as-code, and alerting / notification channels.
+- Prometheus scrape inventory (which exporters, which intervals).
+- Beszel decommissioning date once Grafana coverage is confirmed.

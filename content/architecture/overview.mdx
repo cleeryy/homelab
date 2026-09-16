@@ -3,45 +3,51 @@ title: Overview
 description: Current architecture of the home cluster.
 ---
 
+Last synced with live infrastructure: **September 2026**.
+
 ## Sites
 
 The homelab spans two physical sites:
 
-- **Site 1 — mamie.** Server site. Hosts the Proxmox cluster and all server workloads. Edge: OPNsense VM `401` on `pve3`.
+- **Site 1 — mamie.** Server site. Hosts the Proxmox cluster and all server workloads. Edge: OPNsense VM `501` on `pve3`.
 - **Site 2 — home.** Hosts a Raspberry Pi running Home Assistant, AdGuard Home, and iSponsorBlock. A Fortigate 81E is present but not configured; the RPi currently sits on the ISP CPE. No site-to-site link is configured today.
 
 See [Network](/architecture/network) for the addressing scheme and VLAN plan.
 
 ## Cluster
 
-- Proxmox VE cluster `home`, two active nodes, quorum enabled.
-- `pve1` (`192.168.1.101`) is centered on infrastructure, management, ingress, and the database/code/wiki stack.
-- `pve3` (`192.168.1.103`) is centered on production workloads: storage VM (TrueNAS), media stack, edge router, lab containers.
-- `pve2` is referenced in cluster storage (`pve2-storage`) but is not active.
+- Proxmox VE cluster `home`, version 9.2.11 on both nodes, quorum enabled (2 nodes online, quorate).
+- `pve1` (`192.168.1.101`, Xeon E5-2450v2, 64 GB RAM) is centered on infrastructure, management, and the database/code stack, plus several legacy application VMs.
+- `pve3` (`192.168.1.103`, 2x Xeon Silver 4208, ~172 GiB RAM) is centered on production workloads: edge router, platform services on the VLANs, storage VM (TrueNAS), media stack, and the Dokploy host.
+- `pve2` has been fully removed: no workloads, and the `pve2-storage` entry is gone from `/etc/pve/storage.cfg`.
 
-The cluster is **asymmetric** by usage: `pve3` carries the heavier compute and disk workload (large `local-lvm` plus a TrueNAS VM with attached disks), while `pve1` carries the higher number of small services and shows higher memory pressure.
+The cluster is **asymmetric** by usage: `pve3` carries the heavier compute and disk workload, while `pve1` carries legacy application VMs and small utility LXCs. At the last observation `pve3` showed high load (loadavg 34–51, ~103 GB RAM used) while `pve1` was lightly loaded (loadavg ~2.7, ~37 GB used).
 
 ## Layers
 
 The homelab is organised in three execution layers:
 
-1. **Proxmox host** — bare metal, two Debian/PVE 9.x nodes.
-2. **VMs and LXC containers** — managed by Proxmox.
-3. **Docker stacks inside VMs** — most user-facing apps run inside an Ubuntu 24.04 VM that hosts a `docker compose` stack alongside `portainer`, `watchtower`, and `beszel-agent`.
+1. **Proxmox host** — bare metal, two Debian/PVE 9.2 nodes.
+2. **VMs and LXC containers** — managed by Proxmox. Single-purpose system services run as LXCs; this is now the dominant pattern for platform services.
+3. **Docker stacks inside VMs** — the legacy application VMs (Nextcloud, n8n, Jellyfin, Servarr, qBittorrent, web-apps) still run Ubuntu 24.04 with `docker compose` stacks. Newer workloads deploy as LXCs or via Dokploy on `obiwan`.
 
-This three-layer model is reflected in the documentation: Proxmox-level placement lives under [Architecture](/architecture/service-placement) and [Inventory](/inventory/virtual-machines); per-stack detail lives on each service page.
+This three-layer model is reflected in the documentation: Proxmox-level placement lives under [Architecture](/architecture/service-placement) and [Inventory](/inventory/virtual-machines); per-service detail lives on each service page.
 
 ## Building blocks
 
-- **Edge / routing.** OPNsense VM (`401`) on `pve3`, with `net0` on `vmbr0` (management LAN) and `net1` on `vmbr1` (internal `10.0.0.0/24`).
-- **Ingress.** Nginx Proxy Manager VM (`100`) on `pve1`. A second reverse-proxy VM `ubuntu-nginxrpm` (`105`) is also present on `pve1`; the exact split between the two is not fully confirmed.
-- **Egress / tunnel.** `cloudflared` LXC (`103`) on `pve1`.
-- **Code.** Forgejo LXC (`111`) on `pve1`, with the `forgejo-runner` LXC (`124`) on `pve3` for CI compute.
-- **Database.** PostgreSQL LXC (`112`) on `pve1`. A second PostgreSQL LXC (`113`) is defined but stopped.
-- **Storage.** TrueNAS VM (`127`) on `pve3` with multiple attached disks. Shared NFS `nas` from `192.168.1.16:/data/pve`. ZFS pool `pve1-storage` on `pve1`. `local-lvm` on each node for guest disks.
-- **Observability.** Beszel VM (`202`) on `pve1` with `beszel-agent` deployed on every Docker host.
-- **Application stacks.** Nextcloud, n8n, Jellyfin, the Servarr stack, qBittorrent, and a `web-apps` host — all are Ubuntu VMs running a Docker compose stack.
-- **Lab / experimentation.** Several LXCs on `pve3` for code, EDR testing, and pre-production work.
+- **Edge / routing.** OPNsense VM (`501`) on `pve3`: `vtnet0` on the management LAN (`192.168.1.250/24`, behind the ISP CPE — double NAT), `vtnet1` trunking the LAN plus seven VLANs, WireGuard road-warrior (`10.1.90.0/24`), AirVPN client with kill-switch, NetBird mesh (`100.121.135.95`).
+- **Ingress.** Caddy LXC (`2010` at `10.1.20.10`): wildcard TLS via Cloudflare DNS-01, public zone `*.cleeryy.cloud`, private zone `*.home.cleeryy.cloud`. Nginx Proxy Manager (VM `100`) has been decommissioned; `ubuntu-nginxrpm` (`105`) still runs on `pve1` with a role to be confirmed.
+- **Egress / tunnels.** `cloudflared` LXC (`103`) on `pve1` plus `cloudflared-opnsense` (`511`) on `pve3`; AirVPN via OPNsense for selected VLAN traffic.
+- **Identity.** Authentik LXC (`130`) on `pve3` — SSO provider (used for Caddy `forward_auth` on selected routes). Warpgate LXC (`222` at `10.1.20.22`) — SSO SSH bastion, published via NAT (`:22` → `:2222`) and `warpgate.cleeryy.cloud`.
+- **DNS.** Technitium LXC (`553` at `10.1.50.53`) serves `internal.cleeryy.cloud`; OPNsense runs Unbound (`:53`) with an override pointing the internal zone at Technitium.
+- **Code.** Forgejo LXC (`111`) on `pve1` (`git.cleeryy.cloud`), with the `forgejo-runner` LXC (`124`) on `pve3` for CI compute.
+- **Database.** PostgreSQL LXC (`112`) on `pve1`. The stopped secondary (`113`) has been deleted.
+- **Storage.** TrueNAS VM (`127`, `192.168.1.74`) on `pve3` with passed-through disks. Shared NFS `nas` (`192.168.1.16`) and `truenas` (`192.168.1.74:/mnt/raw/pve`). ZFS pool `pve1-storage` on `pve1`. `local-lvm` on each node for guest disks.
+- **Backups.** Proxmox Backup Server LXC (`578` at `10.1.50.78:8007`), datastore `backupstore` (~600 GB). Scheduled jobs plus encrypted off-site sync to Google Drive. See [Backups](/architecture/backups).
+- **Observability.** Prometheus (`566`) + Grafana (`567`) + PVE exporter (`576`) + scraparr (`577`); Beszel VM (`202`) on `pve1` still runs as legacy monitoring.
+- **Application stacks.** Nextcloud, n8n, Jellyfin, the Servarr stack, qBittorrent, web-apps (legacy Docker VMs on `192.168.1.0/24`); Immich, OpenWebUI, SearXNG, AFFiNE, Dynacat, Sure (LXCs on the production VLAN); Palworld game server (`4001`), Gamevault (`258`).
+- **Deployment.** Dokploy on `obiwan` (CT `205` at `10.1.20.5`). This wiki is the first Dokploy-deployed workload: `homelab.cleeryy.cloud` → Caddy → `obiwan:3545`. See [Operations > Dokploy](/operations/dokploy).
+- **Lab / experimentation.** `projet-paul` (`257` on preproduction `10.1.25.7`), `esgi-docker` (`15002`), `code` (`119`), `hermesagent` (`125`), `discopanel` (`110`); stopped POC VMs `lune-pve1` (`6001`), `lune-pve2` (`6002`), `mint` (`10001`), `esgi-debian` (`15001`). The old `lockbits`/`edragent` lab containers have been deleted.
 
 ## Reading order
 
@@ -56,5 +62,4 @@ This three-layer model is reflected in the documentation: Proxmox-level placemen
 
 ## Notes
 
-- Both active nodes monitor systemd via Beszel and show no failed services at the time of the last observation. `pve1` runs ~83 monitored services, `pve3` ~82.
 - A topology diagram is not included; the inventory and per-section tables are the source of truth.
