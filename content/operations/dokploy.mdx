@@ -23,11 +23,18 @@ WAN → Cloudflare → OPNsense NAT (`:80`/`:443` → `10.1.20.10`) → **Caddy*
 ## Deploying an app (learned the hard way)
 
 1. Create the application in the Dokploy UI (from the Git repository), configure build + environment.
-2. **Publish the port**: add a port mapping (host → container, TCP) in the app's Ports section. A Dokploy swarm service with no published port is reachable only inside the overlay network — Caddy will get connection-refused.
+2. **Publish the port**: add a port mapping (host → container, TCP) in the app's Ports section, with Published Port Mode `HOST`. A Dokploy swarm service with no published port is reachable only inside the overlay network — Caddy will get connection-refused. Do not use `INGRESS` mode: on LXC-based Docker hosts the ingress mesh does not bind the host port (verified broken on `obiwan`, September 2026).
 3. **Redeploy** (saving alone does not recreate the swarm service).
 4. Verify on `obiwan`: `docker ps` shows `0.0.0.0:<port>-><port>` and `curl http://localhost:<port>/` returns `200`.
 5. Add the Caddy route (`/etc/caddy/sites/public/<app>.caddy`, `reverse_proxy obiwan:<port>`), `systemctl reload caddy`.
 6. Test Host-header → TLS → public URL, then document the route on the app's wiki page.
+
+## Swarm update order (single-node gotcha)
+
+Dokploy defaults to the `start-first` update order. On a single-node swarm with a host-published port, that deadlocks every redeploy: the new task stays `Pending` (`no suitable node (host-mode port is already in use)`) because the old task still holds the port, and the site keeps serving the stale build until someone intervenes.
+
+- Set the update order to **`stop-first`** for every app with a published host port. Dokploy UI path: app → Cluster Settings (requires a registry to be configured first); otherwise set `application.updateConfigSwarm` to `{"order":"stop-first",...}` directly in the Dokploy database.
+- Reference setup on `homelab-docs-app` (September 2026): port `3545` in `HOST` mode + `updateConfigSwarm.order = stop-first`. Validated by pushing to `main` and watching the autodeploy roll cleanly.
 
 ## Failure impact
 
