@@ -35,8 +35,6 @@ NFS-specific options for `nas`:
 - Exposes `/mnt/raw/pve` over NFS (mounted as the `truenas` storage on both nodes) and serves SMB shares to the LAN.
 - The exact share/dataset list is not captured here.
 
-## Pending capture
+## Known gaps
 
-- Per-pool usable capacity for `pve1-storage`, `pve3` `local-lvm`, and the TrueNAS datasets.
-- Per-VM and per-LXC disk allocation against each pool.
-- Physical disk inventory (model, serial, size, slot) for both nodes.
+Usable capacity per pool, per-guest disk allocation, and the physical disk inventory (model, serial, size, slot) — the three tables that turn "storage works" into "storage is planned". All three are evenings of careful `lsblk` away.

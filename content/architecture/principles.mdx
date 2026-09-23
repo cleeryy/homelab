@@ -17,10 +17,10 @@ This wiki has opinions, and they fit on one page. The core bet is that documenta
 - **Asymmetric nodes.** `pve1` is the infrastructure and management node; `pve3` is the primary compute and production node. The cluster is not symmetric and HA failover between nodes is not configured.
 - **Three execution layers.** Proxmox host → VM/LXC → Docker stack. Documentation is structured accordingly.
 - **Shared NFS is shared.** The `nas` mount is reachable from both `pve1` and `pve3` and is configured for `rootdir`, `iso`, `backup`, and `images`.
-- **`pve2` is excluded.** It is not part of the active design. The `pve2-storage` entry exists for historical reasons.
+- **`pve2` is gone.** It was ejected from the cluster and its storage entry removed; it appears in this wiki only as history.
 
 ## Non-goals
 
 - High availability across nodes.
 - Symmetry between `pve1` and `pve3`.
-- A single ingress path before the role of `ubuntu-nginx-proxy-manager` vs. `ubuntu-nginxrpm` is confirmed.
+- Canonical ingress is Caddy. The remaining legacy proxy VM is documented, not legitimised.

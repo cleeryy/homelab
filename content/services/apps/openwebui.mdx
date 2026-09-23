@@ -23,8 +23,6 @@ This is the friendly face over whatever language models the homelab talks to: on
 
 - A `pve3` outage takes the frontend down; hosted-model usage from other clients is unaffected.
 
-## Pending
+## Known gaps
 
-- Backend provider wiring and key management/rotation.
-- SSO gate decision.
-- Backup posture for chats/settings volume.
+The backend provider wiring (local vs. hosted, whose key, who pays) is undocumented, the SSO decision is open despite API keys being involved, and the backup posture for chats and settings is unknown. The first item is the one to resolve; the rest follows from it.

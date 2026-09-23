@@ -39,7 +39,6 @@ Something is broken. This page is the order of operations for that moment: figur
 - TrueNAS lives on `pve3`. A `pve3` host outage takes the media stack and a large portion of storage with it.
 - PBS (`578`) also lives on `pve3`: during a `pve3` outage, restores depend on a fresh PBS or the off-site copy.
 
-## Pending
+## Known gaps
 
-- Severity levels.
-- Notification path / on-call.
+No severity levels, no on-call rotation, no notification path — incidents are handled by whoever notices, which for a homelab is honestly fine. If that ever stops being fine, severity definitions come first and tooling second.

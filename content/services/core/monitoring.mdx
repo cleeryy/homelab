@@ -42,8 +42,6 @@ Two hosts (`n8n`, `web-apps`) report the hostname `ntfy`; the cause is not docum
 
 These are transient observations; they should not be used to draw long-term conclusions.
 
-## Pending
+## Known gaps
 
-- Grafana retention, dashboards-as-code, and alerting / notification channels.
-- Prometheus scrape inventory (which exporters, which intervals).
-- Beszel decommissioning date once Grafana coverage is confirmed.
+Grafana is up but unfinished as a practice: no dashboards-as-code, no retention statement, no alerting channel — monitoring that cannot wake anybody is just graphs. Prometheus scrape inventory (which exporters, which intervals) is similarly tribal knowledge. And Beszel still needs its decommissioning date once Grafana coverage is confirmed rather than assumed.

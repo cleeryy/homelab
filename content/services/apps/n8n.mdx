@@ -36,8 +36,6 @@ n8n is where the homelab stops being a collection of apps and starts behaving li
 - A `pve1` outage takes the n8n host with it.
 - Workflows that integrate with external systems will fail silently if downstream APIs are not reachable.
 
-## Pending
+## Known gaps
 
-- Encryption key location and rotation procedure for n8n credentials.
-- Backup path for the n8n data volume.
-- Reason for the `ntfy` hostname.
+The encryption key for the credential store is the standout unknown — lose the host without it and every workflow credential is scrap. The data-volume backup path matters for the same reason, while the `ntfy` hostname mismatch is cosmetic by comparison. Resolve them in that order.

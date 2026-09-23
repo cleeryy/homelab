@@ -44,7 +44,6 @@ This is how the storage layer is used in practice:
 | Bulk / shared | TrueNAS datasets, `nas` | Media library, large archives, cross-node assets |
 | Backup | `pbs` (`backupstore`), `nas` (legacy `vzdump` target) | See [Backups](/architecture/backups) |
 
-## Pending
+## Known gaps
 
-- TrueNAS dataset enumeration and capacity per pool.
-- Approximate usable capacity for `pve1-storage`, `pve3` `local-lvm`, and `nas`.
+Nobody has written down the TrueNAS dataset layout with per-pool capacity, nor the usable capacity of `pve1-storage`, `pve3` `local-lvm`, and `nas`. Storage works today on tribal knowledge; a capacity table is what stands between "working" and "plannable".

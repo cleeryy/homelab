@@ -36,8 +36,6 @@ All the code that runs this homelab — including the wiki you are reading — l
 - The runner depends on connectivity from `pve3` to the forge on `pve1`. A `pve1` outage halts CI even if `pve3` is up.
 - The forge hosts the `homelab` wiki repository that Dokploy builds; a `pve1` outage blocks wiki redeploys (the running site is unaffected).
 
-## Pending
+## Known gaps
 
-- Database wiring details (which Postgres, schema name, credentials path).
-- Backup and restore path for Forgejo data (covered by the general PBS job; application-level dump status unknown).
-- Runner labels and which repositories use the runner.
+The database wiring (which Postgres, which schema, where credentials live) is the one fact that would matter in a restore and is still unconfirmed. Runner labels and the per-repository usage are nice-to-have; the application-level backup story (beyond the guest-level PBS job) is the other item worth an hour before it is ever needed.

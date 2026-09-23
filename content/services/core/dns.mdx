@@ -27,8 +27,6 @@ Technitium is in the critical backup job (02:00, keep-last 7) — losing DNS bli
 - Technitium down → `.internal.cleeryy.cloud` stops resolving: Caddy cannot route to short-name upstreams, SSH shortcuts fail. Unbound still resolves external names.
 - Unbound down → all LAN DNS fails; the VLANs lose name resolution entirely.
 
-## Pending
+## Known gaps
 
-- Full zone dump / record inventory.
-- Upstream resolver policy (which roots/DoT, DNSSEC posture).
-- DHCP reservations inventory.
+No full zone dump exists yet, so the record inventory is "whatever Caddy and SSH resolve today". Upstream resolver policy (roots vs. DoT, DNSSEC) and the DHCP reservation list are similarly undocumented. A zone export plus a short policy note would close all three at once.

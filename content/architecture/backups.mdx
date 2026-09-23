@@ -51,9 +51,6 @@ Snapshots are a recovery feature, not an off-host backup.
 - The TrueNAS VM lives on `pve3`. A `pve3` failure affects both the production workload and a large fraction of the storage layer — PBS on the same node shares that fate, which is why the encrypted off-site copy matters.
 - Gamevault (`258`) is intentionally unprotected: re-download, don't restore.
 
-## Pending
+## Known gaps
 
-- Whether the Docker hosts' application data (Nextcloud `nextcloud-db`, n8n state, Servarr config) gets an additional application-level dump on top of the guest-level PBS backup.
-- Whether TrueNAS replicates datasets to an off-chassis target.
-
-See [Operations > Backup & restore](/operations/backup-restore) for procedures.
+Two open questions, both about the layer above guest backups: whether the stateful Docker hosts get application-level dumps on top of PBS, and whether TrueNAS replicates anywhere off-chassis. See [Operations > Backup & restore](/operations/backup-restore) for procedures.

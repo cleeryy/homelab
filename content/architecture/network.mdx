@@ -147,11 +147,7 @@ Two Docker hosts report a system hostname `ntfy` in Beszel while their system la
 
 The cause is not documented. The mismatch is recorded so that operators reading Beszel do not misidentify hosts.
 
-## Pending
+## Known gaps
 
-- Finish VLAN migration for remaining legacy-LAN guests.
-- Inter-VLAN firewall policy on OPNsense (current rules are open; `[DEV]`/`TEMP` rules to finalise).
-- Investigate CrowdSec port-scan bans against the Caddy host itself (`10.1.20.10`) — likely log-noise from proxying, rule tuning pending.
-- Fortigate 81E base configuration at site 2.
-- Site-to-site VPN between site 1 and site 2.
+The honest list: legacy guests still sit on the flat LAN instead of the VLANs, inter-VLAN policy is still allow-all with `[DEV]`/`TEMP` markers, the CrowdSec bans naming Caddy itself need someone to confirm log-noise and tune the rule, and site 2 is still a Fortigate in a box plus a site-to-site VPN that exists only as intent. Each is tracked; none is news.
 - The remaining role of `ubuntu-nginxrpm` (`105`).

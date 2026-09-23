@@ -43,8 +43,6 @@ Dokploy defaults to the `start-first` update order. On a single-node swarm with 
 - `obiwan` down → all Dokploy apps down, including this wiki (stateless — rebuild from Git once the host is back).
 - Dokploy's own state (apps, volumes) is covered by the general PBS backup of CT `205`. When adding an app with a persistent volume, record the volume and its restore path on the app's page.
 
-## Pending
+## Known gaps
 
-- Persistent-volume inventory across Dokploy apps.
-- Whether Dokploy-managed domains (Traefik) should ever be used directly instead of Caddy (current answer: no).
-- Dokploy backup/restore drill for the platform itself.
+No persistent-volume inventory across Dokploy apps yet (the first stateful app will force the issue), Dokploy-managed Traefik domains remain deliberately unused in favor of Caddy, and the platform itself has never had a backup/restore drill — its state rides along in the PBS backup of `obiwan`, untested. The drill is the one to schedule.

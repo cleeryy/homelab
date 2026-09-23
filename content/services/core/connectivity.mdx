@@ -44,8 +44,6 @@ WAN rule allows WireGuard access (`udp/51920`, logged). Keys live in the OPNsens
 
 - `cloudflared` (LXC `103`, `pve1`) and `cloudflared-opnsense` (LXC `511`, `pve3`) provide Cloudflare tunnel egress for selected services.
 
-## Pending
+## Known gaps
 
-- Which VLANs/hosts are members of the `INTERNAL` AirVPN-routed group (full member list).
-- NetBird peer inventory with owners and ACL policy.
-- Whether the road-warrior peers are still needed (all offline at last observation).
+The full member list of the AirVPN-routed `INTERNAL` group has never been exported, the NetBird peer inventory (owners, ACLs) lives in the NetBird console rather than here, and the three road-warrior peers have all shown offline — they may be dormant accounts worth pruning. None of this affects the tunnels themselves, which are healthy.

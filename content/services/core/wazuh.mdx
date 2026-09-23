@@ -25,9 +25,6 @@ Central security monitoring alongside OPNsense Suricata/CrowdSec. Agent deployme
 
 - Wazuh down → loss of centralised security visibility; no production traffic impact.
 
-## Pending
+## Known gaps
 
-- Enrolled agent inventory (which hosts, which agent versions).
-- Alert rules and notification channels.
-- Indexer retention policy.
-- SSO gate for the dashboard.
+Almost everything that would make Wazuh real is still ahead: no enrolled-agent inventory, no alert rules, no notification channel, no retention policy — and the dashboard itself sits behind no SSO. This page is honest about that on purpose. The next step is a single evening: enroll five hosts, define three alerts, wire one notification, then document what was done.

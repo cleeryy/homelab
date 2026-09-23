@@ -32,8 +32,6 @@ Authentik is the identity provider for humans (SSO logins) and for services (Cad
 - Authentik down → SSO logins fail and every `forward_auth` route returns 401/403. Ungated public routes are unaffected.
 - A `pve3` outage takes Authentik with it.
 
-## Pending
+## Known gaps
 
-- Database wiring confirmation.
-- Provider/factor inventory (which sources, MFA policy).
-- SSO-by-default rollout plan (see the [migration plan](/architecture/migration-plan)).
+Three things are still undocumented: which database actually backs Authentik (presumably the shared PostgreSQL, unconfirmed), the full inventory of providers and MFA policy, and the rollout plan for SSO-by-default across the remaining open routes. None of them block daily operation, but the first one matters for disaster recovery — find it before the next restore drill.

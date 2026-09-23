@@ -40,7 +40,6 @@ Encrypted rclone `crypt` sync to Google Drive (`gdrive-crypt:backupstore` + `pbs
 - PBS down → scheduled backups stop; existing backups remain on the datastore but are not taken. The off-site copy continues to reflect the last successful sync.
 - PBS shares a node (`pve3`) with most of what it protects — the encrypted off-site copy is the real disaster-recovery path.
 
-## Pending
+## Known gaps
 
-- Datastore usage headroom and growth trend.
-- GC/verify job history export.
+Datastore headroom is the number to watch: ~600 GB fills silently until jobs start failing, so a growth trend (even a monthly glance at the PBS dashboard) belongs in the routine. GC/verify history is similarly only visible inside the PBS UI — exporting it here can wait until someone automates it.

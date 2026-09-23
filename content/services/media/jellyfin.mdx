@@ -37,8 +37,6 @@ Jellyfin is the cinema: the media library, collected by the Servarr stack and do
 - A `pve3` outage takes Jellyfin, the Servarr stack, and qBittorrent down at the same time. TrueNAS, which sits on the same node, is also affected.
 - Catalog continuity depends on Jellyfin's metadata volume, not on the media files themselves.
 
-## Pending
+## Known gaps
 
-- Library mount path.
-- Hardware acceleration / transcoder configuration.
-- Catalog backup procedure.
+The library mount path, the transcoder setup, and the catalog backup procedure are all unconfirmed — in other words, everything that would matter on rebuild day. The media files themselves are replaceable; the metadata volume is the part worth documenting.

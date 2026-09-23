@@ -85,7 +85,6 @@ Off-site: encrypted rclone sync (`crypt` → Google Drive, `gdrive-crypt:backups
 
 Restore drills are the proof that backups exist. At least one workload per tier should be exercised after any major change; the last successful drill booted on 10/09/2026.
 
-## Pending
+## Known gaps
 
-- Application-level dump jobs for stateful Docker stacks (Nextcloud DB, n8n).
-- Off-chassis TrueNAS replication target.
+Guest-level backups are solid; what is missing is the layer above — application-level dumps for the stateful Docker stacks (Nextcloud's database, n8n's state) — and the layer beside: TrueNAS replication to an off-chassis target. Both are the kind of gap that only hurts on the worst day, which is exactly why they are written here and not forgotten.

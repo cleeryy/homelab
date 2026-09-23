@@ -30,6 +30,10 @@ This Fumadocs site is the canonical documentation surface for the homelab. It is
 - Production: `pnpm build` → standalone output; the repo `Dockerfile` produces the image Dokploy builds.
 - CI: GitHub Actions runs install, lint, and build on every push/PR.
 
+## Design
+
+The theme follows Dieter Rams' ten principles of good design: one paper, one ink, one functional orange accent, no decorative color. Type and spacing do the work; the accent appears only where function demands it — active states, focus rings, selection. If a future redesign adds a second accent color, it should have to justify itself against "as little design as possible".
+
 ## Failure impact
 
 - The wiki is stateless. Content lives in Git; the Dokploy host holds no unique data. A site outage loses no data — rebuild from `main`.

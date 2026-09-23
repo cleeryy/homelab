@@ -61,8 +61,6 @@ Pinning policy per stack (which image tags are pinned vs. latest) is **not captu
   5. Storage and edge VMs (`truenas`, `opnsense`).
   6. Proxmox hosts.
 
-## Pending
+## Known gaps
 
-- A documented cadence per surface.
-- Image pinning policy for Docker stacks.
-- Whether unattended-upgrades runs on the Debian/Ubuntu guests.
+No documented cadence per surface, no image-pinning policy for the Docker stacks, and no answer on whether unattended-upgrades runs inside the guests. In practice: Watchtower drifts the easy hosts forward on its own, and everything else updates when somebody schedules it. Writing the cadence down is the cheapest reliability win left on this page.

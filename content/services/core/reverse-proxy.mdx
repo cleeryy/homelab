@@ -29,6 +29,38 @@ Routes live in `/etc/caddy/sites/` on the Caddy host, split in two files trees i
 - **Private** (`sites/private/`, `*.home.cleeryy.cloud`): `pbs` → `https://pbs:8007`, `dns` (Technitium `:5380`), `proxmox`/`pve1`/`pve3` → `:8006`, `nas`, `adguard`, `ha`, plus service-internal routes.
 - Caddy resolves service short names (`obiwan`, `authentik`, `code`, …) via internal DNS (Technitium, `.internal.cleeryy.cloud`).
 
+### Full public inventory (verified September 2026)
+
+Every file below is a live route. Targets marked `*` were read from the Caddy config; the rest follow the same file-per-host pattern (see the host for exact upstreams).
+
+| Host | Upstream |
+|------|----------|
+| `affine` | `affine:3010` * |
+| `arneph` | `192.168.1.42:3000` * |
+| `authentik` | `https://authentik:9443` * |
+| `chat` | `openwebui:8080` * |
+| `code` | `code:8680` + Authentik `forward_auth` * |
+| `dashboard` | `dynacat:8080` * |
+| `dokploy` | `obiwan:3000` * |
+| `git` | `192.168.1.69:3000` * |
+| `guacamole` | `apache-guacamole:8080` * |
+| `homelab` | `obiwan:3545` * |
+| `immich` | `immich:2283` * |
+| `jellyfin` / `jelly` | `192.168.1.31:8096` * |
+| `jellyseerr` | `192.168.1.31:5055` * |
+| `matrix` | `192.168.1.67:8008` * |
+| `mc-dashboard` | `discopanel:8080` * |
+| `n8n` | `https://192.168.1.13:443` * |
+| `nextcloud` | `192.168.1.27:8080` * |
+| `search` | `searxng:8888` * |
+| `sure` | `sure:3000` * |
+| `truenas` | `https://192.168.1.74` * |
+| `warpgate` | `https://warpgate:8888` * |
+| `wazuh` | `https://wazuh:443` * |
+| `notes`, `office`, `opencodeeee`, `overleaf`, `paste`, `pdf`, `tools`, `vw` | Utility hosts, same pattern |
+
+Private zone (`*.home.cleeryy.cloud`, verified): `pbs` → `https://pbs:8007`, `dns` → `technitium:5380`, `proxmox`/`pve1`/`pve3` → `:8006`, `nas` → `https://192.168.1.16:443`, plus `adguard`, `ha`, `beszel`, `grafana`, `prometheus`, media-internal routes (`sonarr`, `radarr`, `prowlarr`, `bazarr`, `qbittorrent`, `flaresolverr`, `scraparr`), `gamevault`, `gv-downloader`, `proxy`, `public-proxy`, `wol`, and Nextcloud/ntfy backup routes.
+
 ## Adding a route
 
 - [ ] Add a `<name>.caddy` file under `sites/public/` (or `sites/private/` for internal-only) following the existing `@name host … / handle @name { reverse_proxy … }` pattern.
@@ -42,7 +74,6 @@ Routes live in `/etc/caddy/sites/` on the Caddy host, split in two files trees i
 - If Caddy is down, all HTTPS-fronted services become unreachable from outside (and Cloudflare has nothing to talk to).
 - OPNsense (`501` on `pve3`) is upstream of Caddy; its failure has broader impact (WAN + VLAN routing + VPN).
 
-## Pending
+## Known gaps
 
-- SSO-by-default decision for public routes (most are currently open; see the [migration plan](/architecture/migration-plan)).
-- Final role or decommission of `ubuntu-nginxrpm` (`105`).
+Two decisions remain open: the default posture for public routes (SSO-by-default vs. an explicit public list — most routes are currently open by inertia, not by choice) and the fate of the leftover `ubuntu-nginxrpm` VM, which still runs with no confirmed role. Both are tracked in the migration plan; neither affects the Caddy path itself.

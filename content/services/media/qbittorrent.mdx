@@ -34,8 +34,6 @@ qBittorrent does exactly one job — download — wrapped in exactly one protect
 - A `pve3` outage takes qBittorrent, the Servarr stack, Jellyfin, and TrueNAS down together.
 - Loss of `gluetun` health stops downloads but leaves the rest of the media stack working from already-downloaded content.
 
-## Pending
+## Known gaps
 
-- VPN provider details and key rotation.
-- Compose wiring between `qbittorrent` and `gluetun`.
-- Download volume location and capacity headroom.
+VPN provider and key rotation, the exact `gluetun` compose wiring, and the download volume's location and headroom — the same trio as the Servarr page, because they are really one system split across two hosts. Document them once, link twice.

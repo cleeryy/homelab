@@ -41,8 +41,6 @@ Nextcloud is the private cloud of the homelab: files, calendar, contacts, and co
 - A `pve1` outage takes the Nextcloud host with it.
 - Loss of `nextcloud-db` data is the most critical risk; backup of this volume is essential and not documented here.
 
-## Pending
+## Known gaps
 
-- Exact volume mounts for user data and database.
-- Backup path for the database and the data directory.
-- Hostname / DNS used by the reverse proxy to reach the stack.
+The exact volume mounts for user data and database are the critical unknown — everything about restoring Nextcloud depends on them. The database backup path and the reverse-proxy hostname complete the picture. Given how stateful this host is, these three answers are overdue.

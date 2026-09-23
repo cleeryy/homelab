@@ -31,7 +31,6 @@ Warpgate is the single SSH entry point for the whole homelab: Proxmox nodes (via
 - Warpgate down → no SSH access from WAN until it is restored (local console via Proxmox still works).
 - Authentik down → Warpgate SSO validation fails; same effect.
 
-## Pending
+## Known gaps
 
-- Policy inventory (which SSO users/groups reach which targets).
-- Session logging/auditing posture.
+The policy inventory — which SSO users and groups can reach which targets — has never been written down, and neither has the session logging posture. Both are worth an evening: access policy is the actual security boundary here, and logs are what turn "someone was in" from a suspicion into a timeline.

@@ -40,8 +40,6 @@ The *arr stack is the librarian: it watches for wanted shows and movies, finds t
 - A `pve3` outage takes the stack down alongside qBittorrent, Jellyfin, and TrueNAS.
 - A `gluetun` failure may degrade indexer traffic but does not affect Jellyfin playback of already-downloaded content.
 
-## Pending
+## Known gaps
 
-- Per-container compose wiring (which containers route through `gluetun`).
-- Backup path for the *arr configuration volumes.
-- VPN provider and credential rotation.
+Which containers actually route through `gluetun` (the compose wiring), where the *arr configs are backed up, and whose VPN credentials are in play — three answers that turn this page from a parts list into a runnable reference. The VPN provider question is the most time-sensitive, since credentials rotate.
