@@ -1,0 +1,26 @@
+---
+title: Code (dev environment)
+description: Development LXC hosting this wiki's repository on `pve3`.
+---
+
+`code` is the dev environment where the `homelab` Fumadocs repository lives (`/root/homelab`) and gets edited. It also runs side services on `:3000` (arneph), `:4096` (opencodeeee) and `:8680`.
+
+## Placement
+
+- LXC `119` `code` on `pve3`, `10.1.20.50` (VLAN 20).
+
+## Status
+
+- Running. Ingress: `code.cleeryy.cloud` → Caddy → `code:8680` behind Authentik `forward_auth`; `arneph` → `10.1.20.50:3000`, `opencodeeee` → `10.1.20.50:4096`.
+
+## Dependencies
+
+- Git remote for the wiki repo (push to persist work done here).
+
+## Failure impact
+
+- No doc edits or side services until restore. The published wiki (built by Dokploy) keeps serving.
+
+## Known gaps
+
+- What arneph and opencodeeee are for is not recorded here.

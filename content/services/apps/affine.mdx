@@ -1,0 +1,26 @@
+---
+title: AFFiNE
+description: Collaborative workspace on `pve3`.
+---
+
+AFFiNE is the collaborative docs/whiteboard workspace. It runs with its own Postgres (`:5432` loopback) and Redis (`:6379` loopback) inside the container — self-contained by design.
+
+## Placement
+
+- LXC `126` `affine` on `pve3`, `10.1.20.64:80` (VLAN 20).
+
+## Status
+
+- Running. Ingress: `affine.cleeryy.cloud` → Caddy → `affine:3010` (short-name DNS via Technitium).
+
+## Dependencies
+
+- Local Postgres + Redis only. No external database.
+
+## Failure impact
+
+- Workspace unreachable until restore. Application data lives in the container (covered by the general PBS job).
+
+## Known gaps
+
+- Application-level export/backup story beyond guest-level PBS is unconfirmed.

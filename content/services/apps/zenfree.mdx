@@ -1,0 +1,26 @@
+---
+title: ZenFree
+description: Unidentified service on `pve3` — documentation wanted.
+---
+
+ZenFree listens on `:8020` and is otherwise a mystery: no Caddy route points at it, no dashboard references it, nobody has claimed it. It survives on the principle that deleting unknown things is worse than documenting them as unknown.
+
+## Placement
+
+- LXC `233` `zenfree` on `pve3`, `10.1.20.33` (VLAN 20).
+
+## Status
+
+- Running. No ingress. No known consumers.
+
+## Dependencies
+
+- Unknown.
+
+## Failure impact
+
+- Unknown — presumably none, since nothing references it.
+
+## Known gaps
+
+- Everything: what it is, who installed it, whether `:8020` is HTTP. Claim it or decommission it.

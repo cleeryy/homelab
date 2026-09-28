@@ -1,0 +1,26 @@
+---
+title: Nginx Proxy (nginxrpm)
+description: Nginx Proxy Manager remnant VM on `pve1`.
+---
+
+`nginxrpm` is the leftover Nginx Proxy Manager host from before Caddy became canonical ingress. NPM still answers on `:81`; `:8080` serves the WOL panel. Both remain reachable through Caddy while nobody has finished deciding whether anything still needs them.
+
+## Placement
+
+- VM `105` on `pve1`, `10.1.20.43` (VLAN 20, netplan static, QEMU guest agent running).
+
+## Status
+
+- Running. Caddy upstreams: `proxy` → `10.1.20.43:81`, `wol` → `10.1.20.43:8080`.
+
+## Dependencies
+
+- None.
+
+## Failure impact
+
+- NPM admin and WOL panel unreachable until restore. Public traffic (Caddy) unaffected.
+
+## Known gaps
+
+- Confirm whether any live route still depends on NPM; otherwise decommission the VM.

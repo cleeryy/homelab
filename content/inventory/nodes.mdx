@@ -11,13 +11,13 @@ Two machines, two personalities. `pve1` is the old workhorse — modest, lightly
 
 | Node | Role | Proxmox VE | Management | Gateway |
 |------|------|-----------|------------|---------|
-| `pve1` | Infrastructure and management | 9.2.11 (kernel `7.0.14-8-pve`) | `192.168.1.101/24` on `vmbr0` | `192.168.1.1` |
-| `pve3` | Primary compute and production | 9.2.11 (kernel `7.0.14-15-pve`) | `192.168.1.103/24` on `vmbr0` | `192.168.1.1` |
+| `pve1` | Infrastructure and management | 9.2.11 (kernel `7.0.14-8-pve`) | `192.168.1.101/24` on `vmbr0` + `10.1.50.101` (`vlan50`) | `192.168.1.1` |
+| `pve3` | Primary compute and production | 9.2.11 (kernel `7.0.14-15-pve`) | `192.168.1.103/24` on `vmbr0` + `10.1.50.103` (`vlan50`) | `192.168.1.1` |
 
 ### `pve1`
 
 - Hardware: 2x Intel Xeon E5-2450 v2 @ 2.50 GHz (32 threads), 64 GB RAM. Legacy BIOS boot.
-- Bridges: `vmbr0` (management LAN).
+- Bridges: `vmbr0` (management LAN) + `vmbr1` (trunk to `pve3`, VLAN-aware 2-4094) + `vlan50` (`10.1.50.101/24`).
 - Storage attached: `local`, `local-lvm`, `pve1-storage` (ZFS), `nas` + `truenas` (shared NFS), `pbs`.
 - Hosts legacy application VMs running Docker stacks, the code/database stack, and utility LXCs.
 - Lightly loaded at last observation (loadavg ~2.7, ~37 GB RAM used). Uptime ~15 days.
@@ -25,7 +25,7 @@ Two machines, two personalities. `pve1` is the old workhorse — modest, lightly
 ### `pve3`
 
 - Hardware: 2x Intel Xeon Silver 4208 @ 2.10 GHz (32 threads), ~172 GiB RAM. EFI boot.
-- Bridges: `vmbr0` only (`vmbr1`/`vmbr2` are gone). Static route `10.1.0.0/16 via 10.1.50.1` persists for reaching the VLANs.
+- Bridges: `vmbr0` (management LAN) + `vmbr1` (trunk to `pve1`, VLAN-aware 2-4094, carries OPNsense tags 10/20/25/30/40/50/60) + `vlan50` (`10.1.50.103/24`). Static route `10.1.0.0/16 via 10.1.50.1` persists for reaching the VLANs.
 - Storage attached: `local`, `local-lvm` (large LVM-thin pool), `nas` + `truenas` (shared NFS), `pbs`.
 - Additional physical disks passed through to the TrueNAS VM (`127`).
 - No active ZFS pool on the host.

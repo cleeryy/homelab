@@ -17,19 +17,19 @@ You cannot run what you cannot see, and this homelab is mid-migration between tw
 | LXC | `577` | `scraparr` | `pve3` | Exporter for the *arr stack |
 | VM | `202` | `ubuntu-beszel` | `pve1` | Legacy Beszel server (to be decommissioned) |
 
-Prometheus/Grafana are the current monitoring path; Beszel is legacy and still runs on `pve1` (`192.168.1.25`) with a `beszel-agent` on every legacy Docker host VM. The canonical cutover is tracked in the [migration plan](/architecture/migration-plan).
+Prometheus/Grafana are the current monitoring path; Beszel is legacy and still runs on `pve1` (`10.1.20.45`) with a `beszel-agent` on every legacy Docker host VM. The canonical cutover is tracked in the [migration plan](/architecture/migration-plan).
 
 ## Beszel host inventory (legacy)
 
 | Beszel label | IP | Hostname (Beszel) | Backing Proxmox VM | Node |
 |--------------|----|--------------------|---------------------|------|
-| `Beszel` | `192.168.1.25` | `beszel` | `202` | `pve1` |
-| `Jelly` | `192.168.1.31` | `jelly` | `300` | `pve3` |
-| `n8n` | `192.168.1.13` | `ntfy` | `204` | `pve1` |
-| `Nextcloud` | `192.168.1.27` | `nextcloud` | `200` | `pve1` |
-| `QBittorrent` | `192.168.1.28` | `qbittorrent` | `302` | `pve3` |
-| `Servarr` | `192.168.1.26` | `servarr` | `301` | `pve3` |
-| `web-apps` | `192.168.1.23` | `ntfy` | `102` | `pve1` |
+| `Beszel` | `10.1.20.45` | `beszel` | `202` | `pve1` |
+| `Jelly` | `10.1.20.61` | `jelly` | `300` | `pve3` |
+| `n8n` | `10.1.20.47` | `ntfy` | `204` | `pve1` |
+| `Nextcloud` | `10.1.20.44` | `nextcloud` | `200` | `pve1` |
+| `QBittorrent` | `10.1.20.63` | `qbittorrent` | `302` | `pve3` |
+| `Servarr` | `10.1.20.62` | `servarr` | `301` | `pve3` |
+| `web-apps` | `10.1.20.42` | `ntfy` | `102` | `pve1` |
 
 Two hosts (`n8n`, `web-apps`) report the hostname `ntfy`; the cause is not documented.
 

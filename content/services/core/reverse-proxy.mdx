@@ -25,7 +25,7 @@ Nginx Proxy Manager (VM `100`) has been decommissioned. `ubuntu-nginxrpm` (VM `1
 
 Routes live in `/etc/caddy/sites/` on the Caddy host, split in two files trees imported by the main `Caddyfile`:
 
-- **Public** (`sites/public/`, `*.cleeryy.cloud`): user services. Verified routes include `homelab` → `obiwan:3545` (this wiki), `dokploy` → `obiwan:3000`, `authentik` → `https://authentik:9443`, `code` → `code:8680` (behind Authentik `forward_auth`), `wazuh` → `https://wazuh:443`, `guacamole` → `apache-guacamole:8080`, `immich` → `immich:2283`, `chat` → `openwebui:8080`, `search` → `searxng:8888`, `dashboard` → `dynacat:8080`, `sure` → `sure:3000`, `affine` → `affine:3010`, `mc-dashboard` → `discopanel:8080`, `nextcloud` → `192.168.1.27:8080`, `n8n` → `https://192.168.1.13:443`, `jellyfin`/`jelly` → `192.168.1.31:8096`, `jellyseerr` → `192.168.1.31:5055`, `git` → `192.168.1.69:3000`, `matrix` → `192.168.1.67:8008`, `truenas` → `https://192.168.1.74`, `warpgate` → `https://warpgate:8888`. Unknown hosts get a `404`.
+- **Public** (`sites/public/`, `*.cleeryy.cloud`): user services. Verified routes include `homelab` → `obiwan:3545` (this wiki), `dokploy` → `obiwan:3000`, `authentik` → `https://authentik:9443`, `code` → `code:8680` (behind Authentik `forward_auth`), `wazuh` → `https://wazuh:443`, `guacamole` → `apache-guacamole:8080`, `immich` → `immich:2283`, `chat` → `openwebui:8080`, `search` → `searxng:8888`, `dashboard` → `dynacat:8080`, `sure` → `sure:3000`, `affine` → `affine:3010`, `mc-dashboard` → `discopanel:8080`, `nextcloud` → `10.1.20.44:8080`, `n8n` → `https://10.1.20.47:443`, `jellyfin`/`jelly` → `10.1.20.61:8096`, `jellyseerr` → `10.1.20.61:5055`, `git` → `10.1.20.32:3000`, `matrix` → `10.1.20.38:8008`, `truenas` → `https://192.168.1.74`, `warpgate` → `https://warpgate:8888`. Unknown hosts get a `404`.
 - **Private** (`sites/private/`, `*.home.cleeryy.cloud`): `pbs` → `https://pbs:8007`, `dns` (Technitium `:5380`), `proxmox`/`pve1`/`pve3` → `:8006`, `nas`, `adguard`, `ha`, plus service-internal routes.
 - Caddy resolves service short names (`obiwan`, `authentik`, `code`, …) via internal DNS (Technitium, `.internal.cleeryy.cloud`).
 
@@ -36,22 +36,22 @@ Every file below is a live route. Targets marked `*` were read from the Caddy co
 | Host | Upstream |
 |------|----------|
 | `affine` | `affine:3010` * |
-| `arneph` | `192.168.1.42:3000` * |
+| `arneph` | `10.1.20.50:3000` * |
 | `authentik` | `https://authentik:9443` * |
 | `chat` | `openwebui:8080` * |
 | `code` | `code:8680` + Authentik `forward_auth` * |
 | `dashboard` | `dynacat:8080` * |
 | `dokploy` | `obiwan:3000` * |
-| `git` | `192.168.1.69:3000` * |
+| `git` | `10.1.20.32:3000` * |
 | `guacamole` | `apache-guacamole:8080` * |
 | `homelab` | `obiwan:3545` * |
 | `immich` | `immich:2283` * |
-| `jellyfin` / `jelly` | `192.168.1.31:8096` * |
-| `jellyseerr` | `192.168.1.31:5055` * |
-| `matrix` | `192.168.1.67:8008` * |
+| `jellyfin` / `jelly` | `10.1.20.61:8096` * |
+| `jellyseerr` | `10.1.20.61:5055` * |
+| `matrix` | `10.1.20.38:8008` * |
 | `mc-dashboard` | `discopanel:8080` * |
-| `n8n` | `https://192.168.1.13:443` * |
-| `nextcloud` | `192.168.1.27:8080` * |
+| `n8n` | `https://10.1.20.47:443` * |
+| `nextcloud` | `10.1.20.44:8080` * |
 | `search` | `searxng:8888` * |
 | `sure` | `sure:3000` * |
 | `truenas` | `https://192.168.1.74` * |

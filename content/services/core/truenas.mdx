@@ -1,0 +1,26 @@
+---
+title: TrueNAS
+description: Storage VM deliberately staying on the LAN on `pve3`.
+---
+
+TrueNAS is the exception that proves the migration: while everything else moved to VLAN 20/50, the storage VM stays on `192.168.1.74` (`vmbr0`) with passed-through disks, because both Proxmox NFS storages and in-guest `/mnt/medias` mounts point at LAN addresses. Moving it buys nothing and risks every mount in the fleet.
+
+## Placement
+
+- VM `127` on `pve3`, `192.168.1.74` (vmbr0). QEMU guest agent running.
+
+## Status
+
+- Running. Exports consumed as PVE `truenas` storage and guest NFS mounts. Reachable from VLAN 20 via OPNsense (same path as the physical NAS).
+
+## Dependencies
+
+- Passed-through physical disks (see nodes gaps: slot mapping unknown).
+
+## Failure impact
+
+- NFS-backed guests lose media/storage mounts until restore. VM virtual disks on `nas` are unaffected.
+
+## Known gaps
+
+- Which physical disk sits in which slot, and the TrueNAS pool/dataset layout, are not recorded here.

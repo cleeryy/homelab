@@ -1,0 +1,26 @@
+---
+title: Webapps stack (ntfy)
+description: Small webapps Docker host VM on `pve1`.
+---
+
+`ntfy` (Proxmox name `ubuntu-small-webapps`) is the small-webapps Docker host. Despite the Beszel hostname, it is not the notification service — it is four small stacks behind one IP.
+
+## Placement
+
+- VM `102` on `pve1`, `10.1.20.42` (VLAN 20, netplan static, QEMU guest agent running).
+
+## Status
+
+- Running. Ports: `:8282` (tools), `:4001` (overleaf), `:8888` (vw), `:4096` (backup-ntfy) — all via Caddy.
+
+## Dependencies
+
+- None external. Images come from public registries.
+
+## Failure impact
+
+- Four small apps down at once until restore. Guest-level PBS backup applies.
+
+## Known gaps
+
+- Which ISO/upstream each of the four stacks tracks is not recorded here.

@@ -1,0 +1,26 @@
+---
+title: DiscoPanel
+description: Game server panel on `pve3`.
+---
+
+DiscoPanel is the game server panel (Minecraft port `25565` is open alongside the `:8080`/`:8100` web ports). Lab-grade workload with production-grade uptime so far.
+
+## Placement
+
+- LXC `110` `discopanel` on `pve3`, `10.1.20.49:8080` (VLAN 20).
+
+## Status
+
+- Running. Ingress: `mc-dashboard.cleeryy.cloud` → Caddy → `discopanel:8080`.
+
+## Dependencies
+
+- None (manages game servers itself).
+
+## Failure impact
+
+- Panel unreachable until restore. Game servers it manages may keep running headless.
+
+## Known gaps
+
+- Which game servers it manages and who owns them is not recorded here — see test-systems gaps.

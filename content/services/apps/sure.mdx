@@ -1,0 +1,26 @@
+---
+title: Sure
+description: Finance app on `pve3`.
+---
+
+Sure is the finance app, backed by local Postgres (`:5432` loopback) and Redis (`:6379` loopback) inside its container.
+
+## Placement
+
+- LXC `128` `sure` on `pve3`, `10.1.20.54:3000` (VLAN 20).
+
+## Status
+
+- Running. Ingress: `sure.cleeryy.cloud` → Caddy → `sure:3000` (short-name DNS).
+
+## Dependencies
+
+- Local Postgres + Redis only.
+
+## Failure impact
+
+- Finance data unreachable until restore. Guest-level PBS backup applies.
+
+## Known gaps
+
+- Export/backup procedure for the financial data is not recorded here.

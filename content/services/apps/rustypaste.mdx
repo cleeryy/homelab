@@ -1,0 +1,26 @@
+---
+title: RustyPaste
+description: Minimal file/pastebin utility on `pve1`.
+---
+
+RustyPaste does one thing — accept a file or a paste through a tiny web UI and hand back a link. No accounts, no database, nothing to back up beyond the container itself. It lives on an Alpine LXC because it needs almost nothing to run.
+
+## Placement
+
+- LXC `101` `alpine-rustypaste` on `pve1`, `10.1.20.35:8000` (VLAN 20, gw `10.1.20.1`).
+
+## Status
+
+- Running. Ingress: `paste.cleeryy.cloud` → Caddy → `10.1.20.35:8000`.
+
+## Dependencies
+
+- None. Stateless apart from pasted files on local disk.
+
+## Failure impact
+
+- Pastes unreachable until the LXC is restored. Nothing else depends on it.
+
+## Known gaps
+
+- Retention/expiry policy and max upload size are not recorded here.

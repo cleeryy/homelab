@@ -1,0 +1,26 @@
+---
+title: Alpine Docker host
+description: Generic Docker host LXC on `pve1`.
+---
+
+`alpine-docker` is a spare Alpine + Docker host: 1 core, 1 GB RAM, no production workload assigned. Port `:29334` listens; the container behind it is unidentified.
+
+## Placement
+
+- LXC `108` on `pve1`, `10.1.20.39` (VLAN 20).
+
+## Status
+
+- Running. No Caddy route. No DNS consumer beyond the auto-registered record.
+
+## Dependencies
+
+- None.
+
+## Failure impact
+
+- None currently — nothing production runs here.
+
+## Known gaps
+
+- What listens on `:29334`. Either assign this host a job or keep it as spare capacity.

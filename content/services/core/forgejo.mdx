@@ -11,7 +11,7 @@ All the code that runs this homelab — including the wiki you are reading — l
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
-| LXC | `111` | `forgejo` | `pve1` | Git forge, `192.168.1.69` |
+| LXC | `111` | `forgejo` | `pve1` | Git forge, `10.1.20.32` |
 | LXC | `124` | `forgejo-runner` | `pve3` | CI runner |
 
 ## Placement
@@ -29,13 +29,17 @@ All the code that runs this homelab — including the wiki you are reading — l
 
 ## Ingress
 
-- Web UI at `git.cleeryy.cloud` → Caddy → `192.168.1.69:3000`. No SSO gate currently.
+- Web UI at `git.cleeryy.cloud` → Caddy → `10.1.20.32:3000`. No SSO gate currently.
 
 ## Operational notes
 
 - The runner depends on connectivity from `pve3` to the forge on `pve1`. A `pve1` outage halts CI even if `pve3` is up.
 - The forge hosts the `homelab` wiki repository that Dokploy builds; a `pve1` outage blocks wiki redeploys (the running site is unaffected).
 
+## CI runner
+
+LXC `124` `forgejo-runner` on `pve3` (`10.1.20.52`) polls the forge over `git.cleeryy.cloud` and runs jobs with ephemeral Docker builders. Re-registered itself cleanly (`declared successfully`) after the VLAN migration with zero config change — the public URL indirection paid off.
+
 ## Known gaps
 
-The database wiring (which Postgres, which schema, where credentials live) is the one fact that would matter in a restore and is still unconfirmed. Runner labels and the per-repository usage are nice-to-have; the application-level backup story (beyond the guest-level PBS job) is the other item worth an hour before it is ever needed.
+Database wiring confirmed 28/09/2026: Postgres LXC `112` (`10.1.20.34:5432`, `user=forgejo database=forgejo`, see `/etc/forgejo/app.ini` on CT `111`). Credentials location and dump procedure still unconfirmed. Runner labels and the per-repository usage are nice-to-have; the application-level backup story (beyond the guest-level PBS job) is the other item worth an hour before it is ever needed.

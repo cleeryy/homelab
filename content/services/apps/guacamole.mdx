@@ -1,0 +1,26 @@
+---
+title: Guacamole
+description: Remote desktop gateway on `pve3`.
+---
+
+Guacamole is the browser-based remote desktop gateway (RDP/VNC/SSH through HTML5). MySQL (`:3306` loopback) holds its connection definitions.
+
+## Placement
+
+- LXC `106` `apache-guacamole` on `pve3`, `10.1.20.48:8080` (VLAN 20).
+
+## Status
+
+- Running. Ingress: `guacamole.cleeryy.cloud` → Caddy → `apache-guacamole:8080`.
+
+## Dependencies
+
+- Local MySQL only. Target machines are reached over the tailnet/VLANs.
+
+## Failure impact
+
+- No browser remote access until restore. Direct SSH via Warpgate still works.
+
+## Known gaps
+
+- SSO (Authentik) is not in front of Guacamole yet — see the SSO coverage item in the [migration plan](/architecture/migration-plan).

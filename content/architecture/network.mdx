@@ -104,14 +104,14 @@ A Fortigate 81E is present at the home site. It has not been configured. The Ras
 
 ## Legacy network on site 1
 
-Proxmox management and the legacy Docker application VMs still run on the flat network:
+Proxmox management, NAS and TrueNAS stay on the flat network (all guests migrated to VLAN 20/50 on 26-28/09/2026):
 
 | Segment | CIDR | Status |
 |---------|------|--------|
-| Management LAN | `192.168.1.0/24` | In use by `pve1`, `pve3`, OPNsense WAN (`192.168.1.250`), legacy Docker VMs, NAS (`192.168.1.16`), TrueNAS (`192.168.1.74`) |
+| Management LAN | `192.168.1.0/24` | In use by `pve1`, `pve3`, OPNsense WAN (`192.168.1.250`), NAS (`192.168.1.16`), TrueNAS (`192.168.1.74`) |
 | Proxmox link | `vmbr0` on both nodes | Up |
 
-Host gateway for both Proxmox nodes is `192.168.1.1`. The old `vmbr1` (`10.0.0.0/24`) and `vmbr2` segments are gone: `vmbr2` no longer exists on `pve3`.
+Host gateway for both Proxmox nodes is `192.168.1.1`. `vmbr1` is a shared trunk `pve3` (eno4) <-> `pve1` (enp7s0), 1 Gbit/s, VLAN-aware 2-4094 (direct cable since 26/09/2026); `vlan50` on both hosts (10.1.50.103/10.1.50.101). The old `vmbr2` segment is gone.
 
 ## Ingress
 
@@ -120,23 +120,23 @@ Canonical ingress is **Caddy** (LXC `2010` at `10.1.20.10`, also tagged on legac
 - Wildcard TLS via Cloudflare DNS-01 for `cleeryy.cloud`, `*.cleeryy.cloud`, `*.home.cleeryy.cloud`.
 - Public zone (`sites/public/`): user services — `homelab`, `dokploy`, `authentik`, `code` (behind Authentik `forward_auth`), `wazuh`, `nextcloud`, `n8n`, `immich`, `jellyfin`/`jellyseerr`, `affine`, `guacamole`, `truenas`, `dashboard`, `search`, `sure`, `chat`, `matrix`, and more. Full list lives in `/etc/caddy/sites/` on the Caddy host.
 - Private zone (`sites/private/`, `*.home.cleeryy.cloud`): `pbs` (`:8007`), `dns` (Technitium `:5380`), `proxmox`/`pve1`/`pve3` (`:8006`), `nas`, `adguard`, `ha`, plus service-internal routes.
-- Nginx Proxy Manager (VM `100`) has been decommissioned. `ubuntu-nginxrpm` (`105`) still runs on `pve1`; its role is tracked in the [migration plan](/architecture/migration-plan).
+- Nginx Proxy Manager (VM `100`) has been decommissioned. `ubuntu-nginxrpm` (`105`, `10.1.20.43`) migrated to VLAN 20 on 28/09/2026; serves Caddy upstreams `:81`/`:8080`.
 
 A `cloudflared` LXC (`103`) on `pve1` plus `cloudflared-opnsense` (`511`) on `pve3` provide Cloudflare tunnel egress for selected services.
 
-## Docker host addresses (site 1, legacy network)
+## Docker host addresses (site 1, production VLAN 20)
 
 Reported by the Proxmox API and Beszel:
 
 | Host (Beszel label) | IP | Proxmox VM | Node |
 |---------------------|----|------------|------|
-| `Beszel` | `192.168.1.25` | `202` `ubuntu-beszel` | `pve1` |
-| `Jelly` | `192.168.1.31` | `300` `ubuntu-jelly` | `pve3` |
-| `n8n` | `192.168.1.13` | `204` `ubuntu-n8n` | `pve1` |
-| `Nextcloud` | `192.168.1.27` | `200` `ubuntu-nextcloud` | `pve1` |
-| `QBittorrent` | `192.168.1.28` | `302` `ubuntu-qbittorrent` | `pve3` |
-| `Servarr` | `192.168.1.26` | `301` `ubuntu-servarr` | `pve3` |
-| `web-apps` | `192.168.1.23` | `102` `ubuntu-small-webapps` | `pve1` |
+| `Beszel` | `10.1.20.45` | `202` `ubuntu-beszel` | `pve1` |
+| `Jelly` | `10.1.20.61` | `300` `ubuntu-jelly` | `pve3` |
+| `n8n` | `10.1.20.47` | `204` `ubuntu-n8n` | `pve1` |
+| `Nextcloud` | `10.1.20.44` | `200` `ubuntu-nextcloud` | `pve1` |
+| `QBittorrent` | `10.1.20.63` | `302` `ubuntu-qbittorrent` | `pve3` |
+| `Servarr` | `10.1.20.62` | `301` `ubuntu-servarr` | `pve3` |
+| `web-apps` | `10.1.20.42` | `102` `ubuntu-small-webapps` | `pve1` |
 
 ## Beszel hostname mismatches
 
@@ -149,5 +149,5 @@ The cause is not documented. The mismatch is recorded so that operators reading 
 
 ## Known gaps
 
-The honest list: legacy guests still sit on the flat LAN instead of the VLANs, inter-VLAN policy is still allow-all with `[DEV]`/`TEMP` markers, the CrowdSec bans naming Caddy itself need someone to confirm log-noise and tune the rule, and site 2 is still a Fortigate in a box plus a site-to-site VPN that exists only as intent. Each is tracked; none is news.
+The honest list: TrueNAS/NAS stay on the flat LAN by design, inter-VLAN policy is still allow-all with `[DEV]`/`TEMP` markers, the CrowdSec bans naming Caddy itself need someone to confirm log-noise and tune the rule, and site 2 is still a Fortigate in a box plus a site-to-site VPN that exists only as intent. Each is tracked; none is news.
 - The remaining role of `ubuntu-nginxrpm` (`105`).

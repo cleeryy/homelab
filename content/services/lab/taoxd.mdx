@@ -1,0 +1,26 @@
+---
+title: TaoXD
+description: Stopped VM on `pve3` — undocumented workload.
+---
+
+TaoXD is a stopped 4 GB / 64 GB VM on the production VLAN tag with no documentation, no DNS record, and no owner on file. It was running at the start of the September migration and stopped at some point during it; whether that was cleanup or accident is itself undocumented.
+
+## Placement
+
+- VM `2242` on `pve3`, `net0` on `vmbr1` tag 20. **Stopped.**
+
+## Status
+
+- Stopped. QEMU guest agent flag set (takes effect on next boot).
+
+## Dependencies
+
+- Unknown.
+
+## Failure impact
+
+- None observed while stopped.
+
+## Known gaps
+
+- Everything: what it ran, who stopped it, boot or delete. This page is a placeholder until someone claims it.

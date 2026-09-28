@@ -13,7 +13,7 @@ Security here is layered but honest about its gaps. The perimeter is genuinely t
 - **Public services** — TLS-terminated by Caddy (`2010`) with Cloudflare-managed wildcard certificates. No service is exposed directly; everything public goes through Caddy routes.
 - **Private services** — `*.home.cleeryy.cloud` zone on the same Caddy (PBS, Proxmox UIs, Technitium, NAS). Reachable from WAN through the same NAT forwards; network-level restriction to VPN/management networks is **pending**.
 - **VLANs** — Admin (10), Production (20), Preproduction (25), IoT (30), Guest (40), Management (50), Home (60) exist at the OPNsense layer, but inter-VLAN isolation policy is **not in place yet** (allow-all rules with `[DEV]`/`TEMP` markers persist).
-- **Legacy LAN** — `192.168.1.0/24`: Proxmox management, legacy Docker VMs, NAS, TrueNAS. Flat, no segmentation.
+- **Legacy LAN** — `192.168.1.0/24`: Proxmox management, NAS, TrueNAS. Flat, no segmentation. All guests moved to VLAN 20/50 on 26-28/09/2026.
 
 ## Ingress
 

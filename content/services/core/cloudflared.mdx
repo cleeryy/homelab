@@ -1,0 +1,27 @@
+---
+title: Cloudflared tunnels
+description: Cloudflare tunnel egress on both nodes.
+---
+
+Two token-run (remotely managed) tunnels give selected services public URLs without opening inbound ports. Ingress rules live in the Cloudflare Zero Trust dashboard, not in local files — when a backend moves IP, the dashboard is where it gets fixed.
+
+## Placement
+
+- LXC `103` `cloudflared` on `pve1`, `10.1.20.36` — serves `nextcloud.cleeryy.cloud` → `10.1.20.44:8080` and friends.
+- LXC `511` `cloudflared-opnsense` on `pve3`, `10.1.20.55` — tunnel toward OPNsense.
+
+## Status
+
+- Both running. After the 26-28/09/2026 migration, stale ingress origins (`192.168.1.x`) must be repointed to `10.1.20.x` in the dashboard.
+
+## Dependencies
+
+- Cloudflare edge (outbound HTTPS). Origins must be reachable from the tunnel host's VLAN.
+
+## Failure impact
+
+- Tunnel host down or origin moved = public URL 502s while direct Caddy/LAN access still works.
+
+## Known gaps
+
+- Full ingress inventory per tunnel is only visible in the dashboard; mirror it here when convenient.

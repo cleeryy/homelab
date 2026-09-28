@@ -1,0 +1,26 @@
+---
+title: BentoPDF
+description: PDF utility service on `pve1`.
+---
+
+BentoPDF is the PDF toolbox: merge, split, compress and convert through a web UI. Same philosophy as the other utilities — one container, one port, behind Caddy.
+
+## Placement
+
+- LXC `104` `bentopdf` on `pve1`, `10.1.20.37:8080` (VLAN 20).
+
+## Status
+
+- Running. Ingress: `pdf.cleeryy.cloud` → Caddy → `10.1.20.37:8080`.
+
+## Dependencies
+
+- None.
+
+## Failure impact
+
+- PDF tools unreachable until restore. No downstream services.
+
+## Known gaps
+
+- Upload size limits and temp-file cleanup are not recorded here.

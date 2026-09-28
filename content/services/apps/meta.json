@@ -1,5 +1,25 @@
 {
   "title": "Apps",
   "description": "User-facing applications on the compute node",
-  "pages": ["nextcloud", "n8n", "immich", "openwebui", "searxng", "dynacat", "docmost"]
+  "pages": [
+    "nextcloud",
+    "n8n",
+    "immich",
+    "openwebui",
+    "searxng",
+    "dynacat",
+    "docmost",
+    "rustypaste",
+    "bentopdf",
+    "synapse",
+    "affine",
+    "sure",
+    "guacamole",
+    "discopanel",
+    "code",
+    "webapps",
+    "nginx-proxy",
+    "zenfree",
+    "alpine-docker"
+  ]
 }

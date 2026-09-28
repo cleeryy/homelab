@@ -1,0 +1,26 @@
+---
+title: Synapse (Matrix)
+description: Matrix homeserver with Element web client on `pve1`.
+---
+
+Synapse is the Matrix homeserver; Element (`:5173`) is the web client served next to it. Federation port `8448` applies if federation is ever enabled — until then this is a private chat island behind Caddy.
+
+## Placement
+
+- LXC `107` `elementsynapse` on `pve1`, `10.1.20.38:8008` (VLAN 20).
+
+## Status
+
+- Running. Ingress: `matrix.cleeryy.cloud` → Caddy → `10.1.20.38:8008`.
+
+## Dependencies
+
+- Database backend (SQLite or Postgres) is inside the container; exact wiring unconfirmed.
+
+## Failure impact
+
+- Chat history unreachable until restore. No other service depends on it.
+
+## Known gaps
+
+- Confirm the database backend and whether federation (`:8448`) is intended.

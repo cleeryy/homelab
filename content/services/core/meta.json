@@ -1,5 +1,20 @@
 {
   "title": "Core",
   "description": "Platform-critical services on the management plane",
-  "pages": ["reverse-proxy", "authentik", "warpgate", "dns", "connectivity", "pbs", "wazuh", "forgejo", "fumadocs", "monitoring"]
+  "pages": [
+    "reverse-proxy",
+    "authentik",
+    "warpgate",
+    "dns",
+    "connectivity",
+    "pbs",
+    "wazuh",
+    "forgejo",
+    "fumadocs",
+    "monitoring",
+    "firewall",
+    "cloudflared",
+    "postgresql",
+    "truenas"
+  ]
 }

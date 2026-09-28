@@ -7,7 +7,7 @@ Last synced with live infrastructure: **September 2026**.
 
 This is a flat view of where services live today. It is descriptive — not aspirational. Group is the role family, host is the Proxmox node, kind is VM or LXC.
 
-Read it as a map, not a verdict. The two clear patterns are worth naming: everything new lands on `pve3` as an LXC on a VLAN, while the legacy Docker VMs stay parked on `pve1` and the old flat LAN. Nothing here implies a service *should* move — moves are tracked as migrations, and until one is decided the observed placement is simply the truth to operate against.
+Read it as a map, not a verdict. The two clear patterns are worth naming: everything new lands on `pve3` as an LXC on a VLAN, while the Docker VMs (now on production VLAN `10.1.20.0/24`) stay mostly parked on `pve1`. Nothing here implies a service *should* move — moves are tracked as migrations, and until one is decided the observed placement is simply the truth to operate against.
 
 ## Edge and ingress
 
@@ -53,9 +53,9 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 
 | Service | Kind | ID | Host | Beszel label | IP |
 |---------|------|----|------|--------------|----|
-| Nextcloud | VM | `200` | `pve1` | `Nextcloud` | `192.168.1.27` |
-| n8n | VM | `204` | `pve1` | `n8n` | `192.168.1.13` |
-| Small webapps | VM | `102` | `pve1` | `web-apps` | `192.168.1.23` |
+| Nextcloud | VM | `200` | `pve1` | `Nextcloud` | `10.1.20.44` |
+| n8n | VM | `204` | `pve1` | `n8n` | `10.1.20.47` |
+| Small webapps | VM | `102` | `pve1` | `web-apps` | `10.1.20.42` |
 
 ## Applications (Proxmox LXCs — production VLAN)
 
@@ -79,9 +79,9 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 
 | Service | Kind | ID | Host | Beszel label | IP |
 |---------|------|----|------|--------------|----|
-| Jellyfin host | VM | `300` | `pve3` | `Jelly` | `192.168.1.31` |
-| Servarr host | VM | `301` | `pve3` | `Servarr` | `192.168.1.26` |
-| qBittorrent host | VM | `302` | `pve3` | `QBittorrent` | `192.168.1.28` |
+| Jellyfin host | VM | `300` | `pve3` | `Jelly` | `10.1.20.61` |
+| Servarr host | VM | `301` | `pve3` | `Servarr` | `10.1.20.62` |
+| qBittorrent host | VM | `302` | `pve3` | `QBittorrent` | `10.1.20.63` |
 
 ## Media / games (Proxmox LXCs)
 

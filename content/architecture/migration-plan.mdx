@@ -23,14 +23,13 @@ This page captures **transitions that are already visible** in the live setup, n
 
 ## Ingress: remaining `ubuntu-nginxrpm` (`105`)
 
-- VM `105` still runs on `pve1`. Its role next to Caddy is not confirmed.
-- Action: confirm whether anything still routes through it; decommission or repurpose.
+- VM `105` (`nginxrpm`, `10.1.20.43`) migrated to VLAN 20 on 28/09/2026; serves Caddy upstreams `:81` (proxy) and `:8080` (wol). Role confirmed, nothing to decommission.
 
 ## Network: finish the VLAN migration
 
 - Production (20) and Management (50) carry the platform; Admin (10) is lightly used; Preproduction (25), IoT (30), Guest (40), Home (60) are configured but near idle.
-- Legacy guests (all `pve1` Docker VMs, TrueNAS, NAS) still sit on `192.168.1.0/24`.
-- Action: move remaining guests onto the VLAN plan, then write the inter-VLAN firewall policy (current `[DEV]`/`TEMP` allow-all rules are not final).
+- Legacy guests (all Docker VMs + LXCs, `pve1` and `pve3`) moved onto VLAN 20/50 on 26-28/09/2026. TrueNAS (`127`) and the physical NAS stay on `192.168.1.0/24` by design (NFS backends, reachable from VLAN 20 via OPNsense).
+- Action: write the inter-VLAN firewall policy (current `[DEV]`/`TEMP` allow-all rules are not final).
 
 ## Security: SSO coverage
 
@@ -46,7 +45,7 @@ This page captures **transitions that are already visible** in the live setup, n
 
 | Item | Kind | Status | Action |
 |------|------|--------|--------|
-| `mint` (`10001`) | VM on `pve3` | Stopped | Keep as parked lab desktop or remove |
+| `mint` (`10001`) | VM on `pve3` | Running, VLAN 10 ADMIN (DHCP, IP unverified 28/09/2026) | Relever son IP |
 | `lune-pve1` (`6001`) / `lune-pve2` (`6002`) | VMs on `pve3` | Stopped POCs | Remove if the POC is over (512 GB disk each) |
 | `esgi-debian` (`15001`) | LXC on `pve3` | Stopped | Lab cleanup or revival |
 | `hermesagent` (`125`) | LXC on `pve3` | Running lab agent | Confirm owner/purpose |

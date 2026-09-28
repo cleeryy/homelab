@@ -1,5 +1,11 @@
 {
   "title": "Lab",
   "description": "Pre-production and test workloads",
-  "pages": ["preprod", "test-systems"]
+  "pages": [
+    "preprod",
+    "test-systems",
+    "taoxd",
+    "mint",
+    "hermes-agent"
+  ]
 }

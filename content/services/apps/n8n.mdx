@@ -8,7 +8,7 @@ n8n is where the homelab stops being a collection of apps and starts behaving li
 ## Placement
 
 - VM `204` `ubuntu-n8n` on `pve1`.
-- Beszel label `n8n`, IP `192.168.1.13`.
+- Beszel label `n8n`, IP `10.1.20.47`.
 - Beszel reports the system hostname as `ntfy`, which does not match the Beszel label or the Proxmox VM name.
 
 ## Docker containers
@@ -23,7 +23,7 @@ n8n is where the homelab stops being a collection of apps and starts behaving li
 
 ## Dependencies
 
-- The stack includes its own Traefik. Traffic enters via Caddy (`n8n.cleeryy.cloud` → `https://192.168.1.13:443`, backend certificate not validated) and then hits this internal Traefik.
+- The stack includes its own Traefik. Traffic enters via Caddy (`n8n.cleeryy.cloud` → `https://10.1.20.47:443`, backend certificate not validated) and then hits this internal Traefik.
 - n8n state (workflows, credentials) is stored locally in the n8n container's data directory.
 
 ## Operational notes

@@ -11,11 +11,11 @@ The VM list is short on purpose: virtual machines are reserved for the heavyweig
 
 | VM ID | Name | Function | Status | Notes |
 |-------|------|----------|--------|-------|
-| `102` | `ubuntu-small-webapps` | Docker host for the `web-apps` stack | Running | 4 GB RAM, IP `192.168.1.23` |
-| `105` | `ubuntu-nginxrpm` | Legacy reverse proxy | Running | 2 GB RAM; role next to Caddy pending validation |
-| `200` | `ubuntu-nextcloud` | Docker host for Nextcloud | Running | 12 GB RAM, IP `192.168.1.27` |
-| `202` | `ubuntu-beszel` | Docker host for Beszel + Portainer + Watchtower + Termix | Running | 2 GB RAM, IP `192.168.1.25` |
-| `204` | `ubuntu-n8n` | Docker host for n8n + internal Traefik | Running | 4 GB RAM, IP `192.168.1.13`; Beszel system hostname displayed as `ntfy` |
+| `102` | `ubuntu-small-webapps` | Docker host for the `web-apps` stack | Running | 4 GB RAM, IP `10.1.20.42` |
+| `105` | `ubuntu-nginxrpm` | Reverse proxy (NPM `:81`) + WOL panel (`:8080`) | Running | 2 GB RAM, IP `10.1.20.43` |
+| `200` | `ubuntu-nextcloud` | Docker host for Nextcloud | Running | 12 GB RAM, IP `10.1.20.44` |
+| `202` | `ubuntu-beszel` | Docker host for Beszel + Portainer + Watchtower + Termix | Running | 2 GB RAM, IP `10.1.20.45` |
+| `204` | `ubuntu-n8n` | Docker host for n8n + internal Traefik | Running | 4 GB RAM, IP `10.1.20.47`; Beszel system hostname displayed as `ntfy` |
 
 Nginx Proxy Manager (`100`) has been decommissioned.
 
@@ -24,20 +24,22 @@ Nginx Proxy Manager (`100`) has been decommissioned.
 | VM ID | Name | Function | Status | Notes |
 |-------|------|----------|--------|-------|
 | `127` | `truenas` | Storage VM with passed-through disks | Running | 8 GB RAM, `192.168.1.74`; does not move |
-| `300` | `ubuntu-jelly` | Docker host for Jellyfin + Seerr | Running | 12 GB RAM, IP `192.168.1.31` |
-| `301` | `ubuntu-servarr` | Docker host for the Servarr stack | Running | 8 GB RAM, IP `192.168.1.26` |
-| `302` | `ubuntu-qbittorrent` | Docker host for qBittorrent + Gluetun | Running | 24 GB RAM, IP `192.168.1.28` |
-| `501` | `opnsense` | Edge router / firewall | Running | 16 GB RAM; WAN `192.168.1.250`, LAN trunk + VLANs |
+| `300` | `ubuntu-jelly` | Docker host for Jellyfin + Seerr | Running | 12 GB RAM, IP `10.1.20.61` |
+| `301` | `ubuntu-servarr` | Docker host for the Servarr stack | Running | 8 GB RAM, IP `10.1.20.62` |
+| `302` | `ubuntu-qbittorrent` | Docker host for qBittorrent + Gluetun | Running | 24 GB RAM, IP `10.1.20.63` |
+| `501` | `opnsense` | Edge router / firewall (master) | Running | 16 GB RAM; WAN `192.168.1.250`, LAN trunk + VLANs |
+| `502` | `opnsense-slave` | CARP standby (full clone 28/09/2026) | **Stopped** | 16 GB RAM, `onboot 0`, new MACs, `net0` vmbr0 + `net1` vmbr1 — never boot unconfigured |
+| `2242` | `taoxd` | Undocumented workload | **Stopped** | 4 GB RAM, 64 GB disk, `net0` vmbr1 tag 20 |
 | `6001` | `lune-pve1` | POC | **Stopped** | 24 GB RAM, 512 GB disk |
 | `6002` | `lune-pve2` | POC | **Stopped** | 24 GB RAM, 512 GB disk |
-| `10001` | `mint` | Lab desktop | **Stopped** | Decision pending |
+| `10001` | `mint` | Lab desktop | Running | 8 GB RAM, VLAN 10 ADMIN (DHCP, IP unverified) |
 
 ## ID ranges currently in use
 
 - `100–199` — legacy VMs (one remaining: `105`).
 - `200–299` — Docker host VMs for application workloads.
 - `300–399` — Docker host VMs for the media stack.
-- `500–599` — edge / network (`501` OPNsense).
+- `500–599` — edge / network (`501` OPNsense master, `502` standby).
 - `127` — historical, outside the per-role ranges (TrueNAS).
 - `6000+` — POC VMs.
 - `10000+` — lab desktops.

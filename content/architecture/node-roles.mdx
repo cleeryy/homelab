@@ -22,7 +22,7 @@ Notable workloads on `pve1` (5 VMs, 8 CTs — verified September 2026):
 ## `pve3` — primary compute / production
 
 - Proxmox VE 9.2.11 (kernel `7.0.14-15-pve`), management address `192.168.1.103/24` on `vmbr0`. Hardware: 2x Xeon Silver 4208 (32 threads), ~172 GiB RAM. Heavily loaded at last observation (loadavg 34–51, ~103 GB RAM used, ~1.1 GB swap used).
-- Only `vmbr0` remains as host bridge (`vmbr1`/`vmbr2` are gone). Static route `10.1.0.0/16 via 10.1.50.1` persists on the host for reaching the VLANs.
+- Host bridges: `vmbr0` (management) + `vmbr1` (trunk to the other node, VLAN-aware). Static route `10.1.0.0/16 via 10.1.50.1` persists on both hosts for reaching the VLANs.
 - Storage attached: `local`, `local-lvm` (large LVM-thin pool), `nas` + `truenas` (shared NFS), `pbs`. Additional physical disks are passed through to the TrueNAS VM. No active ZFS pool on the host itself.
 
 Notable workloads on `pve3` (verified September 2026):
