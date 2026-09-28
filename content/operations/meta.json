@@ -5,6 +5,7 @@
     "provisioning",
     "dokploy",
     "backup-restore",
+    "startup-shutdown",
     "patching",
     "incident-response",
     "decommissioning"

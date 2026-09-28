@@ -111,7 +111,7 @@ Proxmox management, NAS and TrueNAS stay on the flat network (all guests migrate
 | Management LAN | `192.168.1.0/24` | In use by `pve1`, `pve3`, OPNsense WAN (`192.168.1.250`), NAS (`192.168.1.16`), TrueNAS (`192.168.1.74`) |
 | Proxmox link | `vmbr0` on both nodes | Up |
 
-Host gateway for both Proxmox nodes is `192.168.1.1`. `vmbr1` is a shared trunk `pve3` (eno4) <-> `pve1` (enp7s0), 1 Gbit/s, VLAN-aware 2-4094 (direct cable since 26/09/2026); `vlan50` on both hosts (10.1.50.103/10.1.50.101). The old `vmbr2` segment is gone.
+Host gateway for both Proxmox nodes is `192.168.1.1`. `vmbr1` is a shared trunk `pve3` (eno4) ↔ `pve1` (enp7s0), 1 Gbit/s, VLAN-aware 2-4094 (direct cable since 26/09/2026); `vlan50` on both hosts (10.1.50.103/10.1.50.101). The old `vmbr2` segment is gone.
 
 ## Ingress
 

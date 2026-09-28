@@ -16,6 +16,7 @@ The VM list is short on purpose: virtual machines are reserved for the heavyweig
 | `200` | `ubuntu-nextcloud` | Docker host for Nextcloud | Running | 12 GB RAM, IP `10.1.20.44` |
 | `202` | `ubuntu-beszel` | Docker host for Beszel + Portainer + Watchtower + Termix | Running | 2 GB RAM, IP `10.1.20.45` |
 | `204` | `ubuntu-n8n` | Docker host for n8n + internal Traefik | Running | 4 GB RAM, IP `10.1.20.47`; Beszel system hostname displayed as `ntfy` |
+| `502` | `opnsense-slave` | CARP standby (full clone 28/09/2026) | **Stopped** | 16 GB RAM, `onboot 0`, new MACs, `net0` vmbr0 + `net1` vmbr1 — never boot unconfigured |
 
 Nginx Proxy Manager (`100`) has been decommissioned.
 
@@ -28,11 +29,12 @@ Nginx Proxy Manager (`100`) has been decommissioned.
 | `301` | `ubuntu-servarr` | Docker host for the Servarr stack | Running | 8 GB RAM, IP `10.1.20.62` |
 | `302` | `ubuntu-qbittorrent` | Docker host for qBittorrent + Gluetun | Running | 24 GB RAM, IP `10.1.20.63` |
 | `501` | `opnsense` | Edge router / firewall (master) | Running | 16 GB RAM; WAN `192.168.1.250`, LAN trunk + VLANs |
-| `502` | `opnsense-slave` | CARP standby (full clone 28/09/2026) | **Stopped** | 16 GB RAM, `onboot 0`, new MACs, `net0` vmbr0 + `net1` vmbr1 — never boot unconfigured |
 | `2242` | `taoxd` | Undocumented workload | **Stopped** | 4 GB RAM, 64 GB disk, `net0` vmbr1 tag 20 |
 | `6001` | `lune-pve1` | POC | **Stopped** | 24 GB RAM, 512 GB disk |
 | `6002` | `lune-pve2` | POC | **Stopped** | 24 GB RAM, 512 GB disk |
-| `10001` | `mint` | Lab desktop | Running | 8 GB RAM, VLAN 10 ADMIN (DHCP, IP unverified) |
+| `10001` | `mint` | Lab desktop | Running | 8 GB RAM, VLAN 10 ADMIN (DHCP, IP unverified); manual start only — explicitly excluded from auto-start (`onboot 0`) |
+
+Start-at-boot and boot order for all of the above: [Operations > Startup & shutdown](/operations/startup-shutdown).
 
 ## ID ranges currently in use
 

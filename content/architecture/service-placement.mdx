@@ -27,7 +27,7 @@ Nginx Proxy Manager (VM `100`) has been decommissioned.
 |---------|------|----|------|-------|
 | Authentik (SSO) | LXC | `130` | `pve3` | SSO provider, `authentik.cleeryy.cloud` |
 | Warpgate (bastion) | LXC | `222` | `pve3` | SSO SSH bastion, `10.1.20.22` |
-| Apache Guacamole | LXC | `106` | `pve3` | Remote access gateway |
+| Guacamole | LXC | `106` | `pve3` | Remote access gateway |
 | Technitium (DNS) | LXC | `553` | `pve3` | Internal DNS, `10.1.50.53` |
 
 ## Infrastructure / management
@@ -69,6 +69,8 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 | Sure | LXC | `128` | `pve3` | Finance app, `sure.cleeryy.cloud` |
 | Code server | LXC | `119` | `pve3` | Dev environment, behind Authentik |
 | Hermes agent | LXC | `125` | `pve3` | Agent host, `10.1.20.41` |
+| Zenfree | LXC | `233` | `pve3` | Utility, role to be confirmed |
+| Paperclip | LXC | `279` | `pve3` | Utility, role to be confirmed |
 | Discopanel | LXC | `110` | `pve3` | Game panel, `mc-dashboard.cleeryy.cloud` |
 | BentoPDF | LXC | `104` | `pve1` | PDF utility |
 | RustyPaste | LXC | `101` | `pve1` | Pastebin utility |
@@ -87,7 +89,7 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
-| Palworld | LXC | `4001` | `pve3` | Game server, `10.1.20.143`, NAT-published UDP |
+| Palworld | LXC | `4001` | `pve3` | Game server, `10.1.20.143`, NAT-published UDP — **Stopped** |
 | Gamevault | LXC | `258` | `pve3` | Game library, ~1.2 TB used, excluded from backups |
 
 ## Storage
@@ -101,11 +103,13 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 | Service | Kind | ID | Host | Status |
 |---------|------|----|------|--------|
 | `projet-paul` | LXC | `257` | `pve3` | Running on preproduction (`10.1.25.7`) |
-| `esgi-docker` | LXC | `15002` | `pve3` | Running |
+| `esgi-docker` | LXC | `15002` | `pve3` | **Stopped** |
 | `esgi-debian` | LXC | `15001` | `pve3` | **Stopped** |
+| `taoxd` | VM | `2242` | `pve3` | **Stopped** |
 | `lune-pve1` | VM | `6001` | `pve3` | **Stopped** POC |
 | `lune-pve2` | VM | `6002` | `pve3` | **Stopped** POC |
-| `mint` | VM | `10001` | `pve3` | **Stopped** lab desktop |
+| `mint` | VM | `10001` | `pve3` | Running lab desktop — manual start, no auto-boot |
+| `opnsense-slave` | VM | `502` | `pve1` | **Stopped** — manual failover only |
 
 Deleted since June 2026: `prod-lockbits` (`310`), `preprod-lockbits` (`320`), all three `debian-test-edragent` containers (`331`–`333`).
 
