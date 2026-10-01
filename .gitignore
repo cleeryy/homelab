@@ -45,3 +45,6 @@ next-env.d.ts
 
 # claude code worktrees
 .claude/
+
+# pnpm local store (container builds)
+.pnpm-store/
