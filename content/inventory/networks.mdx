@@ -104,7 +104,7 @@ The virtual bridges are where the VLAN plan meets physical cables. Each node exp
 | `vmbr1` | `pve3` | trunk (no host IP, `eno4`) | Up, VLAN-aware 2-4094 |
 | `vmbr1` | `pve1` | trunk (no host IP, `enp7s0`) | Up, VLAN-aware 2-4094 |
 
-`vmbr1` is a shared trunk `pve3` (`eno4`) <-> `pve1` (`enp7s0`), 1 Gbit/s, VLAN-aware 2-4094 (direct cable since 26/09/2026). `vlan50` exists on both hosts (`.103`/`.101`). The direct cable date matters because older diagrams may still show switched uplinks; since late September the inter-node path is a single gigabit cable with no switch in between.
+`vmbr1` is a shared trunk `pve3` (`eno4`) ↔ `pve1` (`enp7s0`), 1 Gbit/s, VLAN-aware 2-4094 (direct cable since 26/09/2026). `vlan50` exists on both hosts (`.103`/`.101`). The direct cable date matters because older diagrams may still show switched uplinks; since late September the inter-node path is a single gigabit cable with no switch in between.
 
 ## Legacy segments (site 1)
 
