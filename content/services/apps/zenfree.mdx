@@ -1,41 +1,52 @@
 ---
 title: ZenFree
-description: "Pool proxy local vers l'API gratuite opencode Zen (usage : Hermes, OpenWebUI)."
+description: "Pool proxy local vers l'API gratuite opencode Zen + traducteur muse (usage : Hermes, OpenWebUI)."
 ---
 
 ZenFree est un proxy de pool (binaire Rust `zenfree`, image `zenfree:test`) devant l'API gratuite opencode Zen (`https://opencode.ai/zen/v1`). Il fait tourner les sorties sur 3 VPN (gluetun : se-1, ch-1, nl-1) avec rotation quand un plafond par IP est atteint. 84 modèles gratuits, coût 0.
 
+Le CT héberge aussi `zenfree-translator`, une brique de la même stack qui rend les modèles `muse-*` utilisables par n'importe quel client OpenAI-compatible.
+
 ## Placement
 
 - LXC `233` `zenfree` sur `pve3`, `10.1.20.33` (VLAN 20), stack docker-compose dans `/opt/zenfree/deploy/`.
-- Écoute `:8020` (LAN uniquement, pas d'ingress Caddy).
+- Pool sur `:8020`, traducteur sur `:8099` (LAN uniquement, pas d'ingress Caddy).
 
-## Interface
+## Pourquoi un traducteur
+
+Le tier gratuit de Zen refuse le trafic qui ne vient pas d'un client opencode « reconnu » : sondes desde nos IP → `403 FreeTierError: OpenCode's free tier can only be used from within OpenCode`. La recette pour passer est connue (voir `9router`, projet tiers) : endpoint `/v1/responses`, `stream` forcé, `store: false`, ids `ses_`/`msg_` valides, en-têtes `x-opencode-*`, et le quartet d'outils `bash/glob/grep/read` avec `tool_choice: auto`.
+
+Le pool seul ne fait pas cette traduction (il renvoie 500 sur `/v1/chat/completions` pour muse). Le traducteur l'applique **et** envoie le trafic par les proxies des conteneurs gluetun — c'est indispensable, une IP WAN est refusée alors que les sorties VPN passent.
+
+## Traducteur (`zenfree-translator`, CT 233)
+
+- systemd (dans le CT) : `/etc/systemd/system/zenfree-translator.service`, code `/opt/zenfree-translator/translator.py`, clé locale `/opt/zenfree-translator/.key` (600, à lire sur place), log `/opt/zenfree-translator/access.log` (`model=… code=… ms=… exit=…`, sans secrets ni corps).
+- `muse-*` : `POST /v1/chat/completions` → `/v1/responses` amont via `http://<ip-gluetun>:8888`, avec l'empreinte complète. Rotation maison sur les 3 sorties (cap 150 requêtes/sortie puis cooldown 300s), un essai par sortie en cas d'échec transitoire (reconnexion VPN), `x-opencode-request` régénéré à chaque tentative.
+- Autres modèles : simple relais vers le pool local (`127.0.0.1:8020`) — ils gardent la rotation et le catalogue du pool.
+- `GET /v1/models` retransmis du pool. Concurrence : sémaphore à 3, sessions stables par conversation (dérivées du premier message → continuité + quota), 429 amont retransmis tel quel. Streaming SSE supporté.
+- Note : `curl` via subprocess (et non `urllib`) parce que c'est la voie prouvée pour l'empreinte.
+
+## Consommateurs
+
+- Hermes (profil principal **et** profil `opencode`) : provider `translator` (`~/.hermes/plugins/model-providers/translator/` et `~/.hermes/profiles/opencode/plugins/model-providers/translator/`), `base_url http://10.1.20.33:8099/v1`, modèle `muse-spark-1.3-contributor-free`, clé `TRANSLATOR_API_KEY` dans le `.env` de chaque profil. Repli : `stealth/space-bunny-alpha` via OpenRouter.
+- OpenWebUI (CT 131) : `http://10.1.20.33:8099/v1`, clé = `/opt/zenfree-translator/.key` sur le CT 233 (à lire sur place). Modèles : `muse-spark-1.3-contributor-free`, `space-bunny-free`, etc.
+- Appels directs au pool `:8020` : seulement `space-bunny-free` passe ; muse passe par le traducteur.
+
+## Pool (interface)
 
 - Compatible OpenAI : `GET /v1/models`, `POST /v1/chat/completions`, `POST /v1/responses`.
 - Auth : Bearer obligatoire (`auth.enabled: true`). Token dans `/opt/zenfree/deploy/zenfree-pool.docker.yaml` (clé `tokens`, ligne 9) — le lire sur place, ne jamais le copier en clair ailleurs.
 - Les réponses sont gzippées : utiliser `curl --compressed`.
 
-## Consommateurs
-
-- Hermes profil `opencode` (Discord) : provider `zenfree` (`~/.hermes/profiles/opencode/plugins/model-providers/zenfree/`), `base_url http://10.1.20.33:8020/v1`, modèle `space-bunny-free`, clé `ZENFREE_API_KEY` dans le `.env` du profil. Repli : `stealth/space-bunny-alpha` via OpenRouter.
-- OpenWebUI (CT 131) : **via le traducteur** `http://10.1.20.41:8099/v1` (clé dans `/home/hermes/zenfree-translator/.key`, à lire sur place), pas direct au pool. Modèles : `muse-spark-1.3-contributor-free`, `space-bunny-free`, autres en retransmission.
-- Appels directs compatibles OpenAI : uniquement `space-bunny-free` passe en direct au pool ; muse exige la recette responses (voir traducteur).
-
-## Traducteur muse (`zenfree-translator`, CT `hermesagent` 10.1.20.41:8099)
-
-- Le pool seul ne fait pas passer muse (500/403 : il casse la recette d'empreinte). Le traducteur (`/home/hermes/zenfree-translator/translator.py`, service user systemd `zenfree-translator`, enabled) traduit `POST /v1/chat/completions` → `/v1/responses` amont avec : endpoint responses, `stream: true`, `store: false`, session `ses_`+requête `msg_` valides et stables par clé, quartet d'outils `bash/glob/grep/read` + `tool_choice: auto`, `max_output_tokens >= 16`, headers `opencode/1.18.31` + `x-opencode-*`, `Bearer public`.
-- Muse part en direct amont (même egress que le vrai client) ; le reste passe par le pool (rotation VPN + catalogue).
-- `GET /v1/models` retransmis du pool (84 modèles). Concurrence : sémaphore à 3, sessions stables par conversation (dérivées du premier message : continuité + quota, conversations différentes en parallèle), 429 amont retransmis tel quel (retry côté client). Streaming SSE supporté (agrégé en un chunk + `[DONE]`).
-
 ## Opérations
 
-- Config montée en bind (`/etc/zenfree/config.yaml`) : après modif, simple `docker restart zenfree` suffit.
-- Rotation/fallback inter-sorties automatique ; en voir l'état via `docker logs zenfree` (`member unreachable` = sortie KO, `proxied ... status=200` = OK).
-- Limites connues : quotas par IP côté Zen (files d'attente possibles), certaines sorties parfois injoignables (couvert par rotation). Pas fait pour du gros parallèle.
+- Pool : config montée en bind (`/etc/zenfree/config.yaml`) → après modif, `docker restart zenfree` suffit.
+- Traducteur : `systemctl restart zenfree-translator` (dans le CT). Code = fichier unique, pas de dépendance hors Python 3 + curl + docker (pour résoudre les IP gluetun).
+- État des sorties : `docker logs zenfree` (`member unreachable` = sortie KO, `proxied … status=200` = OK) et `access.log` du traducteur pour ce qui passe par lui.
+- Limites : quota gratuit par IP/session (d'où la rotation + les sessions stables), ~3 s par appel muse, pas designed pour de gros volumes.
 
 ## Historique
 
-- 30/09/2026 : token Bearer posé (était le placeholder `CHANGE...`), profil Hermes `opencode` basculé dessus (remplace `nvidia/nemotron-3.5-lightning:free` via OpenRouter qui crachait du gibberish).
-- 30/09/2026 : état du tier gratuit Zen testé modèle par modèle — `space-bunny-free` passe via le pool (OK OpenWebUI/Hermes) ; `muse-spark-*-contributor-free` → 500 upstream via le pool MAIS OK via le vrai client opencode ; `mimo`/`nemotron`/`longcat` `-free` → 403 « free tier can only be used from within OpenCode » hors vrai client ; IDs sans suffixe `-free` → 401 (clé Zen requise). Moralité : hors opencode, seul space-bunny passe pour l'instant.
-- 30/09/2026 : recette muse-sans-client trouvée (endpoint `/v1/responses`, stream forcé, session/requête `ses_`/`msg_` valides, quartet d'outils + `tool_choice: auto`, `max_output_tokens >= 16`) — merci au projet tiers `decolua/9router` pour la doc du gate. Traducteur déployé pour OpenWebUI (muse OK vérifié : `TRANSLATOR_MUSE4_OK`, `2+2`). Token pool regénéré (ancien préfixe visible dans des logs), log pool repassé en info.
+- 30/09/2026 : token Bearer posé (était le placeholder `CHANGE...`), profil Hermes basculé dessus (remplace `nvidia/nemotron-3.5-lightning:free` via OpenRouter qui crachait du gibberish).
+- 30/09/2026 : tests modèle par modèle du tier gratuit — `space-bunny-free` passe via le pool ; `muse-*-contributor-free` 500 via le pool mais OK via le vrai client ; `mimo`/`nemotron`/`longcat` `-free` → 403 « free tier only from within OpenCode » ; IDs sans `-free` → 401. Recette muse trouvée via `decolua/9router`. Premier traducteur (Python, sur CT 125) : muse OK en egress direct.
+- 01/10/2026 : l'egress direct se fait throttler (429) — le tier gratuit refuse l'IP WAN. Traducteur **v2 déplacé sur le CT 233** : il utilise les proxies gluetun du pool, avec rotation (cap 150 + cooldown 300s) et retries. Muse repasse en 200, y compris en parallèle (3 appels → 3 sorties distinctes). Ancien traducteur CT 125 supprimé. Hermes (profil principal inclus) basculé sur `http://10.1.20.33:8099/v1`. Intégration au binaire Rust écartée : source absente du CT (build fait ailleurs, `COPY /src/target/release/zenfree`).
