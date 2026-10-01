@@ -27,13 +27,14 @@ The *arr stack is the librarian: it watches for wanted shows and movies, finds t
 
 ## Dependencies
 
-- The stack writes to a shared media library mounted from TrueNAS. The same library is consumed by Jellyfin (`300`) and produced by qBittorrent (`302`).
+- The stack writes to a shared media library mounted from the physical NAS (`192.168.1.16`, exports `/data/pve` + `/data/medias`, reached from VLAN 20 via the `10.1.20.155` VIP + DNAT). The same library is consumed by Jellyfin (`300`) and produced by qBittorrent (`302`).
 - `prowlarr` provides indexer configuration to `sonarr`, `radarr`, and `bazarr`.
 - `gluetun` provides a VPN egress for traffic that should not exit on the host's public IP.
 
 ## Operational notes
 
 - Network policy for the *arr containers depends on whether they are wired into `gluetun`'s network namespace. The exact wiring is **not captured here**.
+- DNS (fixed 30/09/2026 — was hardcoded before): VM uplink is Technitium `10.1.50.53` via systemd-resolved stub, search domain `internal.cleeryy.cloud`. Inter-VM by hostname verified: `qbittorrent.internal.cleeryy.cloud` → `10.1.20.63` (sonarr→qbit HTTP 200), `jelly.internal.cleeryy.cloud` → `10.1.20.61`. Technitium A records (TTL 3600): `servarr`→`.62`, `qbittorrent`→`.63`, `jelly`→`.61`.
 
 ## Failure impact
 

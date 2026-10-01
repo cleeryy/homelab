@@ -51,6 +51,7 @@ VLAN migration is in progress: production and management carry the platform; IoT
 - DNS: Unbound on `:53` is the primary resolver. Override: `internal.cleeryy.cloud` → `10.1.50.53` (Technitium). DHCP served by dnsmasq (Admin `.100`–`.199`, Guest `.10`–`.199`, Home `.10`–`.199`).
 - Plugins: `os-crowdsec` 1.0.12 and `os-netbird` 1.3_3. Suricata (IDS) is **running**.
 - Gateways `WAN_GW` (`192.168.1.1`) and `AIRVPN_GW` (`10.128.0.1`) both report online.
+- NAS access from VLAN 20: IP alias `10.1.20.155/32` on PRODUCTION + DNAT `opt2 → 10.1.20.155` to `192.168.1.16` (all protocols, no SNAT — the NAS sees real `10.1.20.x` sources, so its exports must allow `10.1.20.0/24`). TCP `80/443/445/2049/111` verified through the VIP on 30/09/2026.
 - IPv6: not configured on any production interface (loopback only).
 
 ### Firewall posture (current)
