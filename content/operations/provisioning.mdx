@@ -3,49 +3,63 @@ title: Provisioning
 description: Procedure for bringing a new VM, LXC, or Docker stack online.
 ---
 
-Bringing up something new should feel routine, not adventurous. This procedure exists so the tenth deployment looks like the first: pick the right layer, take a free ID in the right range, wire DNS and ingress the same way every time, and leave the wiki updated behind you. Skip steps and the homelab accumulates exactly the kind of mystery this documentation was written to kill.
+Bringing up something new should feel routine, not adventurous. This procedure exists so the tenth deployment looks like the first: pick the right layer, take a free ID in the right range, wire DNS and ingress the same way every time, and leave the wiki updated behind you. Skip steps and the homelab accumulates exactly the kind of mystery this documentation was written to kill. The sections below follow the real order of a build — decide, allocate, provision, wire, document — and the last one is not optional polish but part of the provisioning itself.
 
 ## Decide where it goes
 
-- **Containerised app / website** → Dokploy on `obiwan` (`205`), exposed through Caddy. See [Dokploy](/operations/dokploy).
-- **Application Docker stack (legacy pattern)** → an Ubuntu VM on the appropriate node, following the pattern used for Nextcloud/n8n/Servarr (Docker compose + `portainer` + `watchtower` + `beszel-agent`). Prefer Dokploy for anything new.
-- **Single-purpose system service** → Proxmox LXC on `pve3` (production/management VLANs) unless it belongs with the legacy `pve1` stack.
-- **Storage-adjacent workload** → coordinate with TrueNAS for dataset and share creation.
-- **Lab / pre-production** → `pve3`, in a clearly separated namespace.
+Placement is the decision everything else inherits, so make it deliberately rather than by habit. A containerised app or website belongs on Dokploy on `obiwan` (`205`), exposed through Caddy as described on the [Dokploy](/operations/dokploy) page. The legacy pattern — an application Docker stack on an Ubuntu VM in the style of Nextcloud, n8n, or Servarr (Docker compose plus `portainer` plus `watchtower` plus `beszel-agent`) — still exists for what already runs that way, but anything new should prefer Dokploy. A single-purpose system service belongs in a Proxmox LXC on `pve3` (production and management VLANs), unless it genuinely belongs with the legacy `pve1` stack. Anything adjacent to storage needs coordinating with TrueNAS first for dataset and share creation, rather than after the guest is already expecting a mount. And lab or pre-production work belongs on `pve3` in a clearly separated namespace, so experiments never share an ID range or a network assumption with production.
 
 ## Allocate the ID
 
-ID ranges currently in use are documented in [Inventory > Virtual machines](/inventory/virtual-machines). Pick a free ID in the matching range.
+IDs in this homelab encode their VLAN and address by convention, so a wrong-range ID is a small lie every future reader has to work around. The ID ranges currently in use are documented under [Inventory > Virtual machines](/inventory/virtual-machines), and the rule is simply to pick a free ID in the matching range before creating anything. This takes a minute and saves the afternoon where two guests argue over one identity.
 
 ## Provision the guest
 
+Provisioning the guest is where the chosen layer becomes a running machine, and the two paths below diverge immediately — a Docker host VM is a small platform in its own right, while an LXC is a single service with host-level efficiency. Follow only the path you chose above, but follow it completely, because the monitoring and version-control steps are what make the guest operable rather than merely running.
+
 ### VM (Docker host)
 
-- [ ] Create on the target node.
-- [ ] OS: Ubuntu 24.04 LTS to stay consistent with the rest of the Docker hosts.
-- [ ] Install Docker and the compose plugin.
-- [ ] Install the `beszel-agent` container and register the host in Beszel.
-- [ ] Install `portainer` and `watchtower` if the host pattern uses them.
-- [ ] Drop the compose file under version control (Forgejo).
+Build this path when the workload is a Docker stack in the legacy VM pattern, keeping it consistent with the existing Ubuntu fleet so tooling and muscle memory transfer. Consistency here is operational, not aesthetic: same OS, same agent, same control plane, same versioned compose.
+
+1. Create the VM on the target node.
+2. Install Ubuntu 24.04 LTS to stay consistent with the rest of the Docker hosts.
+3. Install Docker and the compose plugin inside the guest.
+4. Install the `beszel-agent` container and register the host in Beszel.
+5. Install `portainer` and `watchtower` if the host pattern uses them.
+6. Place the compose file under version control in Forgejo.
+
+Confirm the new host reports in Beszel and its compose converges from a clean checkout before wiring anything to it. A host whose compose only exists on its own disk is provisioned halfway — the Forgejo copy is what makes it reproducible.
 
 ### LXC
 
-- [ ] Create on the target node from a vetted template.
-- [ ] Apply baseline configuration (timezone, networking, SSH).
-- [ ] Add to Beszel monitoring if relevant.
+Build this path for a single-purpose system service, starting from a vetted template rather than improvising an OS image. LXCs are cheap, which makes it tempting to skip the baseline, but the baseline is what keeps ten small guests manageable.
+
+1. Create the LXC on the target node from a vetted template.
+2. Apply the baseline configuration covering timezone, networking, and SSH.
+3. Add the guest to Beszel monitoring if relevant to its role.
+
+Verify login, networking, and (where applicable) monitoring visibility before proceeding to wiring. An LXC that cannot be reached the standard way on day one becomes the special case everyone dreads on day one hundred.
 
 ## Wire it in
 
-- [ ] If user-facing, add a Caddy route (see [Reverse proxy](/services/core/reverse-proxy)): public zone for user services, private `*.home.cleeryy.cloud` zone for admin UIs. Add Authentik `forward_auth` unless the route is deliberately public.
-- [ ] If the service stores data, decide where the data volume lives (`local-lvm`, `pve1-storage`, TrueNAS dataset, `nas`).
-- [ ] If the service has a backend (Postgres, Redis), confirm the backend exists or stand it up first.
+A running guest with no ingress, no data home, and no backend is not yet a service, and wiring is the phase where most half-provisioned builds stall. Work through ingress, data, and dependencies in that order, because each answers the question the next one assumes — who can reach it, where its state lives, and what it talks to.
+
+1. If the service is user-facing, add a Caddy route as described under [Reverse proxy](/services/core/reverse-proxy), using the public zone for user services and the private `*.home.cleeryy.cloud` zone for admin UIs, and add Authentik `forward_auth` unless the route is deliberately public.
+2. If the service stores data, decide where that data volume lives among `local-lvm`, `pve1-storage`, a TrueNAS dataset, and `nas`.
+3. If the service has a backend such as Postgres or Redis, confirm the backend exists or stand it up first.
+
+Test the route, the volume, and the backend connection from the service's real entry point before calling the build functional. A Caddy route that was never curled, a volume that was never written, or a backend assumed to exist are the three classic ways a "finished" provisioning pages someone at midnight.
 
 ## Document it
 
-- [ ] Add or update the matching page under [Services](/services/core/reverse-proxy).
-- [ ] Update the placement table in [Service placement](/architecture/service-placement).
-- [ ] Update the inventory page for VMs or LXCs.
+Documentation is the final provisioning step, not a favour to future readers but the mechanism that keeps the inventory honest. A service that runs but is not written down is invisible to triage, to decommissioning, and to the next provisioning decision, which means it will be rediscovered during an incident in the worst possible way.
+
+1. Add or update the matching page under [Services](/services/core/reverse-proxy).
+2. Update the placement table in [Service placement](/architecture/service-placement).
+3. Update the inventory page for VMs or LXCs.
+
+The build is done when all three pages agree with reality: the service page describes it, placement locates it, and inventory counts it. If any of the three still describes the world before this guest, provisioning is not finished.
 
 ## Known gaps
 
-There is no scripted path here — no Terraform, no Ansible, just the manual happy path above. That is a conscious scope choice for a two-node homelab, not an oversight; if provisioning ever becomes frequent enough to hurt, automation gets its own page.
+There is no scripted path here — no Terraform, no Ansible, just the manual happy path above. That is a conscious scope choice for a two-node homelab, not an oversight; if provisioning ever becomes frequent enough to hurt, automation gets its own page. Until then, the procedure's reproducibility comes from humans following the same narrative, not from machines enforcing it.

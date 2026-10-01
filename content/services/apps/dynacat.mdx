@@ -9,20 +9,20 @@ With dozens of hostnames in the air, nobody remembers them all — Dynacat is th
 
 ## Placement
 
-- LXC `151` `dynacat` on `pve3` (production VLAN, `10.1.20.51` tag; 2 GB RAM).
+Dynacat runs as LXC `151` (`dynacat`) on `pve3` on the production VLAN, carrying the `10.1.20.51` tag with 2 GB of RAM.
 
 ## Ingress
 
-`dashboard.cleeryy.cloud` → Caddy → `dynacat:8080`. No SSO gate currently.
+Public traffic arrives as `dashboard.cleeryy.cloud` through Caddy toward `dynacat:8080`, currently with no SSO gate — a deliberate non-priority for a page of links.
 
 ## Role
 
-Start-page dashboard linking the homelab services. Stateless; configuration is the asset.
+Dynacat is a start-page dashboard linking the homelab services. It is stateless by nature; its configuration — the tile list itself — is the only asset worth keeping.
 
 ## Failure impact
 
-- Dynacat down → operators lose the start page; all services remain directly reachable.
+If Dynacat goes down, operators lose the start page and guests lose the friendly map, but every service remains directly reachable at its own address. The outage is an inconvenience, never an emergency.
 
 ## Known gaps
 
-Where the dashboard definition lives (and therefore how to restore it) is undocumented, and SSO is a deliberate non-priority for a page of links. One sentence answering the first would finish this page.
+Where the dashboard definition lives, and therefore how to restore it, is undocumented — one sentence answering that would finish this page. SSO remains a conscious non-decision rather than an oversight.

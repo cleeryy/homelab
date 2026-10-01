@@ -9,6 +9,8 @@ This page used to describe a HiFive and a prayer — an NFS share with pruning d
 
 ## Backup platform — Proxmox Backup Server
 
+The backup platform is a single LXC that both nodes treat as their backup target. The table below pins down its identity, capacity and maintenance posture so there is no ambiguity about where restores come from.
+
 | Setting | Value |
 |---------|-------|
 | Host | LXC `578` `pbs` on `pve3`, `10.1.50.78:8007` |
@@ -16,41 +18,42 @@ This page used to describe a HiFive and a prayer — an NFS share with pruning d
 | PVE storage | Declared as `pbs` on both nodes (token `pve@pbs!pve`, DatastoreAdmin on the datastore only) |
 | Maintenance | Weekly garbage collection + monthly verify (via PBS UI) |
 
+Because the backup server lives on `pve3` alongside the workloads it protects, the maintenance rhythm matters as much as the capacity: weekly garbage collection keeps the 600 GB datastore from filling with dead chunks, and monthly verify catches corruption before a restore is needed.
+
 ## Schedules (PVE backup jobs → PBS)
+
+Two scheduled jobs carry the entire guest fleet to PBS, separated by criticality rather than by node. The table below is the contract: anything in scope is backed up nightly, anything excluded is excluded deliberately.
 
 | Job | Time | Retention | Scope |
 |-----|------|-----------|-------|
 | Critical | 02:00 | keep-last 7 | `130` (Authentik), `222` (Warpgate), `553` (Technitium), `2010` (Caddy), `501` (OPNsense) |
 | General | 04:00 | keep-last 3 | All guests **except** `258` (Gamevault, excluded — ~1.2 TB of replaceable game data) and `578` (PBS itself, excluded by design) |
 
+The critical job runs first at 02:00 with a deeper retention of seven copies because losing identity, bastion, DNS, ingress or edge simultaneously would compound any other outage. The general job follows at 04:00 with three copies for everything else, excluding only Gamevault, whose 1.2 TB of replaceable game data would swamp the datastore, and PBS itself, which cannot meaningfully back itself up.
+
 ## Off-site copy
 
-- rclone `crypt` remote → Google Drive: `gdrive-crypt:backupstore` + `pbs-config`.
-- Runs daily at 06:00 from CT `578` under `flock` (never run two syncs in parallel).
+The on-cluster backup server shares fate with the cluster, so an encrypted off-site copy closes that loop. An rclone `crypt` remote syncs to Google Drive, covering both `gdrive-crypt:backupstore` and `pbs-config`. The sync runs daily at 06:00 from CT `578` under `flock`, which guarantees that never more than one sync runs in parallel, since two concurrent syncs against the same datastore would contend on chunks and risk an inconsistent remote.
 
 ## Legacy / secondary destinations
+
+Before PBS, `vzdump` targets on local disk and NFS were the backup story, and their configuration is preserved below for completeness. These destinations still exist in Proxmox but are no longer the restore path anyone should reach for first.
 
 | Destination | Type | Content | Policy |
 |-------------|------|---------|--------|
 | `local` | Directory on each node (`/var/lib/vz`) | `backup`, `iso`, `vztmpl` | Per-job Proxmox retention |
 | `nas` | NFS `192.168.1.16:/data/pve` | `rootdir`, `iso`, `backup`, `images` | `prune-backups keep-all=1` (no pruning) |
 
-`nas` is a legacy `vzdump` target, not the primary backup path anymore.
+The `nas` entry with pruning disabled is the old world fossilised in configuration: it accumulates dumps without ever expiring them. It is a legacy `vzdump` target, not the primary backup path anymore, and it should be read as history rather than policy.
 
 ## Snapshot capabilities
 
-- **PBS snapshots** — the primary restore path for all guests in scope.
-- **ZFS snapshots** on `pve1-storage` (`pve1`) for infra-side application data.
-- **TrueNAS snapshots** for datasets backing media and bulk data on `pve3`.
-
-Snapshots are a recovery feature, not an off-host backup.
+Snapshots complement backups by giving fast local rollback, and each layer of the storage stack has its own mechanism. PBS snapshots are the primary restore path for all guests in scope, since they are deduplicated, verified monthly, and copied off-site. ZFS snapshots on `pve1-storage` cover infra-side application data on `pve1` for quick recovery from bad writes without a full guest restore. TrueNAS snapshots cover the datasets backing media and bulk data on `pve3` for the same reason at larger scale. Snapshots are a recovery feature, not an off-host backup, and none of them survives the loss of the chassis they live on.
 
 ## Practical implications
 
-- A backup that has never been restore-tested does not exist: re-run a restore drill after any major change (last successful drill 10/09/2026).
-- The TrueNAS VM lives on `pve3`. A `pve3` failure affects both the production workload and a large fraction of the storage layer — PBS on the same node shares that fate, which is why the encrypted off-site copy matters.
-- Gamevault (`258`) is intentionally unprotected: re-download, don't restore.
+A backup that has never been restore-tested does not exist, so the drill history is part of the policy: re-run a restore drill after any major change, with the last successful drill having booted on 10/09/2026. The TrueNAS VM lives on `pve3`, which means a `pve3` failure affects both the production workload and a large fraction of the storage layer at once, and since PBS sits on the same node it shares that fate — the encrypted off-site copy is what breaks the shared-fate chain. Gamevault (`258`) is intentionally unprotected, and its recovery procedure is re-download rather than restore, which is a capacity decision documented here so nobody pages over its absence from the backup set.
 
 ## Known gaps
 
-Two open questions, both about the layer above guest backups: whether the stateful Docker hosts get application-level dumps on top of PBS, and whether TrueNAS replicates anywhere off-chassis. See [Operations > Backup & restore](/operations/backup-restore) for procedures.
+Two open questions remain, both about the layer above guest backups. The first is whether the stateful Docker hosts get application-level dumps on top of PBS guest images, since a restorable VM without a consistent database dump inside it is only half a recovery. The second is whether TrueNAS replicates anywhere off-chassis, since snapshots on the same disks are not a second copy. See [Operations > Backup & restore](/operations/backup-restore) for procedures.

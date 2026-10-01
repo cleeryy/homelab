@@ -7,10 +7,11 @@ The *arr stack is the librarian: it watches for wanted shows and movies, finds t
 
 ## Placement
 
-- VM `301` `ubuntu-servarr` on `pve3`.
-- Beszel label `Servarr`, IP `10.1.20.62`.
+The librarian lives on VM `301` (`ubuntu-servarr`) on `pve3`, carrying the Beszel label `Servarr` at IP `10.1.20.62`.
 
 ## Docker containers
+
+The host runs the full automation ensemble plus its two enablers: VPN egress and challenge-solving. `sonarr` handles TV, `radarr` handles movies, `prowlarr` aggregates indexers for both (and for `bazarr`, which fetches subtitles), while `jellysweep` tidies the Jellyfin library and `flaresolverr` solves the Cloudflare challenges indexers throw up. `gluetun` provides VPN egress, and `portainer`, `watchtower`, and `beszel-agent` round out management.
 
 | Container | Function |
 |-----------|----------|
@@ -25,21 +26,19 @@ The *arr stack is the librarian: it watches for wanted shows and movies, finds t
 | `watchtower` | Image auto-update |
 | `beszel-agent` | Monitoring agent |
 
+Whether the *arr containers are actually wired into `gluetun`'s network namespace decides which traffic the VPN really covers, and that exact wiring is **not captured here**. The backup weak point is the set of *arr configs plus the VPN credentials — the library itself can be rebuilt, but the indexers, lists, and custom formats cannot.
+
 ## Dependencies
 
-- The stack writes to a shared media library mounted from the physical NAS (`192.168.1.16`, exports `/data/pve` + `/data/medias`, reached from VLAN 20 via the `10.1.20.155` VIP + DNAT). The same library is consumed by Jellyfin (`300`) and produced by qBittorrent (`302`).
-- `prowlarr` provides indexer configuration to `sonarr`, `radarr`, and `bazarr`.
-- `gluetun` provides a VPN egress for traffic that should not exit on the host's public IP.
+The stack writes to a shared media library mounted from the physical NAS (`192.168.1.16`, exports `/data/pve` + `/data/medias`, reached from VLAN 20 via the `10.1.20.155` VIP + DNAT) — the same library that qBittorrent (`302`) produces into and Jellyfin (`300`) reads from. Inside the host, `prowlarr` feeds indexer configuration to `sonarr`, `radarr`, and `bazarr`, while `gluetun` offers VPN egress to traffic that should not exit on the host's public IP.
 
 ## Operational notes
 
-- Network policy for the *arr containers depends on whether they are wired into `gluetun`'s network namespace. The exact wiring is **not captured here**.
-- DNS (fixed 30/09/2026 — was hardcoded before): VM uplink is Technitium `10.1.50.53` via systemd-resolved stub, search domain `internal.cleeryy.cloud`. Inter-VM by hostname verified: `qbittorrent.internal.cleeryy.cloud` → `10.1.20.63` (sonarr→qbit HTTP 200), `jelly.internal.cleeryy.cloud` → `10.1.20.61`. Technitium A records (TTL 3600): `servarr`→`.62`, `qbittorrent`→`.63`, `jelly`→`.61`.
+Network policy for the *arr containers hinges on the `gluetun` wiring question above: same-namespace means tunneled, separate means direct — and the exact wiring is **not captured here**, so assume nothing about which path a given container takes. DNS was fixed on 30/09/2026 (it was hardcoded before): the VM uplink is Technitium `10.1.50.53` via the systemd-resolved stub with search domain `internal.cleeryy.cloud`, and inter-VM resolution by hostname is verified — `qbittorrent.internal.cleeryy.cloud` resolves to `10.1.20.63` (sonarr→qbit HTTP 200) and `jelly.internal.cleeryy.cloud` to `10.1.20.61`. The corresponding Technitium A records (TTL 3600) are `servarr`→`.62`, `qbittorrent`→`.63`, `jelly`→`.61`.
 
 ## Failure impact
 
-- A `pve3` outage takes the stack down alongside qBittorrent, Jellyfin, and TrueNAS.
-- A `gluetun` failure may degrade indexer traffic but does not affect Jellyfin playback of already-downloaded content.
+A `pve3` outage takes the stack down alongside qBittorrent, Jellyfin, and TrueNAS. A narrower `gluetun` failure is survivable: it may degrade indexer traffic without affecting Jellyfin playback of already-downloaded content.
 
 ## Known gaps
 

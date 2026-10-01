@@ -7,10 +7,11 @@ qBittorrent does exactly one job — download — wrapped in exactly one protect
 
 ## Placement
 
-- VM `302` `ubuntu-qbittorrent` on `pve3`.
-- Beszel label `QBittorrent`, IP `10.1.20.63`.
+The downloader lives on VM `302` (`ubuntu-qbittorrent`) on `pve3`, carrying the Beszel label `QBittorrent` at IP `10.1.20.63`.
 
 ## Docker containers
+
+The stack is a downloader plus its VPN wrapper, with the usual management sidecars alongside. `qbittorrent` downloads, `gluetun` wraps all of that traffic in VPN egress, and `portainer`, `watchtower`, and `beszel-agent` manage, update, and monitor.
 
 | Container | Function |
 |-----------|----------|
@@ -20,19 +21,19 @@ qBittorrent does exactly one job — download — wrapped in exactly one protect
 | `watchtower` | Image auto-update |
 | `beszel-agent` | Monitoring agent |
 
+`gluetun` was reported as **unhealthy** at the last observation — the signature failure of this host, and the first thing to check whenever downloads stall. The backup weak point is not the downloaded content, which can be fetched again, but the `qbittorrent` configuration and the VPN credentials that make the tunnel work.
+
 ## Dependencies
 
-- Downloads land on a shared volume consumed by the Servarr stack (`301`) and read by Jellyfin (`300`). The exact mount path on TrueNAS is **not captured here**.
-- `qbittorrent` is expected to share `gluetun`'s network namespace so that download traffic exits through the VPN; the exact compose wiring is not exported here.
+Downloads land on a shared volume consumed by the Servarr stack (`301`) and read by Jellyfin (`300`), though the exact mount path on TrueNAS is **not captured here**. `qbittorrent` is expected to share `gluetun`'s network namespace so download traffic exits through the VPN, but the exact compose wiring is not exported here.
 
 ## Operational notes
 
-- `gluetun` was reported as **unhealthy** at the last observation. This is the most common single failure for this host: when `gluetun` is unhealthy, `qbittorrent` either has no network or no internet egress depending on the compose mode.
+When `gluetun` is unhealthy, `qbittorrent` ends up with either no network or no internet egress depending on compose mode — either way, downloads stop while the rest of the media stack keeps playing what is already on disk. This split-brain look (player fine, pipeline dry) is the telltale sign.
 
 ## Failure impact
 
-- A `pve3` outage takes qBittorrent, the Servarr stack, Jellyfin, and TrueNAS down together.
-- Loss of `gluetun` health stops downloads but leaves the rest of the media stack working from already-downloaded content.
+A `pve3` outage takes qBittorrent down together with the Servarr stack, Jellyfin, and TrueNAS. A narrower `gluetun` failure is kinder: it stops downloads while leaving the rest of the media stack working from already-downloaded content.
 
 ## Known gaps
 

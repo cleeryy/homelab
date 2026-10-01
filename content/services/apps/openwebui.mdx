@@ -9,20 +9,20 @@ This is the friendly face over whatever language models the homelab talks to: on
 
 ## Placement
 
-- LXC `131` `openwebui` on `pve3` (production VLAN, `10.1.20.31` tag; 8 GB RAM).
+OpenWebUI runs as LXC `131` (`openwebui`) on `pve3` on the production VLAN, carrying the `10.1.20.31` tag with 8 GB of RAM.
 
 ## Ingress
 
-`chat.cleeryy.cloud` → Caddy → `openwebui:8080`. No SSO gate currently — SSO is recommended for any AI frontend holding API keys.
+Traffic arrives as `chat.cleeryy.cloud` through Caddy toward `openwebui:8080`, currently with no SSO gate — a combination worth revisiting for any AI frontend that holds API keys, since SSO is recommended here.
 
 ## Dependencies
 
-- Backend model provider (local inference vs. hosted API) is not captured here; the backing provider determines the real failure domain.
+The only dependency that matters is the backend model provider, and it is not captured here. Whether inference is local or a hosted API determines the real failure domain, the cost exposure, and whose key is at stake — the container itself is the least interesting part of the chain.
 
 ## Failure impact
 
-- A `pve3` outage takes the frontend down; hosted-model usage from other clients is unaffected.
+A `pve3` outage takes the frontend down with it, but hosted-model usage from other clients continues unaffected. The frontend is a convenience layer, not the model itself.
 
 ## Known gaps
 
-The backend provider wiring (local vs. hosted, whose key, who pays) is undocumented, the SSO decision is open despite API keys being involved, and the backup posture for chats and settings is unknown. The first item is the one to resolve; the rest follows from it.
+The backend provider wiring (local versus hosted, whose key, who pays) is undocumented, the SSO decision is open despite API keys being involved, and the backup posture for chats and settings is unknown. The first item is the one to resolve; the rest follows from it.

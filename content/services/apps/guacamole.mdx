@@ -3,24 +3,24 @@ title: Guacamole
 description: Remote desktop gateway on `pve3`.
 ---
 
-Guacamole is the browser-based remote desktop gateway (RDP/VNC/SSH through HTML5). MySQL (`:3306` loopback) holds its connection definitions.
+Guacamole is the browser-based remote desktop gateway: RDP, VNC, and SSH sessions delivered as HTML5, so any laptop with a browser becomes a jump host. Its connection definitions live in a local MySQL on loopback `:3306` inside the same container, which keeps the gateway self-contained — lose the container and you lose both the software and its address book together. It is the convenient front door, never the only one: direct SSH via Warpgate keeps working even when Guacamole does not.
 
 ## Placement
 
-- LXC `106` `apache-guacamole` on `pve3`, `10.1.20.48:8080` (VLAN 20).
+The gateway runs as LXC `106` (`apache-guacamole`) on `pve3`, listening at `10.1.20.48:8080` on VLAN 20.
 
 ## Status
 
-- Running. Ingress: `guacamole.cleeryy.cloud` → Caddy → `apache-guacamole:8080`.
+The container is running. Ingress is `guacamole.cleeryy.cloud` through Caddy toward `apache-guacamole:8080`.
 
 ## Dependencies
 
-- Local MySQL only. Target machines are reached over the tailnet/VLANs.
+Guacamole depends only on its local MySQL for connection definitions. The machines it reaches are contacted over the tailnet and VLANs, so no shared database or storage service stands between a working gateway and its targets.
 
 ## Failure impact
 
-- No browser remote access until restore. Direct SSH via Warpgate still works.
+If the LXC fails, browser-based remote access stops until the guest is restored. Direct SSH access via Warpgate is unaffected, so operators are inconvenienced rather than locked out.
 
 ## Known gaps
 
-- SSO (Authentik) is not in front of Guacamole yet — see the SSO coverage item in the [migration plan](/architecture/migration-plan).
+SSO through Authentik is not yet in front of Guacamole — see the SSO coverage item in the [migration plan](/architecture/migration-plan). For a gateway that brokers interactive sessions, that gap is the one to close.

@@ -7,31 +7,29 @@ Last synced with live infrastructure: **September 2026**.
 
 Every login in the homelab flows through here. Authentik is the single identity provider: humans authenticate once, and services either redirect to it or ask Caddy to check with it on every request. That design means adding SSO to a new service is a five-line Caddy change instead of a per-app user database — which is why the migration plan pushes for SSO-by-default. If Authentik is down, every gated route fails closed, so it sits in the critical backup job alongside the edge and DNS.
 
-## Components
+## Placement
+
+Authentik runs as a single LXC on the compute node, where Caddy and the gated upstreams on the production VLAN can all reach it. It is part of the critical backup job (02:00, keep-last 7), precisely because losing it locks out every gated route.
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
 | LXC | `130` | `authentik` | `pve3` | SSO provider (8 GB RAM) |
 
-## Ingress
+## Status
+
+Authentik is running. It serves humans through SSO logins and serves services through Caddy `forward_auth` gates and Warpgate bastion authentication. The admin UI and the outpost endpoint are both fronted by Caddy, with the backend using a self-signed certificate that Caddy explicitly trusts.
 
 - `authentik.cleeryy.cloud` → Caddy → `https://authentik:9443` (`tls_insecure_skip_verify`, self-signed backend).
-- Outpost endpoint `authentik:9000` serves Caddy `forward_auth` (`/outpost.goauthentik.io/auth/caddy`), currently wired on `code.cleeryy.cloud` with `X-Authentik-*` headers forwarded.
-
-## Role
-
-Authentik is the identity provider for humans (SSO logins) and for services (Caddy `forward_auth` gates, Warpgate bastion authentication). It is in the critical backup job (02:00, keep-last 7) — losing it locks out every gated route.
+- Outpost `authentik:9000` serves Caddy `forward_auth` (`/outpost.goauthentik.io/auth/caddy`), currently wired on `code.cleeryy.cloud` with `X-Authentik-*` headers forwarded.
 
 ## Dependencies
 
-- Reachable from Caddy (`2010`) and from gated upstreams over the production VLAN.
-- Database backend: not exported into this documentation (likely the shared PostgreSQL `112`; pending validation).
+Authentik depends on reachability from Caddy (`2010`) and from the gated upstreams over the production VLAN, since every `forward_auth` check is a live HTTP call. Its database backend is not exported into this documentation and is most likely the shared PostgreSQL `112`, but that wiring is still pending validation.
 
 ## Failure impact
 
-- Authentik down → SSO logins fail and every `forward_auth` route returns 401/403. Ungated public routes are unaffected.
-- A `pve3` outage takes Authentik with it.
+If Authentik goes down, SSO logins fail and every `forward_auth` route returns 401 or 403, while ungated public routes keep serving. A `pve3` outage takes Authentik with it, which turns a single-node failure into a homelab-wide login outage.
 
 ## Known gaps
 
-Three things are still undocumented: which database actually backs Authentik (presumably the shared PostgreSQL, unconfirmed), the full inventory of providers and MFA policy, and the rollout plan for SSO-by-default across the remaining open routes. None of them block daily operation, but the first one matters for disaster recovery — find it before the next restore drill.
+Three things remain undocumented: which database actually backs Authentik (presumably the shared PostgreSQL, unconfirmed), the full inventory of providers and MFA policy, and the rollout plan for SSO-by-default across the remaining open routes. None of them blocks daily operation, but the first one matters for disaster recovery and should be confirmed before the next restore drill.

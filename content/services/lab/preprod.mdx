@@ -15,21 +15,20 @@ Preproduction is where experiments live before they earn the right to touch real
 | LXC | `15002` | `esgi-docker` | `pve3` | **Stopped** | Project Docker host |
 | LXC | `15001` | `esgi-debian` | `pve3` | **Stopped** | Lab cleanup or revival |
 
-The old `lockbits` preproduction/production containers (`310`, `320`) have been deleted.
+The table above is the whole fleet: one running project host and two stopped ones awaiting a decision. `projet-paul` is the only guest currently living on the preproduction VLAN, which otherwise sits idle, while the two stopped ESGI hosts hold disk and IDs but no running workload. The old `lockbits` preproduction and production containers (`310`, `320`) have been deleted and are noted here only so nobody goes looking for them.
 
 ## Purpose
 
-Project-specific hosts that are not part of the production data path. `projet-paul` is the only guest currently living on the preproduction VLAN, which otherwise sits idle.
+These are project-specific hosts outside the production data path. They exist so experiments have somewhere to run that is neither the production VLAN nor somebody's laptop, and they earn detailed pages only when they graduate toward production — until then, a paragraph each is the right size.
 
 ## Placement
 
-- All pre-production workloads live on `pve3`, separated from production stacks by VLAN (for `257`) or by convention.
+All pre-production workloads live on `pve3`, separated from the production stacks by VLAN for `257` and by convention for the stopped hosts.
 
 ## Operational notes
 
-- These are lab workloads. They are not part of the production data path and should not be relied on by user-facing services.
-- Backup posture: covered by the general PBS job; per-guest restore priority is best-effort.
+These are lab workloads, not production services: nothing user-facing should rely on them, and their state can change without notice. Backup posture is the general PBS job with best-effort per-guest restore priority — enough to recover an experiment, not a promise to preserve one.
 
 ## Known gaps
 
-Functional descriptions for both project hosts, plus their reachability and exposure model. Lab workloads earn detailed pages only when they graduate toward production; until then, a paragraph each is the right size.
+Functional descriptions for both project hosts, plus their reachability and exposure model, remain undocumented. Lab workloads earn detail only as they approach production; until then the gap is intentional.

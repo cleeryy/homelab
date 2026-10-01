@@ -9,20 +9,19 @@ Years of photos are the least replaceable data in this homelab — movies can be
 
 ## Placement
 
-- LXC `276` `immich` on `pve3` (production VLAN, `10.1.20.76` tag; 6 GB RAM).
+Immich runs as LXC `276` (`immich`) on `pve3` on the production VLAN, carrying the `10.1.20.76` tag with 6 GB of RAM.
 
 ## Ingress
 
-`immich.cleeryy.cloud` → Caddy → `immich:2283`. No SSO gate currently.
+Public traffic arrives as `immich.cleeryy.cloud` through Caddy toward `immich:2283`, currently with no SSO gate.
 
 ## Dependencies
 
-- Object storage / database live on the LXC root disk (`local-lvm` on `pve3`); exact volume layout not captured here.
-- Covered by the general PBS job; application-level backup posture (libraries, thumbnails, ML data) is pending.
+Object storage and the database live on the LXC root disk (`local-lvm` on `pve3`), though the exact volume layout is not captured here. The guest is covered by the general PBS job, but the application-level backup posture for libraries, thumbnails, and ML data is still pending — guest restore and library restore are not the same thing.
 
 ## Failure impact
 
-- A `pve3` outage takes Immich down with the rest of the production VLAN.
+A `pve3` outage takes Immich down together with the rest of the production VLAN. The outage itself is ordinary; what makes it scary is the irreplaceable data sitting underneath it.
 
 ## Known gaps
 

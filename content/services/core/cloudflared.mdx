@@ -7,21 +7,23 @@ Two token-run (remotely managed) tunnels give selected services public URLs with
 
 ## Placement
 
+One tunnel runs on each Proxmox node so that egress survives a single-node outage. The `pve1` tunnel fronts the user-facing services, while the `pve3` tunnel points toward OPNsense.
+
 - LXC `103` `cloudflared` on `pve1`, `10.1.20.36` — serves `nextcloud.cleeryy.cloud` → `10.1.20.44:8080` and friends.
 - LXC `511` `cloudflared-opnsense` on `pve3`, `10.1.20.55` — tunnel toward OPNsense.
 
 ## Status
 
-- Both running. After the 26-28/09/2026 migration, stale ingress origins (`192.168.1.x`) must be repointed to `10.1.20.x` in the dashboard.
+Both tunnels are running. After the 26–28/09/2026 migration, any stale ingress origins still pointing at `192.168.1.x` must be repointed to `10.1.20.x` in the dashboard, since the backends have moved.
 
 ## Dependencies
 
-- Cloudflare edge (outbound HTTPS). Origins must be reachable from the tunnel host's VLAN.
+Both tunnels depend on the Cloudflare edge over outbound HTTPS, with no inbound firewall rules required. Each origin must be reachable from its tunnel host's VLAN, otherwise the tunnel stays up but the public URL returns an error.
 
 ## Failure impact
 
-- Tunnel host down or origin moved = public URL 502s while direct Caddy/LAN access still works.
+If a tunnel host goes down or an origin moves without the dashboard being updated, the affected public URLs return 502s. Direct access over Caddy and the LAN keeps working, so the outage looks like a public-ingress problem rather than an application failure.
 
 ## Known gaps
 
-- Full ingress inventory per tunnel is only visible in the dashboard; mirror it here when convenient.
+The full per-tunnel ingress inventory is only visible in the Cloudflare dashboard and has never been mirrored here. Copying it over when convenient would make this page self-sufficient during an outage.

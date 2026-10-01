@@ -3,24 +3,24 @@ title: RustyPaste
 description: Minimal file/pastebin utility on `pve1`.
 ---
 
-RustyPaste does one thing — accept a file or a paste through a tiny web UI and hand back a link. No accounts, no database, nothing to back up beyond the container itself. It lives on an Alpine LXC because it needs almost nothing to run.
+RustyPaste does one thing — accept a file or a paste through a tiny web UI and hand back a link. No accounts, no database, nothing to back up beyond the container itself. It lives on an Alpine LXC because it needs almost nothing to run, and that frugality is its resilience: there is barely anything here that can break.
 
 ## Placement
 
-- LXC `101` `alpine-rustypaste` on `pve1`, `10.1.20.35:8000` (VLAN 20, gw `10.1.20.1`).
+The service runs as LXC `101` (`alpine-rustypaste`) on `pve1`, listening at `10.1.20.35:8000` on VLAN 20 via gateway `10.1.20.1`.
 
 ## Status
 
-- Running. Ingress: `paste.cleeryy.cloud` → Caddy → `10.1.20.35:8000`.
+The container is running. Ingress is `paste.cleeryy.cloud` through Caddy toward `10.1.20.35:8000`.
 
 ## Dependencies
 
-- None. Stateless apart from pasted files on local disk.
+RustyPaste depends on nothing. It is stateless apart from the pasted files sitting on local disk, so its only consumption is a little disk space.
 
 ## Failure impact
 
-- Pastes unreachable until the LXC is restored. Nothing else depends on it.
+If the LXC fails, pastes are unreachable until the guest is restored. Nothing else depends on it, so the outage begins and ends at the pastebin.
 
 ## Known gaps
 
-- Retention/expiry policy and max upload size are not recorded here.
+Retention and expiry policy plus the maximum upload size are not recorded here — the two settings that decide whether this stays a handy scratch space or quietly fills its disk.

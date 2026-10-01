@@ -5,7 +5,11 @@ description: Storage pools and the TrueNAS VM.
 
 Last synced with live infrastructure: **September 2026**.
 
+Storage in this cluster is a federation rather than a single pool. Each Proxmox node keeps fast local disks for images and container root filesystems, two NFS shares provide common ground for ISOs, backups, and images, and a dedicated backup server holds versioned Proxmox backups off the primary disks. TrueNAS adds the ZFS layer that `pve3` itself deliberately lacks, passing physical disks through to a virtualized storage appliance. The tables below name each piece and where it attaches, so capacity planning starts from what exists rather than from assumptions.
+
 ## Storage IDs from `/etc/pve/storage.cfg`
+
+These six IDs are the authoritative vocabulary from the cluster configuration: any disk, ISO, template, or backup in Proxmox references one of them. Local directory and LVM-thin storage exist on both nodes for guest disks, a ZFS pool exists only on `pve1` for application data, the two NFS shares span both nodes for shared images and backups, and the PBS target spans both nodes for versioned backups. Content types per ID determine what Proxmox is allowed to place where, which is why the content column deserves as much attention as the path.
 
 | Storage ID | Type | Path / source | Nodes | Content |
 |------------|------|---------------|-------|---------|
@@ -16,25 +20,22 @@ Last synced with live infrastructure: **September 2026**.
 | `truenas` | NFS | `192.168.1.74:/mnt/raw/pve` | `pve1`, `pve3` | `rootdir`, `images` |
 | `pbs` | PBS | `10.1.50.78`, datastore `backupstore` | `pve1`, `pve3` | `backup` |
 
-NFS-specific options for `nas`:
-
-- `prune-backups keep-all=1`
+The NFS share named `nas` carries one additional retention nuance worth stating in plain language. Its configuration sets `prune-backups keep-all=1` for backups stored there, so pruning on that target keeps a single copy rather than expiring everything. Backup jobs pointing at `nas` therefore behave differently from those pointing at the PBS datastore, and restore expectations should be set accordingly.
 
 ## ZFS pools
+
+ZFS exists in exactly one place at the host layer, and the absence elsewhere is just as deliberate as the presence. The `pve1` node keeps a local pool for application data on the infrastructure side, while `pve3` runs no native host pool at all because its disks are handed to TrueNAS instead. That split keeps copy-on-write and snapshot semantics where they are needed without layering ZFS on both the host and the guest on the same machine.
 
 | Pool | Host | Role |
 |------|------|------|
 | `pve1-storage` | `pve1` | Application data on the infra node |
 
-`pve3` runs no native ZFS pool. The TrueNAS VM owns the ZFS layer on the production node via passed-through disks.
+`pve3` runs no native ZFS pool. The TrueNAS VM owns the ZFS layer on the production node via passed-through disks. Any future pool on `pve3` would need to reckon with those passthroughs first, since the same physical devices cannot serve two masters.
 
 ## TrueNAS
 
-- VM `127` `truenas` on `pve3` (`192.168.1.74`), ~8.5 GB RAM in use.
-- Multiple physical disks passed through.
-- Exposes `/mnt/raw/pve` over NFS (mounted as the `truenas` storage on both nodes) and serves SMB shares to the LAN.
-- The exact share/dataset list is not captured here.
+The TrueNAS virtual machine is the storage appliance hiding inside the compute inventory. It runs as VM `127` under the name `truenas` on `pve3` at `192.168.1.74`, with roughly 8.5 GB of RAM in use at last observation, and it holds multiple physical disks passed through from the host. From those disks it exposes `/mnt/raw/pve` over NFS, which both Proxmox nodes mount as the `truenas` storage, while also serving SMB shares directly to the LAN. The exact share and dataset list is not captured here, so consumers should treat the NFS export as documented and the SMB surface as present but unenumerated.
 
 ## Known gaps
 
-Usable capacity per pool, per-guest disk allocation, and the physical disk inventory (model, serial, size, slot) — the three tables that turn "storage works" into "storage is planned". All three are evenings of careful `lsblk` away.
+The shape of storage is documented but its arithmetic is not yet complete. Usable capacity per pool, per-guest disk allocation, and the physical disk inventory with model, serial, size, and slot would turn the statement that storage works into a plan for how long it keeps working. All three are evenings of careful `lsblk` away, ideally captured alongside the TrueNAS dataset list so logical shares and physical devices finally appear on the same page.

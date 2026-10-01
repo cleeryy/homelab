@@ -3,11 +3,13 @@ title: Homelab Wiki
 description: Architecture and operational reference for the home Proxmox cluster.
 ---
 
-This site is the internal architecture reference for the homelab. It documents the cluster, the workloads currently running on it, the storage and network layout, and the operational notes that go with them.
+This site is the internal architecture reference for the homelab. It documents the cluster, the workloads currently running on it, the storage and network layout, and the operational notes that go with them. It exists because the infrastructure grew organically over several years, from a single node with a few virtual machines into a two-node Proxmox cluster carrying production services, media stacks, and lab experiments side by side.
 
-Last synced with live infrastructure: **September 2026**.
+Last synced with live infrastructure: **September 2026**. That date matters because the cluster moves regularly: containers are added for new services, legacy virtual machines are retired, and network segments evolve with OPNsense. Whenever a page and the live cluster disagree, the cluster wins and the page needs an update.
 
 ## Platform at a glance
+
+The cluster looks small from the outside — two Proxmox nodes, a router VM, a backup server, a handful of shared storage — but the workload distribution is deliberate. The older `pve1` node carries infrastructure and legacy Docker hosts that are stable and rarely touched, while the much larger `pve3` node absorbs nearly all active platform services, from identity and DNS to monitoring and ingress. Reading the list below with that split in mind makes the rest of the wiki easier to follow, since every inventory page repeats the same pattern.
 
 - Proxmox VE cluster `home`, 9.2.x, two active nodes (`pve1`, `pve3`), quorate.
   - `pve1` at `192.168.1.101/24` — infrastructure and management node (Xeon E5-2450v2, 64 GB RAM).
@@ -22,16 +24,21 @@ Last synced with live infrastructure: **September 2026**.
 - Deployment: Dokploy v0.30.x on `obiwan` (CT `205` at `10.1.20.5`). This wiki deploys from GitHub via Dokploy and is exposed at `homelab.cleeryy.cloud` through Caddy.
 - Documentation: this Fumadocs site is canonical. Docmost (LXC `109`) is still present pending content migration.
 
+Taken together, these ten entries describe a complete path from the internet to a workload: OPNsense routes and filters, Caddy terminates TLS and routes by hostname, Authentik gates access, Technitium resolves internal names, PBS guards against data loss, and Prometheus watches over the whole chain. If one of those links is unfamiliar, follow it into the inventory and services sections before going further.
+
 ## Sections
+
+The wiki is organized as four layers that move from the general to the specific. Architecture explains why things are placed where they are, inventory proves what actually exists, operations describes how to change it safely, and services documents each workload in depth. Start at the top when learning the platform and at the bottom when debugging a single app.
 
 - **[Architecture](/architecture/overview)** — nodes, network, storage, service placement, backups, security.
 - **[Inventory](/inventory/nodes)** — node, VM, LXC, storage, and network assets.
 - **[Operations](/operations/provisioning)** — day-2 procedures, including Dokploy deployments.
 - **[Services](/services/core/reverse-proxy)** — per-service detail, including Docker stacks inside VMs.
 
+Each layer links to the next, so a container in the inventory points back to its placement rationale in architecture and forward to its service page and its restore procedure in operations.
+
 ## Conventions
 
-- Pages describe what is actually running. Where a fact is not in the source material it is marked **unknown** or **pending validation**, never invented.
-- IDs and names match Proxmox exactly: VM and LXC IDs are integers, names are reproduced as displayed.
-- Proxmox tags encode the guest IP: prefix `1.` = `192.168.1.0/24` (legacy LAN), `20.` = `10.1.20.0/24` (production), `25.` = `10.1.25.0/24` (preproduction), `50.` = `10.1.50.0/24` (management). IPs derived from tags alone are treated as indicative until confirmed by DNS, DHCP, or a service binding.
-- Docker workloads are documented as services running **inside their VMs**, not at the Proxmox level.
+Every page in this wiki describes what is actually running rather than what was planned or hoped for. Where a fact cannot be confirmed from the cluster, DNS, DHCP, or a service binding, it is explicitly marked **unknown** or **pending validation** instead of being guessed, because an honest gap is safer than a plausible invention.
+
+Identifiers follow Proxmox exactly: VM and LXC IDs are integers reproduced without remapping, and names are copied as displayed in the Proxmox UI. Proxmox tags encode the guest IP, with prefix `1.` meaning `192.168.1.0/24` (legacy LAN), `20.` meaning `10.1.20.0/24` (production), `25.` meaning `10.1.25.0/24` (preproduction), and `50.` meaning `10.1.50.0/24` (management). Addresses derived from tags alone are treated as indicative until confirmed by DNS, DHCP, or a service binding. Docker workloads are documented as services running **inside their VMs**, not at the Proxmox level, which keeps the inventory pages honest about what Proxmox itself manages.

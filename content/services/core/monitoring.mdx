@@ -7,7 +7,9 @@ Last synced with live infrastructure: **September 2026**.
 
 You cannot run what you cannot see, and this homelab is mid-migration between two ways of seeing. Beszel was the first answer: a lightweight server with an agent on every Docker host, great for glancing at CPU graphs but blind to everything else. Prometheus and Grafana are the second answer: real metrics collection with the Proxmox exporter and *arr exporters feeding in, aimed at dashboards and eventually alerts. Both run today. Until Grafana is declared canonical and Beszel is switched off, check Grafana first for platform questions and Beszel for the legacy Docker VMs.
 
-## Components
+## Placement
+
+The current stack all lives on `pve3` in the private zone, with a dedicated exporter per data source so Prometheus never scrapes infrastructure directly. Beszel remains on `pve1` as the legacy path until Grafana coverage is confirmed and a decommissioning date is set, as tracked in the [migration plan](/architecture/migration-plan).
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
@@ -17,9 +19,20 @@ You cannot run what you cannot see, and this homelab is mid-migration between tw
 | LXC | `577` | `scraparr` | `pve3` | Exporter for the *arr stack |
 | VM | `202` | `ubuntu-beszel` | `pve1` | Legacy Beszel server (to be decommissioned) |
 
-Prometheus/Grafana are the current monitoring path; Beszel is legacy and still runs on `pve1` (`10.1.20.45`) with a `beszel-agent` on every legacy Docker host VM. The canonical cutover is tracked in the [migration plan](/architecture/migration-plan).
+## Status
+
+Prometheus and Grafana are the current monitoring path, while Beszel is legacy but still running on `pve1` (`10.1.20.45`) with a `beszel-agent` on every legacy Docker host VM. The last snapshot showed the usual low-grade noise rather than a systemic problem: transient container restarts, memory pressure during transcoding, and proxy log-noise tripping edge bans.
+
+- `QBittorrent` reports `gluetun` as **unhealthy** (recurring; kills download egress).
+- `Nextcloud` has reported `portainer` restarting (transient).
+- `Jelly` reports high memory usage on the `jellyfin` container during transcoding (transient).
+- CrowdSec on OPNsense shows port-scan bans including the Caddy host itself — likely proxy log-noise; rule tuning pending.
+
+These are transient observations; they should not be used to draw long-term conclusions.
 
 ## Beszel host inventory (legacy)
+
+The legacy fleet is still fully enrolled in Beszel, which is why the server cannot simply be switched off yet. Each label maps to a Proxmox VM, although two entries disagree about their own hostname in a way nobody has chased down.
 
 | Beszel label | IP | Hostname (Beszel) | Backing Proxmox VM | Node |
 |--------------|----|--------------------|---------------------|------|
@@ -33,15 +46,14 @@ Prometheus/Grafana are the current monitoring path; Beszel is legacy and still r
 
 Two hosts (`n8n`, `web-apps`) report the hostname `ntfy`; the cause is not documented.
 
-## Observed at the last snapshot
+## Dependencies
 
-- `QBittorrent` reports `gluetun` as **unhealthy** (recurring; kills download egress).
-- `Nextcloud` has reported `portainer` restarting (transient).
-- `Jelly` reports high memory usage on the `jellyfin` container during transcoding (transient).
-- CrowdSec on OPNsense shows port-scan bans including the Caddy host itself — likely proxy log-noise; rule tuning pending.
+Monitoring depends on the network paths it watches rather than on any database: exporters must be able to reach Proxmox and the *arr stack, and agents must be able to phone home. Nothing else in the homelab depends on monitoring to run, which is both its weakness and its safety.
 
-These are transient observations; they should not be used to draw long-term conclusions.
+## Failure impact
+
+If Prometheus or Grafana goes down, the homelab keeps running blind: no dashboards, no history, but no production traffic impact either. If Beszel goes down, only the legacy Docker VM graphs disappear, which is acceptable once Grafana coverage is confirmed.
 
 ## Known gaps
 
-Grafana is up but unfinished as a practice: no dashboards-as-code, no retention statement, no alerting channel — monitoring that cannot wake anybody is just graphs. Prometheus scrape inventory (which exporters, which intervals) is similarly tribal knowledge. And Beszel still needs its decommissioning date once Grafana coverage is confirmed rather than assumed.
+Grafana is up but unfinished as a practice: no dashboards-as-code, no retention statement, and no alerting channel — monitoring that cannot wake anybody is just graphs. The Prometheus scrape inventory (which exporters, which intervals) is similarly tribal knowledge. Beszel still needs its decommissioning date once Grafana coverage is confirmed rather than assumed.

@@ -7,29 +7,30 @@ Last synced with live infrastructure: **September 2026**.
 
 There is exactly one door into this infrastructure over SSH, and this is it. Warpgate exists so that no guest ever needs its port 22 reachable from the internet: the firewall forwards WAN SSH to Warpgate alone, Warpgate verifies who you are against Authentik, and only then proxies you to the target machine. Day to day that means one SSH key, short hostnames, and per-user policies instead of scattered `authorized_keys` files. If you are debugging at 2 AM and SSH hangs, check these two things in order: is Warpgate itself up, and can it still talk to Authentik.
 
-## Components
+## Placement
+
+Warpgate runs as a single LXC on `pve3` on the production VLAN, where both the firewall NAT and the internal targets can reach it. It is in the critical backup job (02:00, keep-last 7), because losing the only SSH door during an outage is exactly when you need it most.
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
 | LXC | `222` | `warpgate` | `pve3` | SSO SSH bastion, `10.1.20.22` (4 GB RAM) |
 
-## Access paths
+## Status
+
+Warpgate is running and is the single SSH entry point for the whole homelab: Proxmox nodes (via `pct` and `qm` from the node shell), LXCs, and any SSH-enabled guest. Direct SSH to guests from WAN is denied by design, so everything passes through Warpgate policies. Day-to-day operator access uses the `ssh.cleeryy.cloud` bastion endpoint with `~/.ssh/warpgate_ed25519`, short hostnames, non-interactive flags, and 30 s keepalives (see the operator runbook, not this wiki).
 
 | Path | Route | Auth |
 |------|-------|------|
 | SSH from WAN | OPNsense NAT `:22` → `10.1.20.22:2222` | SSO (Authentik) — no raw keys |
 | HTTPS admin | `warpgate.cleeryy.cloud` → Caddy → `https://warpgate:8888` | SSO |
 
-Direct SSH to guests from WAN is denied by design; everything passes through Warpgate policies. Local SSH access uses `~/.ssh/warpgate_ed25519` via the `ssh.cleeryy.cloud` bastion endpoint with short hostnames (`pve3`, `pbs`, `caddy`, …), non-interactive flags, and 30 s keepalives (see the operator runbook, not this wiki).
+## Dependencies
 
-## Role
-
-Warpgate is the single SSH entry point for the whole homelab: Proxmox nodes (via `pct`/`qm` from the node shell), LXCs, and any SSH-enabled guest. It is in the critical backup job (02:00, keep-last 7).
+Warpgate depends on Authentik for SSO validation, on Caddy for its HTTPS admin path, and on OPNsense for the WAN `:22` forward. If Authentik is down, Warpgate is up but cannot let anybody in, which is the same outage from the operator's point of view.
 
 ## Failure impact
 
-- Warpgate down → no SSH access from WAN until it is restored (local console via Proxmox still works).
-- Authentik down → Warpgate SSO validation fails; same effect.
+If Warpgate goes down, there is no SSH access from WAN until it is restored, although local console access through Proxmox still works. If Authentik goes down instead, Warpgate SSO validation fails and the effect is identical.
 
 ## Known gaps
 

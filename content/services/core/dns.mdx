@@ -7,26 +7,31 @@ Last synced with live infrastructure: **September 2026**.
 
 Names are the glue of this homelab. Nothing here is reached by raw IP in normal operation: Caddy routes to short service names, SSH uses short hostnames, and Technitium is what turns those names into addresses. OPNsense still handles the raw resolving and DHCP, but the moment a query ends in `internal.cleeryy.cloud` it is handed to Technitium. That split is deliberate — network plumbing stays on the firewall, while the human-facing namespace lives in a service that is easy to edit and back up. Lose Technitium and the whole place goes blind even though every machine is still running, which is why it is in the critical backup set.
 
-## Components
+## Placement
+
+Technitium runs as a single LXC on `pve3` on the management VLAN. It is in the critical backup job (02:00, keep-last 7), because losing DNS blinds Caddy upstreams and SSH short names even though every other guest keeps running.
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
 | LXC | `553` | `technitium` | `pve3` | Internal DNS, `10.1.50.53` |
 
-## Architecture
+## Status
+
+The resolver chain is healthy: OPNsense Unbound answers on `:53` for all VLANs and hands the internal zone to Technitium, which is authoritative for every platform host. DHCP comes from dnsmasq on OPNsense, and the Technitium admin UI is exposed privately through Caddy.
 
 - **OPNsense Unbound** on `:53` is the network resolver for all VLANs. Override: the `internal.cleeryy.cloud` zone → `10.1.50.53` (Technitium).
 - **Technitium** is authoritative for `internal.cleeryy.cloud`: every platform host has a short name and an FQDN (`caddy`, `obiwan`, `authentik`, `pbs`, `technitium`, `pve1`, `pve3`, `warpgate`, …). Caddy upstreams use these short names.
 - **DHCP** is served by dnsmasq on OPNsense (Admin, Guest, Home ranges); IoT is bound without a range.
 - Admin UI: `dns.home.cleeryy.cloud` → Caddy → `technitium:5380` (private zone).
 
-Technitium is in the critical backup job (02:00, keep-last 7) — losing DNS blinds Caddy upstreams and SSH short names.
+## Dependencies
+
+DNS has no database or upstream service dependency of its own, but everything else depends on it. The chain assumes OPNsense Unbound stays up to forward the internal zone and Caddy stays up to expose the admin UI; Technitium itself holds the zone data locally.
 
 ## Failure impact
 
-- Technitium down → `.internal.cleeryy.cloud` stops resolving: Caddy cannot route to short-name upstreams, SSH shortcuts fail. Unbound still resolves external names.
-- Unbound down → all LAN DNS fails; the VLANs lose name resolution entirely.
+If Technitium goes down, `.internal.cleeryy.cloud` stops resolving, so Caddy cannot route to short-name upstreams and SSH shortcuts fail, while Unbound still resolves external names. If Unbound itself goes down, all LAN DNS fails and the VLANs lose name resolution entirely.
 
 ## Known gaps
 
-No full zone dump exists yet, so the record inventory is "whatever Caddy and SSH resolve today". Upstream resolver policy (roots vs. DoT, DNSSEC) and the DHCP reservation list are similarly undocumented. A zone export plus a short policy note would close all three at once.
+No full zone dump exists yet, so the record inventory is effectively whatever Caddy and SSH resolve today. Upstream resolver policy (roots versus DoT, DNSSEC) and the DHCP reservation list are similarly undocumented. A zone export plus a short policy note would close all three at once.

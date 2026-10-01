@@ -3,24 +3,26 @@ title: PostgreSQL (forgejo)
 description: Shared Postgres LXC backing Forgejo on `pve1`.
 ---
 
-One Postgres, one job: serve Forgejo (`user=forgejo database=forgejo`, confirmed in `/etc/forgejo/app.ini` on CT `111`, host `10.1.20.34:5432` since the 28/09/2026 migration).
+One Postgres, one job: serve Forgejo. The wiring is confirmed in `/etc/forgejo/app.ini` on CT `111` (`user=forgejo database=forgejo`), and the host has been `10.1.20.34:5432` since the 28/09/2026 migration.
 
 ## Placement
+
+The database sits next to its consumer on the infrastructure node and the production VLAN, so Forgejo never crosses a routed boundary to reach it.
 
 - LXC `112` `postgresql` on `pve1`, `10.1.20.34:5432` (VLAN 20).
 
 ## Status
 
-- Running. No ingress. Reachable from Forgejo (`10.1.20.32`) and, presumably, Docmost.
+Postgres is running with no ingress of its own. It answers Forgejo on `10.1.20.32` and presumably Docmost, though only the Forgejo wiring has actually been confirmed on disk.
 
 ## Dependencies
 
-- None.
+There are none. This is a standalone Postgres LXC with local storage and no upstream service.
 
 ## Failure impact
 
-- Forgejo down (web UI never finishes ORM init without the DB). Restore order: Postgres first, then Forgejo.
+If Postgres stops, Forgejo goes with it: the web UI never finishes ORM initialisation without the database. Restore order is therefore Postgres first, then Forgejo, otherwise the forge will crash-loop waiting for its backend.
 
 ## Known gaps
 
-- Confirm whether Docmost actually uses this instance, and where dumps go (application-level backup beyond PBS).
+It remains unconfirmed whether Docmost actually uses this instance or carries its own store. The application-level backup story beyond the guest-level PBS job — where dumps go, and on what schedule — is similarly open.

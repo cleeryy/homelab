@@ -16,16 +16,15 @@ Not everything on the cluster is production, and this page is the proof. Develop
 | LXC | `110` | `discopanel` | `pve3` | Running | Game panel, `mc-dashboard.cleeryy.cloud` |
 | VM | `10001` | `mint` | `pve3` | Running | Lab desktop (VLAN 10 DHCP) — see [mint](/services/lab/mint) |
 
-The old EDR test containers (`331`–`333`) have been deleted.
+The table gathers the four running lab guests in one place: the `code` dev environment where this wiki is edited, the `hermesagent` sandbox for automation experiments, the `discopanel` game panel, and the parked `mint` desktop detailed on its own page. The old EDR test containers (`331`–`333`) have been deleted and are mentioned only to stop anyone searching for them.
 
 ## Placement
 
-- All lab and test workloads live on `pve3`, distinct from the production stacks.
+All lab and test workloads live on `pve3`, kept distinct from the production stacks by host convention and, where it matters, by VLAN.
 
 ## Operational notes
 
-- Stopped systems are documented because their existence is part of the architecture. They are decision items, not active workloads — see the [migration plan](/architecture/migration-plan).
-- These systems are **not** monitored as production. Their state can change without notice.
+Stopped systems are documented because their existence is part of the architecture: they are decision items, not active workloads, as tracked in the [migration plan](/architecture/migration-plan). These systems are **not** monitored as production, and their state can change without notice — treat every address here as advisory.
 
 ## Known gaps
 

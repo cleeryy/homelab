@@ -3,24 +3,24 @@ title: Nginx Proxy (nginxrpm)
 description: Nginx Proxy Manager remnant VM on `pve1`.
 ---
 
-`nginxrpm` is the leftover Nginx Proxy Manager host from before Caddy became canonical ingress. NPM still answers on `:81`; `:8080` serves the WOL panel. Both remain reachable through Caddy while nobody has finished deciding whether anything still needs them.
+`nginxrpm` is the leftover Nginx Proxy Manager host from before Caddy became the canonical ingress. NPM still answers on `:81` and a WOL panel still serves on `:8080`, both reachable through Caddy while nobody has finished deciding whether anything still needs them. It is infrastructure on borrowed time: kept running because deleting a proxy before proving nothing uses it would be worse than hosting a redundant one a little longer.
 
 ## Placement
 
-- VM `105` on `pve1`, `10.1.20.43` (VLAN 20, netplan static, QEMU guest agent running).
+The host is VM `105` on `pve1`, addressed at `10.1.20.43` on VLAN 20 with a netplan static address and the QEMU guest agent running.
 
 ## Status
 
-- Running. Caddy upstreams: `proxy` → `10.1.20.43:81`, `wol` → `10.1.20.43:8080`.
+The VM is running. Caddy still carries upstreams for it: `proxy` toward `10.1.20.43:81` and `wol` toward `10.1.20.43:8080`.
 
 ## Dependencies
 
-- None.
+It has no dependencies: nothing here consumes another homelab service.
 
 ## Failure impact
 
-- NPM admin and WOL panel unreachable until restore. Public traffic (Caddy) unaffected.
+If the VM fails, the NPM admin UI and the WOL panel go unreachable until restore. Public traffic is unaffected, since Caddy — not NPM — is the canonical ingress.
 
 ## Known gaps
 
-- Confirm whether any live route still depends on NPM; otherwise decommission the VM.
+The single open question is whether any live route still depends on NPM. If none does, this VM should be decommissioned and this page deleted with it.

@@ -3,24 +3,24 @@ title: Hermes Agent
 description: Lab agent LXC on `pve3`.
 ---
 
-Hermes Agent is a lab agent box: the sandbox where automation experiments run before they touch production. Treat anything on it as ephemeral.
+Hermes Agent is a lab agent box: the sandbox where automation experiments run before they touch production. Treat anything on it as ephemeral — its value is the freedom to break things here instead of next to Immich and Nextcloud. When the agent earns a real job, this page will grow to describe it; until then it stays deliberately thin.
 
 ## Placement
 
-- LXC `125` on `pve3`, `10.1.20.41:8642` (VLAN 20).
+The sandbox is LXC `125` on `pve3`, addressed at `10.1.20.41:8642` on VLAN 20.
 
 ## Status
 
-- Running. No ingress.
+The container is running. It has no ingress, so it is reachable only from inside the network rather than through Caddy.
 
 ## Dependencies
 
-- None.
+It has no dependencies: lab work here consumes nothing production and is consumed by nothing production.
 
 ## Failure impact
 
-- None on production. Lab work in progress may be lost.
+A failure here affects no production service. At most, lab work in progress is lost — the accepted price of a sandbox.
 
 ## Known gaps
 
-- Owner and purpose (see test-systems gaps) — this page will grow when the agent gets a real job.
+Owner and purpose remain open (see the test-systems gaps). This page will grow when the agent gets a real job; until then a paragraph is the right size.

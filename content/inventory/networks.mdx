@@ -5,16 +5,22 @@ description: Sites, bridges, VLANs, segments, and host addresses.
 
 Last synced with live infrastructure: **September 2026**.
 
+The network is the one layer every other page depends on, so this inventory moves from the logical plan down to the confirmed addresses. Two sites exist on paper but only the first carries the Proxmox cluster, which is why the bulk of this page details OPNsense interfaces, VLANs, VPNs, and host bindings at site 1. Address allocation follows a strict convention where routed networks take the form `10.<site>.<vlan>.0/24` with the gateway always at `.1`, and Proxmox tags echo the same VLAN numbers, so an address usually reveals its segment at a glance.
+
 ## Sites
+
+The homelab spans two physical locations with very different maturity levels. The first site hosts the full Proxmox cluster behind its OPNsense firewall, while the second site holds consumer-grade hardware and a handful of Raspberry Pi services that are not yet integrated into the VLAN plan. That asymmetry explains why nearly every table below concerns site 1.
 
 | ID | Name | Edge | Notes |
 |----|------|------|-------|
 | `1` | mamie | OPNsense VM `501` (on `pve3`) | Server site, full Proxmox cluster |
 | `2` | home | Fortigate 81E | Present but not configured; RPi services sit on the ISP CPE |
 
-Routed networks follow `10.<site>.<vlan>.0/24`; the gateway is always `.1`.
+Routed networks follow `10.<site>.<vlan>.0/24`; the gateway is always `.1`. In practice that means `10.1.20.0/24` is production at site 1 and its gateway is `10.1.20.1`, with the same predictable mapping across every other VLAN.
 
 ## OPNsense interfaces (site 1)
+
+OPNsense is both the edge and the segmentation authority for site 1, with one virtual NIC facing the ISP router in double NAT and a second NIC fanning out into tagged VLANs. The interface list below is therefore the authoritative VLAN registry: if a segment is not here, OPNsense does not route it. Management, production, preproduction, IoT, guest, and home traffic each get their own broadcast domain, with WireGuard, AirVPN, and NetBird attached as virtual interfaces alongside them.
 
 | Role | OPNsense iface | Underlying | Address | Notes |
 |------|----------------|-----------|---------|-------|
@@ -31,7 +37,11 @@ Routed networks follow `10.<site>.<vlan>.0/24`; the gateway is always `.1`.
 | AirVPN | `opt9` | `wg1` | `10.130.184.82/32` | Privacy egress client |
 | NetBird | `opt10` | `wt0` | `100.121.135.95/16` | Mesh VPN |
 
+The WAN address reveals the double-NAT reality behind the whole design: OPNsense itself sits on the ISP LAN and port-forwards from the CPE determine what the internet can reach. Inside, each VLAN gateway lives at `.1` exactly as the site convention promises, so firewall rules and static routes can assume that layout.
+
 ## DHCP ranges (site 1, served by dnsmasq)
+
+Only the segments with transient clients get dynamic pools from OPNsense, which keeps servers and infrastructure on predictable static addresses. Admin, guest, and home VLANs serve laptops, phones, and desktops that come and go, while production and management hosts are pinned by tags, DNS, or explicit bindings. The ranges below therefore mark where to look for a DHCP lease versus where to look for a static reservation.
 
 | Interface | Range | Pushed gateway |
 |-----------|-------|----------------|
@@ -39,9 +49,11 @@ Routed networks follow `10.<site>.<vlan>.0/24`; the gateway is always `.1`.
 | Guest (`opt5`) | `10.1.40.10`–`10.1.40.199` | `10.1.40.1` |
 | Home (`opt7`) | `10.1.60.10`–`10.1.60.199` | `10.1.60.1` |
 
-IoT (`opt4`) is bound by dnsmasq but no DHCP range is defined; the other VLANs do not run DHCP from OPNsense.
+IoT (`opt4`) is bound by dnsmasq but no DHCP range is defined; the other VLANs do not run DHCP from OPNsense. IoT devices on that segment thus need static addressing or a separate mechanism, and production hosts should never expect a lease from the firewall.
 
 ## WireGuard road-warrior peers (site 1)
+
+Remote access for roaming devices arrives through a single WireGuard instance listening on the WAN, with each peer getting a fixed tunnel address inside `10.1.90.0/24`. The peer list is short and personal — phones and laptops rather than site-to-site tunnels — which matches the road-warrior intent. Pushed DNS points at public resolvers so tunnelled clients keep resolving even when internal DNS is unreachable.
 
 | Peer | Tunnel IP |
 |------|-----------|
@@ -49,17 +61,23 @@ IoT (`opt4`) is bound by dnsmasq but no DHCP range is defined; the other VLANs d
 | `iphone15` | `10.1.90.2/32` |
 | `windaube` | `10.1.90.4/32` |
 
-Listen `udp/51920` on WAN, tunnel `10.1.90.0/24`, peer DNS pushed `94.140.14.14`, `94.140.15.15`. All peers showed offline at the last observation.
+Listen `udp/51920` on WAN, tunnel `10.1.90.0/24`, peer DNS pushed `94.140.14.14`, `94.140.15.15`. All peers showed offline at the last observation. Offline here means no handshake was active when last checked, not that the peers are deleted, so a missing laptop simply looks idle until it reconnects.
 
 ## AirVPN client (site 1)
 
-Interface `wg1`, address `10.130.184.82/32` (+ IPv6 ULA), peer `AirVPN-NL3-peer` online with 15 s keepalive. Gateway `AIRVPN_GW` (`10.128.0.1`) online. The `INTERNAL` group policy-routes outbound traffic through it with a kill-switch beneath.
+Outbound privacy egress leaves through a WireGuard client pinned to an AirVPN endpoint, isolated from the road-warrior server above. The tunnel holds a single `/32` address with an accompanying IPv6 ULA, maintains its peer with a fifteen-second keepalive, and feeds a dedicated gateway used for policy routing. Beneath that policy sits a kill-switch, so traffic assigned to the VPN fails closed rather than leaking onto the WAN.
+
+Interface `wg1`, address `10.130.184.82/32` (+ IPv6 ULA), peer `AirVPN-NL3-peer` online with 15 s keepalive. Gateway `AIRVPN_GW` (`10.128.0.1`) online. The `INTERNAL` group policy-routes outbound traffic through it with a kill-switch beneath. Any host placed in that policy group inherits both the privacy benefit and the outage behavior, which is worth remembering when diagnosing outbound connectivity.
 
 ## NetBird mesh (site 1)
 
-Interface `wt0`, address `100.121.135.95`. Seven peers online at the last observation (relay + direct, including production hosts and `pve1`).
+The mesh VPN complements the hub-and-spoke WireGuard setup by linking hosts across sites and clouds without traversing the edge firewall. OPNsense participates as a regular mesh member with a `100.121.135.95` address, peered with production hosts and `pve1` among others. Because membership is identity-based rather than subnet-based, this interface extends management reach even where VLAN routing does not.
+
+Interface `wt0`, address `100.121.135.95`. Seven peers online at the last observation (relay + direct, including production hosts and `pve1`). Relayed versus direct paths may shift with NAT conditions, so latency through the mesh can vary without any configuration change on OPNsense itself.
 
 ## Key guest addresses (confirmed bindings)
+
+Most guest addresses in this homelab are inferred from Proxmox tags, but the entries below are confirmed by something stronger: a NAT rule, a storage mount, a DNS override, or an explicit upstream. They form the set of addresses automation and firewall rules can safely hardcode, while anything absent from this table should be verified through DNS, DHCP, or a service binding before being trusted. When a tag and this table disagree, this table wins.
 
 | Guest | Address | How confirmed |
 |-------|---------|---------------|
@@ -73,9 +91,11 @@ Interface `wt0`, address `100.121.135.95`. Seven peers online at the last observ
 | NAS | `192.168.1.16` | PVE `nas` NFS storage |
 | `projet-paul` (`257`) | `10.1.25.7` | Preproduction tag |
 
-Other LXC addresses follow the Proxmox tag convention and are indicative until confirmed by a binding above, a DNS record, or DHCP.
+Other LXC addresses follow the Proxmox tag convention and are indicative until confirmed by a binding above, a DNS record, or DHCP. That caution matters most for newly created containers, whose tags may be set before DNS or firewall rules catch up.
 
 ## Bridges (Proxmox, site 1)
+
+The virtual bridges are where the VLAN plan meets physical cables. Each node exposes the flat management LAN on `vmbr0` while sharing a direct trunk on `vmbr1` that carries every tagged VLAN between the two hosts. Because the trunk has no host IP of its own, hosts reach VLAN guests through their `vlan50` interfaces and the OPNsense gateways rather than through the bridge address.
 
 | Bridge | Node | Address on host | Status |
 |--------|------|-----------------|--------|
@@ -84,17 +104,21 @@ Other LXC addresses follow the Proxmox tag convention and are indicative until c
 | `vmbr1` | `pve3` | trunk (no host IP, `eno4`) | Up, VLAN-aware 2-4094 |
 | `vmbr1` | `pve1` | trunk (no host IP, `enp7s0`) | Up, VLAN-aware 2-4094 |
 
-`vmbr1` is a shared trunk `pve3` (`eno4`) ↔ `pve1` (`enp7s0`), 1 Gbit/s, VLAN-aware 2-4094 (direct cable since 26/09/2026). `vlan50` exists on both hosts (`.103`/`.101`).
+`vmbr1` is a shared trunk `pve3` (`eno4`) <-> `pve1` (`enp7s0`), 1 Gbit/s, VLAN-aware 2-4094 (direct cable since 26/09/2026). `vlan50` exists on both hosts (`.103`/`.101`). The direct cable date matters because older diagrams may still show switched uplinks; since late September the inter-node path is a single gigabit cable with no switch in between.
 
 ## Legacy segments (site 1)
 
-Proxmox management and the legacy Docker VMs run on the flat network, not on the VLAN plan above.
+Not everything has migrated to VLANs, and this section records what intentionally remains flat. Proxmox management itself plus the legacy Docker VMs still live on the original LAN rather than on tagged segments, which is why their addresses sit in `192.168.1.0/24` alongside the ISP router. New workloads belong on VLANs, but these segments stay flat until their hosts are rebuilt.
 
 | Segment | CIDR | Where it terminates |
 |---------|------|---------------------|
 | Management LAN | `192.168.1.0/24` | `vmbr0` on both nodes |
 
+Keeping management on the flat LAN preserves access even when OPNsense or the trunk is down, at the cost of leaving that traffic unsegmented. That tradeoff is deliberate for now and should be revisited only with console access at hand.
+
 ## Docker host addresses (site 1, production VLAN 20)
+
+The Docker hosts look like ordinary production guests from the network's point of view, each with a fixed address on VLAN 20 that matches its Proxmox tag. Beszel adds a second naming layer on top, with friendly labels and reported hostnames that do not always match the Proxmox guest names. The table below joins those three views — monitoring label, IP and hostname, and Proxmox identity — so a log line, a Beszel alert, and a Proxmox task can be correlated to the same machine.
 
 | Beszel label | IP | Hostname (Beszel) | Proxmox VM | Node |
 |--------------|----|--------------------|------------|------|
@@ -106,13 +130,12 @@ Proxmox management and the legacy Docker VMs run on the flat network, not on the
 | `Servarr` | `10.1.20.62` | `servarr` | `301` `ubuntu-servarr` | `pve3` |
 | `web-apps` | `10.1.20.42` | `ntfy` | `102` `ubuntu-small-webapps` | `pve1` |
 
-Two hosts (`n8n` and `web-apps`) report the hostname `ntfy`; the cause is not documented.
+Two hosts (`n8n` and `web-apps`) report the hostname `ntfy`; the cause is not documented. Until that collision is resolved, the Beszel label and IP are the reliable keys for those two rows, not the reported hostname.
 
 ## Site 2 (home)
 
-- Fortigate 81E present, not configured.
-- Raspberry Pi running Home Assistant, AdGuard Home, and iSponsorBlock. Sits on the ISP router; address depends on the CPE's DHCP and is not pinned here.
+Site 2 remains a stub compared with the carefully segmented site 1. Its Fortigate 81E firewall is physically present but not yet configured, so the Raspberry Pi services for Home Assistant, AdGuard Home, and iSponsorBlock sit directly on the ISP router instead of behind dedicated VLANs. Their addresses follow whatever the CPE's DHCP hands out and are deliberately not pinned in this inventory. The path forward is to establish the Fortigate base configuration and a matching VLAN plan before moving any service behind it.
 
 ## Known gaps
 
-Everything above is logical topology; the physical layer is still word of mouth. Switch port mapping, the inter-node link, and a cable-level diagram would complete site 1, while site 2 needs its Fortigate base config and any future VLAN plan written down before hardware gets touched.
+Everything above describes logical topology — VLAN IDs, gateways, bridges, and confirmed bindings — while the physical layer underneath is still carried by memory rather than documentation. Switch port mapping, the inter-node link details beyond the trunk endpoints, and a cable-level diagram would complete site 1, and site 2 still needs its Fortigate base config plus any future VLAN plan written down before hardware gets touched. Capturing those details now would turn troubleshooting from recollection into lookup.

@@ -7,7 +7,9 @@ Last synced with live infrastructure: **September 2026**.
 
 This is the box that decides whether an outage is a bad evening or a catastrophe. Every scheduled backup in the homelab lands here, on a dedicated datastore, and from here an encrypted copy leaves for Google Drive every night. The design accepts an uncomfortable truth — PBS shares a physical node with most of what it protects — and compensates with that off-site copy plus mandatory restore drills. The rule written on the architecture page bears repeating: a backup that has never been restore-tested does not exist.
 
-## Components
+## Placement
+
+PBS runs as a single LXC on `pve3` with a dedicated datastore of roughly 600 GB. Both Proxmox nodes declare it as their `pbs` storage using a scoped token, so backups from either node land in the same place.
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
@@ -15,31 +17,32 @@ This is the box that decides whether an outage is a bad evening or a catastrophe
 
 Datastore `backupstore` (~600 GB). Declared as the `pbs` storage on both Proxmox nodes (token `pve@pbs!pve`, DatastoreAdmin on the datastore only).
 
-## Schedules
+## Status
+
+Schedules are split by criticality: the platform-critical guests run nightly with a week of retention, while everything else runs a few hours later with shorter retention. Gamevault is excluded by choice and PBS excludes itself by design. Weekly garbage collection and monthly verify run from the PBS UI, and the last restore drill booted successfully on **10/09/2026**.
 
 | Job | Time | Retention | Scope |
 |-----|------|-----------|-------|
 | Critical | 02:00 | keep-last 7 | `130`, `222`, `553`, `2010`, `501` |
 | General | 04:00 | keep-last 3 | All guests except `258` (Gamevault) and `578` (itself) |
 
-## Off-site
-
-Encrypted rclone `crypt` sync to Google Drive (`gdrive-crypt:backupstore` + `pbs-config`), daily 06:00 from CT `578` under `flock`. Never run two syncs in parallel.
-
-## Maintenance and proof
-
 - Weekly garbage collection + monthly verify via the PBS UI.
 - Last restore drill booted successfully on **10/09/2026**. Re-drill after any major change — an untested backup does not exist.
 
-## Admin UI
+## Dependencies
 
-`pbs.home.cleeryy.cloud` → Caddy → `https://pbs:8007` (private zone).
+PBS needs no other service to take backups; Proxmox nodes push to it directly. Its off-site leg depends on the Google Drive remote staying reachable, and its admin UI depends on Caddy for private-zone access.
+
+- Admin UI: `pbs.home.cleeryy.cloud` → Caddy → `https://pbs:8007` (private zone).
+
+## Off-site
+
+Every morning an encrypted rclone `crypt` sync copies the datastore and the PBS configuration to Google Drive from inside CT `578` itself. The job runs under `flock` at 06:00, and two syncs must never run in parallel or they will contend on the same remote.
 
 ## Failure impact
 
-- PBS down → scheduled backups stop; existing backups remain on the datastore but are not taken. The off-site copy continues to reflect the last successful sync.
-- PBS shares a node (`pve3`) with most of what it protects — the encrypted off-site copy is the real disaster-recovery path.
+If PBS goes down, scheduled backups simply stop while existing backups sit untouched on the datastore. The off-site copy keeps reflecting the last successful sync, so the homelab keeps running but slowly loses its safety net. Because PBS shares `pve3` with most of what it protects, the encrypted off-site copy — not the local datastore — is the real disaster-recovery path.
 
 ## Known gaps
 
-Datastore headroom is the number to watch: ~600 GB fills silently until jobs start failing, so a growth trend (even a monthly glance at the PBS dashboard) belongs in the routine. GC/verify history is similarly only visible inside the PBS UI — exporting it here can wait until someone automates it.
+Datastore headroom is the number to watch: roughly 600 GB fills silently until jobs start failing, so even a monthly glance at the PBS dashboard growth trend belongs in the routine. Garbage-collection and verify history are similarly only visible inside the PBS UI, and exporting them here can wait until someone automates it.

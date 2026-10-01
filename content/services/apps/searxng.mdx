@@ -9,20 +9,20 @@ A search box that answers to nobody. SearXNG forwards your queries to a spread o
 
 ## Placement
 
-- LXC `132` `searxng` on `pve3` (production VLAN, `10.1.20.46` tag; 2 GB RAM).
+The service runs as LXC `132` (`searxng`) on `pve3` on the production VLAN, carrying the `10.1.20.46` tag with 2 GB of RAM.
 
 ## Ingress
 
-`search.cleeryy.cloud` → Caddy → `searxng:8888`. No SSO gate currently.
+Traffic arrives as `search.cleeryy.cloud` through Caddy toward `searxng:8888`, with no SSO gate — a conscious non-priority, since there is no user data here worth gating.
 
 ## Dependencies
 
-- Upstream search engines (declared in the SearXNG settings); rate-limiting or engine blocks degrade results without taking the service down.
+The only dependencies are the upstream search engines declared in the SearXNG settings. Rate-limiting or an engine block degrades result quality without taking the service down, which is exactly the failure mode metasearch is built to absorb.
 
 ## Failure impact
 
-- A `pve3` outage takes SearXNG down; stateless — nothing to lose.
+A `pve3` outage takes SearXNG down with the production VLAN, but there is nothing to lose: the service is stateless and rebuilds from its engine list.
 
 ## Known gaps
 
-Only the engine list (plus any private-engine credentials) is undocumented, and SSO is a conscious non-priority — there is no user data here worth gating. This is about as finished as a service page gets.
+Only the engine list, plus any private-engine credentials, is undocumented. This is about as finished as a service page gets.

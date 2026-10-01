@@ -3,24 +3,24 @@ title: Sure
 description: Finance app on `pve3`.
 ---
 
-Sure is the finance app, backed by local Postgres (`:5432` loopback) and Redis (`:6379` loopback) inside its container.
+Sure is the finance app: the ledger nobody wants to rebuild from memory. Like AFFiNE it carries its own Postgres on loopback `:5432` and Redis on loopback `:6379` inside its container, self-contained rather than wired into shared services. That makes the host easy to reason about and nerve-wracking to lose, since financial history is exactly the kind of data whose absence is discovered at the worst possible moment.
 
 ## Placement
 
-- LXC `128` `sure` on `pve3`, `10.1.20.54:3000` (VLAN 20).
+The app runs as LXC `128` (`sure`) on `pve3`, listening at `10.1.20.54:3000` on VLAN 20.
 
 ## Status
 
-- Running. Ingress: `sure.cleeryy.cloud` → Caddy → `sure:3000` (short-name DNS).
+The container is running. Ingress is `sure.cleeryy.cloud` through Caddy toward `sure:3000`, resolved via short-name DNS.
 
 ## Dependencies
 
-- Local Postgres + Redis only.
+Sure depends only on its local Postgres and Redis. There is no external database or shared service in the path.
 
 ## Failure impact
 
-- Finance data unreachable until restore. Guest-level PBS backup applies.
+If the LXC fails, finance data is unreachable until the guest is restored. Guest-level PBS backup applies, so recovery is whole-container restore — adequate, but untested at the application level.
 
 ## Known gaps
 
-- Export/backup procedure for the financial data is not recorded here.
+The export and backup procedure for the financial data is not recorded here. For a finance app, proving that restore path is worth more than any amount of uptime.

@@ -7,11 +7,11 @@ n8n is where the homelab stops being a collection of apps and starts behaving li
 
 ## Placement
 
-- VM `204` `ubuntu-n8n` on `pve1`.
-- Beszel label `n8n`, IP `10.1.20.47`.
-- Beszel reports the system hostname as `ntfy`, which does not match the Beszel label or the Proxmox VM name.
+The automation host is VM `204` (`ubuntu-n8n`) on `pve1`, carrying the Beszel label `n8n` at IP `10.1.20.47`. Beszel reports the system hostname as `ntfy`, which does not match the Beszel label or the Proxmox VM name — a cosmetic mismatch recorded here so operators do not misidentify the host.
 
 ## Docker containers
+
+The stack pairs the automation app with its own internal reverse proxy, plus the usual management sidecars. `n8n-compose-n8n-1` is the application itself, fronted by `n8n-compose-traefik-1`, while `portainer` and `beszel-agent` provide management and monitoring and `watchtower` keeps images moving.
 
 | Container | Function |
 |-----------|----------|
@@ -21,20 +21,19 @@ n8n is where the homelab stops being a collection of apps and starts behaving li
 | `watchtower` | Image auto-update |
 | `beszel-agent` | Monitoring agent |
 
+Because `watchtower` periodically updates images, recovery procedures should never assume pinned tags. Workflow and credential state lives in the n8n container's local data directory, which makes that volume — and the encryption key protecting it — the backup weak point of the whole host.
+
 ## Dependencies
 
-- The stack includes its own Traefik. Traffic enters via Caddy (`n8n.cleeryy.cloud` → `https://10.1.20.47:443`, backend certificate not validated) and then hits this internal Traefik.
-- n8n state (workflows, credentials) is stored locally in the n8n container's data directory.
+Traffic enters via Caddy as `n8n.cleeryy.cloud` toward `https://10.1.20.47:443` (backend certificate not validated) and then hits the stack's own Traefik. All n8n state, workflows and credentials alike, is stored locally in the n8n container's data directory rather than in any shared service.
 
 ## Operational notes
 
-- `watchtower` periodically updates container images; recovery procedures should not assume image tags are pinned.
-- The hostname mismatch (`ntfy` vs. `n8n`) is recorded so operators do not misidentify the host when reading Beszel.
+`watchtower` keeps the images rolling, so version drift between documentation and reality is expected. The `ntfy` hostname mismatch is noted purely to avoid confusion when reading Beszel.
 
 ## Failure impact
 
-- A `pve1` outage takes the n8n host with it.
-- Workflows that integrate with external systems will fail silently if downstream APIs are not reachable.
+A `pve1` outage takes the whole n8n host with it, and every workflow stops at once. Worse than the outage is the failure mode when only a downstream API is unreachable: affected workflows fail silently instead of alerting, so the symptom surfaces as "automation quietly stopped" rather than an error.
 
 ## Known gaps
 

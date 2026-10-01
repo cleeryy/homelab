@@ -11,6 +11,8 @@ Read it as a map, not a verdict. The two clear patterns are worth naming: everyt
 
 ## Edge and ingress
 
+Edge and ingress are concentrated on `pve3` because they must sit next to the firewall and the VLAN trunks. The table below lists the five hosts that move packets in and out, and its brevity reflects a deliberate consolidation around Caddy.
+
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
 | OPNsense | VM | `501` | `pve3` | Edge router, FW 26.1.x — WAN `192.168.1.250`, LAN trunk + 7 VLANs |
@@ -19,9 +21,11 @@ Read it as a map, not a verdict. The two clear patterns are worth naming: everyt
 | cloudflared | LXC | `103` | `pve1` | Outbound tunnel |
 | cloudflared-opnsense | LXC | `511` | `pve3` | Tunnel for edge-adjacent services |
 
-Nginx Proxy Manager (VM `100`) has been decommissioned.
+Nginx Proxy Manager (VM `100`) has been decommissioned, so Caddy stands alone as canonical ingress and the legacy `105` entry above is the only remaining question mark in this group.
 
 ## Identity and access
+
+Identity and access services are co-located on `pve3` so that SSO, bastion and DNS share fate with the ingress they protect. The table below is small because each of these services is meant to be singular.
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
@@ -30,7 +34,11 @@ Nginx Proxy Manager (VM `100`) has been decommissioned.
 | Guacamole | LXC | `106` | `pve3` | Remote access gateway |
 | Technitium (DNS) | LXC | `553` | `pve3` | Internal DNS, `10.1.50.53` |
 
+The operational point of gathering all four on the production and management VLANs of `pve3` is that a single-node outage takes down login, shell and name resolution together, which is exactly the recovery order the restore plan must assume.
+
 ## Infrastructure / management
+
+Infrastructure and management are split across both nodes, reflecting where each service was born rather than a master plan. The table below mixes the old and the new: databases and docs on `pve1`, observability and backups on `pve3`.
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
@@ -47,9 +55,11 @@ Nginx Proxy Manager (VM `100`) has been decommissioned.
 | Docmost | LXC | `109` | `pve1` | Transitional documentation; Fumadocs is canonical |
 | Dokploy host (`obiwan`) | LXC | `205` | `pve3` | Deployment plane, `10.1.20.5` |
 
-Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (`1101`).
+Deleted since June 2026 are the secondary PostgreSQL (`113`), `debian` (`1005`) and GLPI (`1101`). The runner placement deserves a callout: keeping CI compute on `pve3` while the forge itself sits on `pve1` is intentional, so builds do not contend with the infrastructure node.
 
 ## Applications (Docker stacks inside Ubuntu VMs — legacy)
+
+The legacy application VMs are the oldest residents and the least moved. Each is an Ubuntu VM running `docker compose` stacks, now addressed on the production VLAN, and the table below pins each one to its Beszel label and IP so monitoring and proxy configuration agree on names.
 
 | Service | Kind | ID | Host | Beszel label | IP |
 |---------|------|----|------|--------------|----|
@@ -57,7 +67,11 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 | n8n | VM | `204` | `pve1` | `n8n` | `10.1.20.47` |
 | Small webapps | VM | `102` | `pve1` | `web-apps` | `10.1.20.42` |
 
+All three remain on `pve1`, which confirms the broader pattern that Docker VMs stay where they were built while new work lands on `pve3` as LXCs.
+
 ## Applications (Proxmox LXCs — production VLAN)
+
+The newer application tier is where growth happens: single-purpose LXCs on the production VLAN, almost all on `pve3`. The table below is the longest on this page because this tier holds most user-facing services.
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
@@ -77,7 +91,11 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 | Element / Synapse | LXC | `107` | `pve1` | Matrix homeserver / client host |
 | Docker host | LXC | `108` | `pve1` | `alpine-docker`, generic Docker host |
 
+The exceptions prove the rule: BentoPDF, RustyPaste, Element/Synapse and the generic Docker host still sit on `pve1`, which is why the placement-notes section calls out that compute-fitting apps have not all migrated to the compute node.
+
 ## Media (Docker stacks inside Ubuntu VMs)
+
+The media tier mirrors the legacy application pattern: Ubuntu VMs with Docker stacks, all three on `pve3` where disk and CPU are plentiful. The table below pins each host to its address on the production VLAN.
 
 | Service | Kind | ID | Host | Beszel label | IP |
 |---------|------|----|------|--------------|----|
@@ -85,20 +103,32 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 | Servarr host | VM | `301` | `pve3` | `Servarr` | `10.1.20.62` |
 | qBittorrent host | VM | `302` | `pve3` | `QBittorrent` | `10.1.20.63` |
 
+Grouping all three media VMs on the same node as TrueNAS keeps bulk traffic off the inter-node trunk, which is the practical reason this placement persists.
+
 ## Media / games (Proxmox LXCs)
+
+Games and game-adjacent services are LXCs on `pve3`, close to the media VMs they complement. The table below holds just two rows, but the second one carries the largest single data footprint on the page.
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
 | Palworld | LXC | `4001` | `pve3` | Game server, `10.1.20.143`, NAT-published UDP — **Stopped** |
 | Gamevault | LXC | `258` | `pve3` | Game library, ~1.2 TB used, excluded from backups |
 
+Palworld is the only workload with dedicated UDP NAT forwards, while Gamevault is the only workload explicitly excluded from backups because its contents are replaceable downloads.
+
 ## Storage
+
+Storage has exactly one row because there is exactly one storage VM. The table below records it without implying it could move.
 
 | Service | Kind | ID | Host | Notes |
 |---------|------|----|------|-------|
 | TrueNAS | VM | `127` | `pve3` | `192.168.1.74`, passed-through disks; does not move |
 
+TrueNAS stays on `pve3` because its disks are passed through from that host, so any placement discussion that ignores physical attachment is moot.
+
 ## Lab / pre-production / testing
+
+The lab tier is where experiments park, and stopped versus running is the distinction that matters. The table below separates the one running preproduction LXC from the stopped POCs and the running agent whose purpose is still to be confirmed.
 
 | Service | Kind | ID | Host | Status |
 |---------|------|----|------|--------|
@@ -111,9 +141,8 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 | `mint` | VM | `10001` | `pve3` | Running lab desktop — manual start, no auto-boot |
 | `opnsense-slave` | VM | `502` | `pve1` | **Stopped** — manual failover only |
 
-Deleted since June 2026: `prod-lockbits` (`310`), `preprod-lockbits` (`320`), all three `debian-test-edragent` containers (`331`–`333`).
+Deleted since June 2026 are `prod-lockbits` (`310`), `preprod-lockbits` (`320`) and all three `debian-test-edragent` containers (`331`–`333`). The stopped POCs each hold large virtual disks, so the decision to remove or revive them is a capacity decision as much as a tidiness one.
 
 ## Notes
 
-- "Beszel label" and "IP" come from Beszel's host list and apply only to the Docker host VMs. LXC IPs follow the tag convention (`20.x` → `10.1.20.x`, `50.x` → `10.1.50.x`, `1.x` → `192.168.1.x`) and are confirmed only where a service binding, NAT rule, or DNS record pins them.
-- This table is observed placement, not target placement. There is no implied recommendation to move any service in this view; see the [migration plan](/architecture/migration-plan) for in-flight transitions.
+Two conventions apply across every table on this page and are restated here so they are not missed. "Beszel label" and "IP" come from Beszel's host list and apply only to the Docker host VMs, while LXC IPs follow the tag convention (`20.x` to `10.1.20.x`, `50.x` to `10.1.50.x`, `1.x` to `192.168.1.x`) and are confirmed only where a service binding, NAT rule, or DNS record pins them. This table is observed placement, not target placement: there is no implied recommendation to move any service in this view, and in-flight transitions belong to the [migration plan](/architecture/migration-plan).

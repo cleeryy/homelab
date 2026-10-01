@@ -3,24 +3,24 @@ title: Mint (lab desktop)
 description: Parked Linux desktop VM on the ADMIN VLAN.
 ---
 
-Mint is the parked lab desktop: a full Linux Mint VM for the rare task that wants a GUI. It lives on ADMIN (VLAN 10, DHCP) precisely so it never touches the production data path.
+Mint is the parked lab desktop: a full Linux Mint VM for the rare task that wants a GUI rather than a shell. It lives on ADMIN (VLAN 10, DHCP) precisely so it never touches the production data path — a convenience machine, isolated by design, powered on but mostly idle. Nobody's evening is ruined if it vanishes; somebody's afternoon gets easier the one time a year a browser inside the lab network is needed.
 
 ## Placement
 
-- VM `10001` on `pve3`, `vmbr1` tag 10, IP via DHCP (unverified 28/09/2026).
+The desktop is VM `10001` on `pve3`, attached to `vmbr1` with tag 10 and addressed via DHCP, an address unverified as of 28/09/2026.
 
 ## Status
 
-- Running. No ingress, no monitoring. QEMU guest agent flag set.
+The VM is running with no ingress and no monitoring. The QEMU guest agent flag is set.
 
 ## Dependencies
 
-- OPNsense DHCP on ADMIN (`10.1.10.100-199`).
+Its only dependency is OPNsense DHCP on ADMIN (`10.1.10.100-199`), which hands it whatever address it currently holds.
 
 ## Failure impact
 
-- None — lab convenience only.
+A failure here has no production impact — lab convenience only. The VM can be rebuilt or simply left off without anything else noticing.
 
 ## Known gaps
 
-- Relever son IP DHCP et confirmer desktop environment. Decommissioning decision still open (see [migration plan](/architecture/migration-plan)).
+Its current DHCP lease and the desktop environment need confirming, and the decommissioning decision is still open (see the [migration plan](/architecture/migration-plan)). One login answers the first; one decision closes the second.

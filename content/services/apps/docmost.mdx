@@ -7,12 +7,11 @@ Docmost is the past: the previous wiki, still running, already replaced. It stay
 
 ## Placement
 
-- LXC `109` `docmost` on `pve1`.
+The service lives as LXC `109` (`docmost`) on `pve1`.
 
 ## Status
 
-- Docmost is still deployed and reachable but **not** the canonical documentation surface.
-- Fumadocs (this site) is the canonical documentation layer.
+Docmost is still deployed and reachable, but it is emphatically not the canonical documentation surface. Fumadocs — this site — is the canonical documentation layer, and anything written in Docmost from now on is writing in the wrong place.
 
 ## What to do with it
 
@@ -20,11 +19,11 @@ The decision is binary: migrate any surviving Docmost content into Fumadocs, the
 
 ## Dependencies
 
-- Docmost typically uses PostgreSQL. The PostgreSQL LXC (`112`) on `pve1` is the most likely backend, but the exact wiring is not exported into this documentation.
+Docmost typically uses PostgreSQL, and the PostgreSQL LXC (`112`) on `pve1` is the most likely backend — but the exact wiring is not exported into this documentation, so treat that as an educated guess rather than a confirmed fact.
 
 ## Failure impact
 
-- During the transition window, a Docmost outage means previously-written content is unreachable until either Docmost is restored or that content has been mirrored into Fumadocs.
+During the transition window, a Docmost outage means previously-written content is unreachable until either Docmost is restored or that content has been mirrored into Fumadocs. Every migrated page shrinks this impact a little further.
 
 ## Known gaps
 

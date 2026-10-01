@@ -7,38 +7,49 @@ Something is broken. This page is the order of operations for that moment: figur
 
 ## Triage
 
-- [ ] Identify the affected layer: Proxmox host, VM/LXC, Docker container, or external dependency.
-- [ ] Check Beszel for host and container-level state. Recent observations to expect as benign:
-  - `gluetun` on `QBittorrent` may be unhealthy without taking the whole stack down.
-  - `portainer` on `Nextcloud` may be in a restarting loop without taking Nextcloud itself down.
-  - `jellyfin` memory usage can be high during transcoding.
-- [ ] Locate the service on [Service placement](/architecture/service-placement) to know which node and which dependencies are involved.
+Triage comes first because treatment without a layer is just flailing, and in this homelab the layer is usually obvious within a minute if you look in the right two places. Start by naming which of the four layers is actually broken — Proxmox host, VM or LXC, Docker container, or an external dependency — and only then reach for a fix. Beszel is the fastest way to ground that judgment with host and container-level state, though a few of its observations should be read as benign background noise rather than leads: `gluetun` on `QBittorrent` may show unhealthy without taking the whole stack down, `portainer` on `Nextcloud` may sit in a restarting loop without taking Nextcloud itself down, and `jellyfin` memory usage can legitimately run high during transcoding. Once the layer is named, locate the service on [Service placement](/architecture/service-placement) to learn which node it lives on and which dependencies it drags along.
+
+1. Identify the affected layer among Proxmox host, VM or LXC, Docker container, and external dependency.
+2. Check Beszel for host and container-level state, treating the known-benign observations (`gluetun` unhealthy on `QBittorrent`, `portainer` restarting on `Nextcloud`, high `jellyfin` memory during transcoding) as background rather than causes.
+3. Locate the service on [Service placement](/architecture/service-placement) to establish its node and its dependencies.
+
+A triage that ends with a named layer, a Beszel reading, and a placement row is done, even if the cause is still unknown. The classic trap is skipping straight to restarting things before knowing which layer owns the symptom — resist it, because the mitigate section below assumes you did this part.
 
 ## Mitigate
 
-- [ ] Apply the smallest change that restores service: restart the container, restart the guest, or restart the host service.
-- [ ] If WAN is lost: check OPNsense (VM `501` on `pve3`), then the `WAN_GW` / `AIRVPN_GW` gateway status.
-- [ ] If ingress is lost: check `caddy` (`2010` on `pve3`, `10.1.20.10`) and the OPNsense NAT forwards for 80/443.
-- [ ] If SSH is lost: check `warpgate` (`222`) and Authentik (`130`).
-- [ ] If DNS is broken internally: check `technitium` (`553`) and Unbound on OPNsense.
-- [ ] If storage is unreachable: check `truenas` (`127`) and the `nas`/`truenas` mounts on each affected node.
+Mitigation means restoring service with the smallest possible change, not fixing the root cause, and the subsections below are ordered by blast radius rather than by likelihood. Restart the narrowest thing first — container, then guest, then host service — and only widen when the narrow restart demonstrably did not help. The infrastructure checks that follow are the short list of single points of failure behind most homelab-wide symptoms, so work them in order instead of sampling at random.
+
+1. Apply the smallest change that restores service by restarting the container first, then the guest, then the host service.
+2. If WAN is lost, check OPNsense (VM `501` on `pve3`) and then the `WAN_GW` and `AIRVPN_GW` gateway status.
+3. If ingress is lost, check `caddy` (`2010` on `pve3`, `10.1.20.10`) and the OPNsense NAT forwards for ports 80 and 443.
+4. If SSH is lost, check `warpgate` (`222`) and Authentik (`130`).
+5. If internal DNS is broken, check `technitium` (`553`) and Unbound on OPNsense.
+6. If storage is unreachable, check `truenas` (`127`) and the `nas` and `truenas` mounts on each affected node.
+
+Stop as soon as service is restored and resist the urge to keep tuning; the follow-up section exists precisely so the root cause gets its attention after users are unblocked. Note what you restarted and in which order, because that sequence is the first paragraph of the postmortem.
 
 ## Recover
 
-- [ ] If a backup restore is needed, follow [Backup & restore](/operations/backup-restore).
-- [ ] Validate end-to-end before declaring resolution. Beszel state is a fast smoke test, not a validation.
+Recovery is the deeper repair after mitigation has bought breathing room, and its threshold question is whether a backup restore is actually needed or whether the running state is now trustworthy. If the answer is a restore, do not improvise it — follow [Backup & restore](/operations/backup-restore) from the top, including its validation steps.
+
+1. If a backup restore is needed, follow [Backup & restore](/operations/backup-restore).
+2. Validate end-to-end through the real user path before declaring resolution, treating Beszel state as a fast smoke test rather than validation.
+
+A service that looks green in Beszel but fails through its Caddy route is not recovered. Declare resolution only when the same path a user takes succeeds, and say so explicitly when handing the incident off or closing it.
 
 ## Follow up
 
-- [ ] Short postmortem: what happened, what was done, what changed.
-- [ ] Update affected documentation (service page, architecture page, this page) so the next incident is shorter.
+Every incident is a documentation debt that either gets repaid now or with interest later, so the follow-up happens while the details are still warm. The postmortem need not be long — what happened, what was done, what changed — but it must exist, and the documentation updates are part of the incident rather than a separate chore.
+
+1. Write a short postmortem covering what happened, what was done, and what changed.
+2. Update the affected documentation (service page, architecture page, and this page) so the next incident of the same shape is shorter.
+
+The verification for this section is simple: a future reader hitting the same symptom should find the postmortem or the updated page before finding this one unhelpful. If nothing was written down, the incident is not really over.
 
 ## Useful constraints
 
-- Caddy (`2010`) is the single ingress. A `pve3` host outage takes ingress, WAN (OPNsense `501`), TrueNAS, and most platform LXCs down at once — triage in that order.
-- TrueNAS lives on `pve3`. A `pve3` host outage takes the media stack and a large portion of storage with it.
-- PBS (`578`) also lives on `pve3`: during a `pve3` outage, restores depend on a fresh PBS or the off-site copy.
+These three constraints explain a disproportionate share of homelab-wide outages, which is why they are collected here instead of scattered across service pages. Caddy (`2010`) is the single ingress, so any `pve3` host outage takes ingress, WAN (OPNsense `501`), TrueNAS, and most platform LXCs down at once — triage in that order rather than chasing individual services. TrueNAS also lives on `pve3`, so the same host outage takes the media stack and a large portion of storage with it, and storage-dependent services will stay down even after their own guests boot until the pools are back. Finally, PBS (`578`) lives on `pve3` too, which means that during a `pve3` outage, restores themselves depend on standing up a fresh PBS or reaching for the off-site copy. Read together, these constraints say that `pve3` down is never a single-service incident — treat it as a platform incident from the first minute.
 
 ## Known gaps
 
-No severity levels, no on-call rotation, no notification path — incidents are handled by whoever notices, which for a homelab is honestly fine. If that ever stops being fine, severity definitions come first and tooling second.
+No severity levels, no on-call rotation, no notification path — incidents are handled by whoever notices, which for a homelab is honestly fine. If that ever stops being fine, severity definitions come first and tooling second. Until then, the cheapest improvement is not paging but prose: postmortems that actually get written.

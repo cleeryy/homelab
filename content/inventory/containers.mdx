@@ -5,11 +5,13 @@ description: All Proxmox LXCs by host node.
 
 Last synced with live infrastructure: **September 2026** (`pct list` on both nodes).
 
-Thirty-eight containers, and the split tells the story of the homelab better than any diagram: eight small utilities lingering on `pve1`, thirty platform services crowded onto `pve3`. The LXC is the default unit of deployment here — one service, one container, one ID — which is why this table doubles as the source of truth for IDs used everywhere else in the wiki.
+Thirty-eight containers, and the split tells the story of the homelab better than any diagram: eight small utilities lingering on `pve1`, thirty platform services crowded onto `pve3`. The LXC is the default unit of deployment here — one service, one container, one ID — which is why this table doubles as the source of truth for IDs used everywhere else in the wiki. The `pve1` residents are mostly stable, low-churn utilities that predate the current placement strategy, while `pve3` carries the services that are actively maintained, monitored, and backed up.
 
 Start-at-boot and boot order for all of the above: [Operations > Startup & shutdown](/operations/startup-shutdown).
 
 ## `pve1` (8 containers)
+
+The eight containers on `pve1` are the quiet corner of the cluster. They hold the code forge and its database, a transitional documentation instance, and a few lightweight utilities that run happily on modest resources far from the production VLANs. Their presence explains why `pve1` is described as the infrastructure and management node in the architecture pages rather than as a second production host.
 
 | CT ID | Name | Function | Status |
 |-------|------|----------|--------|
@@ -24,7 +26,11 @@ Start-at-boot and boot order for all of the above: [Operations > Startup & shutd
 
 Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (`1101`).
 
+That short list of deletions matters because it shows the direction of travel: duplicate databases and one-off Debian hosts are being retired rather than replaced. For current placement rationale see [Service placement](/architecture/service-placement), and for the Docker-based counterparts see [Virtual machines](/inventory/virtual-machines).
+
 ## `pve3` (30 containers)
+
+If `pve1` is the quiet corner, `pve3` is the workshop floor. Identity, DNS, monitoring, ingress, backups, and application frontends all share this host, which is why its load average runs far hotter than its sibling. The concentration is intentional — `pve3` has the CPU headroom and the trunked VLAN access these services need — but it also means any maintenance on `pve3` deserves a glance at this table first.
 
 | CT ID | Name | Function | Status |
 |-------|------|----------|--------|
@@ -61,8 +67,10 @@ Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (
 
 Deleted since June 2026: `prod-lockbits` (`310`), `preprod-lockbits` (`320`), `debian-test-edragent` (`331`), `debian-test-edragent2` (`332`), `debian-test-edragent3` (`333`).
 
+Three entries sit stopped while the rest run, and that distinction is worth pausing on. The Palworld game server and the two ESGI project hosts are preserved but idle, so they still occupy IDs and disk without consuming CPU or RAM. The deleted test hosts below the table tell the complementary story of short-lived experiments that were fully removed once finished.
+
 ## Notes
 
-- LXCs are the dominant pattern for platform services. Multi-container application stacks are still deployed inside the Ubuntu VMs documented under [Virtual machines](/inventory/virtual-machines), not directly on Proxmox.
-- LXC IPs follow the tag convention (`1.x` → `192.168.1.x`, `20.x` → `10.1.20.x`, `25.x` → `10.1.25.x`, `50.x` → `10.1.50.x`); see [Networks](/inventory/networks).
-- `108` `alpine-docker` is documented as a generic Docker host; its specific workloads, if any, are not captured.
+The patterns behind this inventory deserve a plain-language summary because they shape how new services should be deployed. LXCs are the dominant pattern for platform services, with each service getting its own container, while multi-container application stacks still live inside the Ubuntu VMs documented under [Virtual machines](/inventory/virtual-machines) rather than directly on Proxmox. That boundary keeps single-service concerns isolated in LXCs and leaves Docker Compose complexity where it belongs, inside dedicated VMs.
+
+Addressing follows the same shared convention as the rest of the cluster. LXC IPs follow the tag convention (`1.x` → `192.168.1.x`, `20.x` → `10.1.20.x`, `25.x` → `10.1.25.x`, `50.x` → `10.1.50.x`), with full detail under [Networks](/inventory/networks). One host breaks the one-service rule in a documented way: `108` `alpine-docker` is carried as a generic Docker host, and its specific workloads, if any, are not captured, so it should not be mistaken for an empty placeholder.

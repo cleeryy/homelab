@@ -3,25 +3,29 @@ title: Firewall (OPNsense)
 description: Edge router and firewall — master running, CARP standby cloned.
 ---
 
-OPNsense is the edge: double-NATted behind the ISP box (`192.168.1.250/24` on `vtnet0`), trunking seven VLANs plus LAN out of `vtnet1` into `vmbr1`. WireGuard road-warrior (`10.1.90.0/24`), AirVPN client with kill-switch, NetBird mesh, CrowdSec bouncer, IDS on WAN/PROD/MGMT. DNS: Unbound (`:53`) forwarding `internal` to dnsmasq (`:53053`) and `internal.cleeryy.cloud` to Technitium (`10.1.50.53`).
+OPNsense is the edge of the homelab. It sits double-NATted behind the ISP box with `192.168.1.250/24` on `vtnet0`, and trunks seven VLANs plus LAN out of `vtnet1` into `vmbr1`. It also concentrates the security and remote-access functions: WireGuard road-warrior on `10.1.90.0/24`, an AirVPN client with kill-switch, the NetBird mesh, the CrowdSec bouncer, and IDS on WAN, PROD, and MGMT. For DNS it runs Unbound on `:53`, forwarding `internal` to dnsmasq on `:53053` and `internal.cleeryy.cloud` to Technitium at `10.1.50.53`.
 
 ## Placement
 
+The master carries all production traffic today, while the cloned standby sits alongside it with a conflicting-services-safe addressing scheme until CARP and pfsync are configured together.
+
 - VM `501` `opnsense` on `pve3` — master, running, 16 GB RAM, `net0` vmbr0 + `net1` vmbr1 trunk.
-- VM `502` `opnsense-slave` on `pve1` — full clone (28/09/2026), **stopped**, `onboot 0`, new MACs. CARP/pfsync to be configured together.
+- VM `502` `opnsense-slave` on `pve1` — re-IPed 28/09/2026 (WAN .251, LAN+VLANs in .2, WG/NetBird/IDS/CrowdSec/DHCP/syslog disabled), **running**, `onboot 0`, snapshot preboot-isole. CARP/pfsync to be configured together.
 
 ## Status
 
-- Master running. No `hasync`, no CARP VIPs yet — single node. Slave must never boot unconfigured (IP conflict with master).
+The cluster is effectively still a single node: the master does everything and no high-availability state is exchanged yet. The standby has been verified safe to leave powered on next to the master, which is what makes the CARP work plannable rather than urgent.
+
+- Master running. No `hasync`, no CARP VIPs yet — single node. Slave verified conflict-free alongside master (28/09).
 
 ## Dependencies
 
-- ISP box (uplink), `nas` (VM disks), Cloudflare (DNS-01, tunnels).
+The firewall depends on the ISP box as its uplink, on the `nas` storage for its VM disks, and on Cloudflare for DNS-01 challenges and tunnel egress. If any of those three is gone, the firewall itself may be healthy but the edge as a whole is degraded.
 
 ## Failure impact
 
-- Master down = no inter-VLAN routing, no internet for VLANs, no SSO-gated ingress. The standby exists precisely for this; finish CARP.
+If the master goes down, there is no inter-VLAN routing and no internet for the VLANs, and no SSO-gated ingress from outside. The standby exists precisely for that scenario; finishing CARP is what turns it from an insurance policy into actual redundancy.
 
 ## Known gaps
 
-- CARP VIPs per VLAN + pfsync + XMLRPC sync are designed, not applied. Inter-VLAN policy is still allow-all (`[DEV]`/`[TEMP]`).
+CARP VIPs per VLAN plus pfsync plus XMLRPC sync are designed but not applied, so failover remains manual. Inter-VLAN policy is still allow-all, marked `[DEV]` and `[TEMP]`, and tightening it is tracked separately from the HA work.

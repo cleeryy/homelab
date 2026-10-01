@@ -3,24 +3,24 @@ title: Webapps stack (ntfy)
 description: Small webapps Docker host VM on `pve1`.
 ---
 
-`ntfy` (Proxmox name `ubuntu-small-webapps`) is the small-webapps Docker host. Despite the Beszel hostname, it is not the notification service — it is four small stacks behind one IP.
+`ntfy` (Proxmox name `ubuntu-small-webapps`) is the small-webapps Docker host: four modest stacks sharing one IP on `pve1`. Despite the Beszel hostname it is not the notification service — the name is a historical accident, and the reality is a shelf of small tools (`:8282`), an Overleaf instance (`:4001`), a Vaultwarden (`:8888`), and a backup ntfy (`:4096`) cohabiting behind Caddy. They share nothing but the host, which means one guest outage fells four unrelated apps at once.
 
 ## Placement
 
-- VM `102` on `pve1`, `10.1.20.42` (VLAN 20, netplan static, QEMU guest agent running).
+The host is VM `102` on `pve1`, addressed at `10.1.20.42` on VLAN 20 with a netplan static address and the QEMU guest agent running.
 
 ## Status
 
-- Running. Ports: `:8282` (tools), `:4001` (overleaf), `:8888` (vw), `:4096` (backup-ntfy) — all via Caddy.
+The VM is running. All four stacks are reached through Caddy: `:8282` for tools, `:4001` for Overleaf, `:8888` for Vaultwarden, and `:4096` for the backup ntfy.
 
 ## Dependencies
 
-- None external. Images come from public registries.
+There are no external dependencies. Images come from public registries, and each stack keeps its own local state rather than consuming a shared homelab service.
 
 ## Failure impact
 
-- Four small apps down at once until restore. Guest-level PBS backup applies.
+If the VM fails, four small apps go down together until the guest is restored. Guest-level PBS backup applies, so recovery is whole-VM restore followed by per-stack sanity checks.
 
 ## Known gaps
 
-- Which ISO/upstream each of the four stacks tracks is not recorded here.
+Which image and upstream each of the four stacks tracks is not recorded here — the four version pins that would turn a restore into a reproducible one.

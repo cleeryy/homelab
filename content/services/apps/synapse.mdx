@@ -3,24 +3,24 @@ title: Synapse (Matrix)
 description: Matrix homeserver with Element web client on `pve1`.
 ---
 
-Synapse is the Matrix homeserver; Element (`:5173`) is the web client served next to it. Federation port `8448` applies if federation is ever enabled — until then this is a private chat island behind Caddy.
+Synapse is the Matrix homeserver, with Element on `:5173` as the web client served next to it. Federation port `8448` applies if federation is ever enabled — until then this is a private chat island behind Caddy, convenient for the household and invisible to the wider Matrix network. Chat history is the only state that matters here; everything else is plumbing.
 
 ## Placement
 
-- LXC `107` `elementsynapse` on `pve1`, `10.1.20.38:8008` (VLAN 20).
+The homeserver runs as LXC `107` (`elementsynapse`) on `pve1`, listening at `10.1.20.38:8008` on VLAN 20.
 
 ## Status
 
-- Running. Ingress: `matrix.cleeryy.cloud` → Caddy → `10.1.20.38:8008`.
+The container is running. Ingress is `matrix.cleeryy.cloud` through Caddy toward `10.1.20.38:8008`.
 
 ## Dependencies
 
-- Database backend (SQLite or Postgres) is inside the container; exact wiring unconfirmed.
+The database backend — SQLite or Postgres — lives inside the container, though the exact wiring is unconfirmed. Either way there is no external dependency: the homeserver stands alone.
 
 ## Failure impact
 
-- Chat history unreachable until restore. No other service depends on it.
+If the LXC fails, chat history is unreachable until the guest is restored. No other service depends on Matrix, so the outage is contained to conversation itself.
 
 ## Known gaps
 
-- Confirm the database backend and whether federation (`:8448`) is intended.
+Two facts would finish this page: confirming the database backend, and deciding whether federation on `:8448` is intended or the island should stay private.

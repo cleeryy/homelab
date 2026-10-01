@@ -7,60 +7,41 @@ Nothing here patches itself except the containers Watchtower is allowed to touch
 
 ## Scope
 
-There are three patching surfaces:
-
-1. **Proxmox hosts** (`pve1`, `pve3`).
-2. **VM and LXC guests** (Debian/Ubuntu).
-3. **Docker containers** inside the Ubuntu VMs.
-
-Each has a different update mechanism.
+Patching covers three distinct surfaces that share nothing but the word "update," and confusing their mechanisms is how maintenance windows go sideways. The Proxmox hosts `pve1` and `pve3` form the bottom layer, the Debian and Ubuntu VM and LXC guests sit on top of them, and the Docker containers inside the Ubuntu VMs form the fastest-moving top layer. Each surface has its own update mechanism, its own reboot semantics, and its own blast radius, so the rest of this page treats them separately before recombining them into a single window order.
 
 ## Proxmox hosts
 
-- Both nodes run PVE 9.2.11. Manual `apt update && apt dist-upgrade` on each node.
-- Plan host reboots: a node reboot stops all guests on that node.
-- Cluster quorum is fine during a single-node reboot (the surviving node retains quorum on a 2-node cluster only when corosync is configured for it). Confirm quorum-related settings before the first planned reboot.
+Host patching is infrequent and high-blast-radius, which is why it closes the window rather than opening it. Both nodes currently run PVE 9.2.11, and updates are applied manually with `apt update && apt dist-upgrade` on each node in turn. Every host reboot stops all guests on that node, so a host patch is really a whole-node outage with a package upgrade inside it. Cluster quorum survives a single-node reboot (the surviving node retains quorum on a 2-node cluster only when corosync is configured for it), but that parenthetical is load-bearing — confirm the quorum-related settings before the first planned reboot rather than discovering the answer mid-window.
 
 ## VM and LXC guests
 
-- Debian / Ubuntu: `apt update && apt upgrade` from inside the guest, or via the configured automation tool.
-- Reboot policy is per guest; high-impact guests (TrueNAS, OPNsense) need a scheduled window.
+Guest patching is the steady middle layer: lower stakes than a host reboot, higher stakes than a container pull. On Debian and Ubuntu guests the mechanism is `apt update && apt upgrade` run from inside the guest or through the configured automation tooling. Reboot policy is per guest rather than global, because most guests tolerate a reboot at any hour while a few do not — and the high-impact ones, TrueNAS and OPNsense, need a genuinely scheduled window with users warned, since their reboots interrupt storage and networking respectively.
 
 ## Docker containers
 
-- `watchtower` runs on most Docker host VMs and pulls newer images automatically.
-- Hosts with `watchtower`:
-  - `Beszel` (`202`).
-  - `n8n` (`204`).
-  - `QBittorrent` (`302`).
-  - `Servarr` (`301`).
-  - `web-apps` (`102`).
-- Hosts that do not visibly run `watchtower`:
-  - `Jelly` (`300`) — no `watchtower` container reported.
-  - `Nextcloud` (`200`) — no `watchtower` container reported. Nextcloud upgrades are typically version-sensitive and benefit from manual control.
-
-Pinning policy per stack (which image tags are pinned vs. latest) is **not captured here**.
+Container patching is the only surface with any automation, and even that is deliberately partial. On most Docker host VMs, `watchtower` pulls newer images automatically, so those stacks drift forward without human intervention — convenient, but also a reason to check what actually changed when something looks odd after a quiet night. The hosts where `watchtower` runs are `Beszel` (`202`), `n8n` (`204`), `QBittorrent` (`302`), `Servarr` (`301`), and `web-apps` (`102`). Two hosts visibly do not run it: `Jelly` (`300`), where no `watchtower` container is reported, and `Nextcloud` (`200`), where no `watchtower` container is reported either — and Nextcloud upgrades in particular are version-sensitive enough to benefit from staying manual. Which image tags are pinned versus tracking latest per stack is **not captured here**, so treat every container update as potentially major until the pinning policy is written down.
 
 ## Dokploy applications
 
-- Dokploy apps (e.g. this wiki) update by **rebuild + redeploy** from Git, not by Watchtower.
-- After changing an app's configuration (ports, env, volumes) a redeploy is required — saving alone does not recreate the swarm service.
+Dokploy apps live outside the Watchtower world entirely, because they deploy from Git rather than tracking upstream image tags. An app like this wiki updates by rebuilding and redeploying from its repository, not by having Watchtower pull something newer underneath it. The operational consequence is that configuration changes (ports, environment, volumes) only take effect on redeploy — saving alone never recreates the swarm service — so every config edit implicitly schedules a redeploy, with the swarm update-order gotcha from the Dokploy page along for the ride.
 
 ## Special cases
 
-- **OPNsense** (`501`) — patched from its own UI (currently 26.1.x); reboot interrupts WAN, VLAN routing, VPN, and NetBird.
-- **TrueNAS** (`127`) — patched from its own UI; reboot interrupts shared datasets.
+OPNsense and TrueNAS are special because their reboots are platform events disguised as guest reboots. OPNsense (`501`) is patched from its own UI (currently 26.1.x), and its reboot interrupts WAN, VLAN routing, VPN, and NetBird all at once — during that window there is no remote access to fix anything else, so it goes last or alone. TrueNAS (`127`) is likewise patched from its own UI, and its reboot interrupts every shared dataset, which means every storage-dependent guest turns unhealthy for the duration even though nothing is wrong with those guests themselves. Schedule both explicitly, announce both, and never bundle them into the same window as the hosts.
 
 ## Operational notes
 
-- Order matters during a coordinated patch window. Suggested order:
-  1. Lab / pre-production LXCs.
-  2. Docker hosts with `watchtower` (already drifting).
-  3. Manual Docker host updates.
-  4. Critical infra LXCs (`forgejo`, `postgresql`).
-  5. Storage and edge VMs (`truenas`, `opnsense`).
-  6. Proxmox hosts.
+A coordinated patch window works only if the order respects dependencies, moving from the most disposable to the least restartable. The suggested sequence runs lab and pre-production LXCs first, then the Docker hosts that `watchtower` already drifts (since they are closest to current anyway), then the manual Docker host updates, then the critical infra LXCs (`forgejo`, `postgresql`), then the storage and edge VMs (`truenas`, `opnsense`), and finally the Proxmox hosts themselves. The logic is that nothing is ever rebooted while something it depends on is still mid-update, and the pieces whose outage is felt most widely move last, when everything beneath them is already known-good.
+
+1. Patch lab and pre-production LXCs first as canaries.
+2. Let the Docker hosts with `watchtower` (already drifting) converge, reviewing what moved.
+3. Apply manual Docker host updates next.
+4. Patch critical infra LXCs (`forgejo`, `postgresql`).
+5. Patch storage and edge VMs (`truenas`, `opnsense`) in their own scheduled slots.
+6. Patch Proxmox hosts last, one node at a time with quorum confirmed.
+
+Close the window by walking the dependency chain upward — storage mounts, then databases and forges, then containers and apps, then ingress — and only call it done when the user-facing paths answer. A window that ends at "all reboots completed" without that upward validation has merely finished rebooting, not finished patching.
 
 ## Known gaps
 
-No documented cadence per surface, no image-pinning policy for the Docker stacks, and no answer on whether unattended-upgrades runs inside the guests. In practice: Watchtower drifts the easy hosts forward on its own, and everything else updates when somebody schedules it. Writing the cadence down is the cheapest reliability win left on this page.
+No documented cadence per surface, no image-pinning policy for the Docker stacks, and no answer on whether unattended-upgrades runs inside the guests. In practice: Watchtower drifts the easy hosts forward on its own, and everything else updates when somebody schedules it. Writing the cadence down is the cheapest reliability win left on this page — a rhythm the homelab keeps is worth more than a perfect order it occasionally follows.

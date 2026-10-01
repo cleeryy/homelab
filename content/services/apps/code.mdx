@@ -3,24 +3,24 @@ title: Code (dev environment)
 description: Development LXC hosting this wiki's repository on `pve3`.
 ---
 
-`code` is the dev environment where the `homelab` Fumadocs repository lives (`/root/homelab`) and gets edited. It also runs side services on `:3000` (arneph), `:4096` (opencodeeee) and `:8680`.
+`code` is the workshop where this very wiki is written: the `homelab` Fumadocs repository lives at `/root/homelab` inside this LXC and gets edited here. Alongside the editor it hosts side services on `:3000` (arneph), `:4096` (opencodeeee), and `:8680`, which makes it both a dev box and a small app host. Losing it would be annoying rather than catastrophic — editing stops, but the published site keeps serving because Dokploy builds and serves it independently.
 
 ## Placement
 
-- LXC `119` `code` on `pve3`, `10.1.20.50` (VLAN 20).
+The environment is LXC `119` (`code`) on `pve3`, addressed at `10.1.20.50` on VLAN 20.
 
 ## Status
 
-- Running. Ingress: `code.cleeryy.cloud` → Caddy → `code:8680` behind Authentik `forward_auth`; `arneph` → `10.1.20.50:3000`, `opencodeeee` → `10.1.20.50:4096`.
+The LXC is running. Ingress is `code.cleeryy.cloud` through Caddy toward `code:8680` behind Authentik `forward_auth`, with `arneph` reaching `10.1.20.50:3000` and `opencodeeee` reaching `10.1.20.50:4096`.
 
 ## Dependencies
 
-- Git remote for the wiki repo (push to persist work done here).
+The only real dependency is the git remote for the wiki repository: work done inside this LXC persists only once it is pushed, so an unpushed edit session is the one thing a host loss would actually destroy.
 
 ## Failure impact
 
-- No doc edits or side services until restore. The published wiki (built by Dokploy) keeps serving.
+A failure here stops doc edits and the side services until the guest is restored. The published wiki is unaffected, since it is built and served by Dokploy rather than from this container.
 
 ## Known gaps
 
-- What arneph and opencodeeee are for is not recorded here.
+What arneph and opencodeeee actually do is not recorded here — their purpose, owner, and whether they deserve ingress of their own are all open.

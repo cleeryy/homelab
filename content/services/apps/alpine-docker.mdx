@@ -3,24 +3,24 @@ title: Alpine Docker host
 description: Generic Docker host LXC on `pve1`.
 ---
 
-`alpine-docker` is a spare Alpine + Docker host: 1 core, 1 GB RAM, no production workload assigned. Port `:29334` listens; the container behind it is unidentified.
+`alpine-docker` is spare capacity, not a service: a minimal Alpine plus Docker host with 1 core and 1 GB of RAM, kept warm on `pve1` for whatever needs a small container next. Nothing production runs here today, which is precisely why it exists — a cheap place to try things without touching the production VLAN guests. The only curiosity is a listener on port `:29334` whose container is unidentified, a loose end that should be named or removed before this host gets a real job.
 
 ## Placement
 
-- LXC `108` on `pve1`, `10.1.20.39` (VLAN 20).
+The host is LXC `108` on `pve1`, addressed at `10.1.20.39` on VLAN 20.
 
 ## Status
 
-- Running. No Caddy route. No DNS consumer beyond the auto-registered record.
+The LXC is running. It has no Caddy route and no DNS consumer beyond the auto-registered record, so it is invisible from the public ingress.
 
 ## Dependencies
 
-- None.
+It has no dependencies: nothing here consumes another service, and no other service consumes anything here.
 
 ## Failure impact
 
-- None currently — nothing production runs here.
+A failure here currently affects nothing in production, since no production workload is assigned to this host.
 
 ## Known gaps
 
-- What listens on `:29334`. Either assign this host a job or keep it as spare capacity.
+What listens on `:29334` remains unknown. Either identify that listener and give this host a defined job, or consciously keep it as documented spare capacity.

@@ -9,6 +9,8 @@ Storage here is a patchwork with a history: local disks for speed, a ZFS pool in
 
 ## Proxmox storage from `/etc/pve/storage.cfg`
 
+The storage configuration below is reproduced from `/etc/pve/storage.cfg` and covers every pool both nodes can see. It is the authoritative list: if a pool is not in this table, Proxmox does not know about it.
+
 | Storage ID | Type | Path / source | Nodes | Content |
 |------------|------|---------------|-------|---------|
 | `local` | Directory | `/var/lib/vz` | `pve1`, `pve3` | `backup`, `iso`, `vztmpl` |
@@ -18,23 +20,19 @@ Storage here is a patchwork with a history: local disks for speed, a ZFS pool in
 | `truenas` | NFS | `192.168.1.74:/mnt/raw/pve` | `pve1`, `pve3` | `rootdir`, `images` |
 | `pbs` | Proxmox Backup Server | `10.1.50.78`, datastore `backupstore` | `pve1`, `pve3` | `backup` |
 
-The `pve2-storage` entry is gone — `pve2` has been fully removed from the cluster. `pve3` has **no native ZFS pool on the host**. Its persistent data lives on `local-lvm`, on TrueNAS datasets, or on the shared NFS mounts.
+The `pve2-storage` entry is gone because `pve2` has been fully removed from the cluster, and `pve3` has no native ZFS pool on the host. Its persistent data therefore lives on `local-lvm`, on TrueNAS datasets, or on the shared NFS mounts, which means `pve3` depends on network-attached storage for everything that outlives a single container rebuild.
 
 ## TrueNAS VM
 
-- VM `127` `truenas` runs on `pve3` (~8.5 GB RAM in use) with multiple physical disks passed through, reachable at `192.168.1.74`.
-- It exposes datasets over NFS (`/mnt/raw/pve`, mounted as the `truenas` storage on both nodes) and serves SMB shares to the LAN.
-- Dataset-level layout, snapshot schedule, and replication targets are **not captured here**; this page will be extended once the TrueNAS configuration is exported.
+The bulk-data story belongs to a single VM. VM `127` named `truenas` runs on `pve3` with roughly 8.5 GB of RAM in use and multiple physical disks passed through, reachable at `192.168.1.74`. It exposes datasets over NFS at `/mnt/raw/pve`, which both nodes mount as the `truenas` storage, and it serves SMB shares to the LAN for clients that do not speak NFS. Dataset-level layout, snapshot schedule, and replication targets are not captured here, and this page will be extended once the TrueNAS configuration is exported, since guessing at dataset names would be worse than admitting the gap.
 
 ## Proxmox Backup Server
 
-- LXC `578` `pbs` on `pve3` (`10.1.50.78:8007`), datastore `backupstore` (~600 GB).
-- Declared as the `pbs` storage on both nodes (token auth `pve@pbs!pve`, DatastoreAdmin on the datastore only).
-- See [Backups](/architecture/backups) for schedules, retention, and off-site sync.
+Backups are storage too, and their side of the configuration lives here while policy lives next door. LXC `578` named `pbs` runs on `pve3` at `10.1.50.78:8007` with the datastore `backupstore` of roughly 600 GB. It is declared as the `pbs` storage on both nodes using token authentication as `pve@pbs!pve` with DatastoreAdmin rights scoped to the datastore only. See [Backups](/architecture/backups) for schedules, retention, and off-site sync.
 
 ## Tier model
 
-This is how the storage layer is used in practice:
+The tier model below is how the storage layer is used in practice, as opposed to how Proxmox lists its pools. Each tier answers a different durability question, from reboot-surviving root disks to off-host backups.
 
 | Tier | Where it lives | What sits there |
 |------|----------------|-----------------|
@@ -43,6 +41,8 @@ This is how the storage layer is used in practice:
 | Application data (compute) | `local-lvm` on `pve3`, TrueNAS datasets | Persistent data for production workloads |
 | Bulk / shared | TrueNAS datasets, `nas` | Media library, large archives, cross-node assets |
 | Backup | `pbs` (`backupstore`), `nas` (legacy `vzdump` target) | See [Backups](/architecture/backups) |
+
+The split between infra-side and compute-side application data mirrors the node asymmetry: databases and forge data rest on the ZFS pool of `pve1`, while production state rests on the LVM-thin pool and datasets attached to `pve3`. Bulk and backup tiers are the only ones both nodes share symmetrically.
 
 ## Known gaps
 

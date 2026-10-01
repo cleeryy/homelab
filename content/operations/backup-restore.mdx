@@ -5,86 +5,116 @@ description: Procedures for taking and restoring backups.
 
 Last synced with live infrastructure: **September 2026**. Last restore drill: booted successfully on **10/09/2026**.
 
-Backups are the one procedure you never want to improvise. Everything below assumes the PBS platform described in [Architecture > Backups](/architecture/backups): scheduled jobs already run, the off-site copy already leaves nightly, and your job is the exception path — the manual backup before surgery, and the restore when something is already broken. Read the restore section *before* you need it; nobody absorbs checklists well during an outage.
+Backups are the one procedure you never want to improvise. Everything below assumes the PBS platform described in [Architecture > Backups](/architecture/backups): scheduled jobs already run, the off-site copy already leaves nightly, and your job is the exception path — the manual backup before surgery, and the restore when something is already broken. Read the restore section *before* you need it; nobody absorbs checklists well during an outage. What follows keeps the same facts and the same order of operations as before, but tells them as a story you can actually follow at 2 AM, with the verification habit built in rather than bolted on.
 
 ## Backup platform
 
-All scheduled backups go to **Proxmox Backup Server** (LXC `578`, `10.1.50.78:8007`, datastore `backupstore` ~600 GB), declared as the `pbs` storage on both nodes.
+All scheduled backups flow to a single platform, so there is only one place to look when something is missing. That platform is **Proxmox Backup Server**, running as LXC `578` at `10.1.50.78:8007` with the `backupstore` datastore of roughly 600 GB, and it is declared as the `pbs` storage on both `pve1` and `pve3`. Two scheduled jobs share that datastore, staggered so the most critical guests finish first and the general sweep follows in the quiet hours.
 
 | Job | Time | Retention | Scope |
 |-----|------|-----------|-------|
 | Critical | 02:00 | keep-last 7 | `130`, `222`, `553`, `2010`, `501` |
 | General | 04:00 | keep-last 3 | All guests except `258` (Gamevault) and `578` (PBS itself) |
 
-Off-site: encrypted rclone sync (`crypt` → Google Drive, `gdrive-crypt:backupstore` + `pbs-config`) daily at 06:00 from CT `578` under `flock` — never run two syncs in parallel. Weekly GC + monthly verify via the PBS UI.
+The on-site jobs are only half the story. Every morning at 06:00, CT `578` pushes an encrypted rclone sync (`crypt` to Google Drive, covering both `gdrive-crypt:backupstore` and `pbs-config`) under `flock`, which means a second sync must never be started by hand while the cron copy is running. Garbage collection runs weekly and verification monthly from the PBS UI, and both are worth glancing at whenever you are already logged in, because a backup job that succeeds and a backup that is still restorable a month later are two different claims.
 
 ## Known building blocks
 
-- **PBS** for scheduled VM and LXC backups (primary path).
-- **Proxmox `vzdump`** for manual one-off archives (to `local` or `nas`).
-- **ZFS snapshots** on `pve1-storage` for infra-side application data.
-- **TrueNAS snapshots** for the datasets backing media and bulk data.
-- **Docker volumes** for application state on the legacy Docker host VMs — captured by the guest-level backup, not by a Docker-aware backup.
+The scheduled PBS path covers whole guests, and everything else in this section exists for the data that lives outside a guest image or needs a lighter touch than a full backup. For a manual one-off archive of a VM or LXC, `vzdump` remains the tool of choice, writing either back to `pbs` or to `local` or `nas` when the copy is only scratch. Where application data lives on the infrastructure side rather than inside a guest disk, ZFS snapshots on `pve1-storage` capture it in place, and TrueNAS snapshots play the same role for the datasets that back media and bulk data. The legacy Docker host VMs are simpler than they look: their application state sits in Docker volumes on the VM disk, so the guest-level backup already captures it, even though no Docker-aware backup ever runs. The gap to keep in mind is that none of this takes an application-consistent dump by itself, which is why per-service dump steps live on the service pages rather than here.
 
 ## Backup procedure (manual)
 
+Use a manual backup whenever a scheduled job is not enough: right before an upgrade, before touching storage or ingress, or when a guest holds state you cannot afford to reconstruct from last night. The four cases below all share the same discipline — take the copy, then confirm it actually landed and looks sane — and they differ only in where the copy lives.
+
 ### One-off `vzdump` for a VM or LXC
 
-- [ ] Pick the target storage (`pbs` preferred; `local` or `nas` for scratch copies).
-- [ ] Trigger from the Proxmox UI or `vzdump <vmid> --storage <storage>` on the node hosting the guest.
-- [ ] Confirm the backup appears in PBS (or the archive landed) and its size is consistent with previous runs.
+This is the default manual backup for any Proxmox guest, and it is the one to reach for when in doubt. It runs against the node that currently hosts the guest and writes a self-contained archive you can restore from either UI.
+
+1. Choose the target storage for the archive, preferring `pbs` for anything that matters and reserving `local` or `nas` for throwaway scratch copies.
+2. Trigger the backup from the Proxmox UI, or run `vzdump <vmid> --storage <storage>` directly on the node hosting the guest.
+3. Confirm the backup is visible in PBS (or that the archive file landed on the chosen storage) and that its size is consistent with previous runs.
+
+A backup that never got verified is barely a backup, so do not walk away until the new entry shows up where you expect it. If the size looks wildly off, stop and understand why before proceeding with the change that motivated the backup.
 
 ### ZFS snapshot on `pve1-storage`
 
-- [ ] Take a snapshot of the relevant dataset.
-- [ ] Consider sending the snapshot off-host (target **pending**).
+When the data you care about lives in an infrastructure dataset rather than inside a guest, a ZFS snapshot captures it atomically without stopping anything. This is a point-in-time safety net for application data held on `pve1-storage`, not a replacement for the guest backup.
+
+1. Take a snapshot of the relevant dataset on `pve1-storage`.
+2. Consider sending that snapshot off-host for an extra copy, knowing the off-host target is still **pending**.
+
+Treat the snapshot name and time as part of your change notes, so the restore half of the story starts from a known point. Until the off-host send target exists, remember that this snapshot still shares fate with the node it sits on.
 
 ### TrueNAS dataset
 
-- [ ] Snapshot the dataset from the TrueNAS UI.
-- [ ] Consider TrueNAS-native replication to an off-chassis target (**pending**).
+Media and bulk data live on TrueNAS, so the safety net for those datasets is taken on the TrueNAS side itself. The gesture is quick, which is exactly why there is no excuse to skip it before a risky change to shares or permissions.
+
+1. Snapshot the dataset from the TrueNAS UI.
+2. Consider TrueNAS-native replication to an off-chassis target, knowing that target is still **pending**.
+
+Note which dataset and snapshot you took before touching anything downstream. As with ZFS on `pve1-storage`, the snapshot protects against mistakes but not against losing the chassis itself until replication exists.
 
 ### Dokploy applications
 
-- Application code and images rebuild from Git; what needs backup is the Dokploy state (managed by the PBS backup of `obiwan` / `205`) plus any persistent volumes declared on the app.
-- [ ] When adding a Dokploy app with a volume, record the volume and its restore path on the app's service page.
+Dokploy applications invert the usual backup logic, because code and images rebuild deterministically from Git. What actually needs protecting is the Dokploy state itself — which rides along in the PBS backup of `obiwan` / `205` — plus any persistent volumes declared on the app, since those hold the only state a rebuild cannot recreate.
+
+1. When adding a Dokploy app with a volume, record the volume and its restore path on the app's service page so a future restore does not become archaeology.
+
+There is no separate dump to run here, only documentation to keep current. If the volume is not written down, assume the next person (possibly you, mid-incident) will not find it.
 
 ## Restore procedure
 
+Restores happen under pressure, so this section is ordered the way incidents unfold: the common single-guest restore first, then the Docker nuance that surprises people, then the whole-node rebuilds nobody wants but everybody should have skimmed once. In every case, validate end-to-end before swinging ingress or DNS back, because a guest that boots is not yet a service that works.
+
 ### Single VM / LXC from PBS
 
-- [ ] Identify the backup (date, guest, datastore `backupstore`).
-- [ ] Restore from the PBS UI or the Proxmox UI onto the destination node.
-- [ ] If the guest holds application data on a separate volume (e.g. `pve1-storage` dataset, TrueNAS share), restore that volume from its snapshot.
-- [ ] Boot and validate end-to-end before swapping ingress / DNS.
+This is the standard path when one guest is broken, lost, or needs rolling back, and it works the same whether you drive it from the PBS UI or the Proxmox UI. The subtlety is that some guests keep data on a separate volume outside their own disk, and restoring the guest without that volume restores only half the system.
+
+1. Identify the backup to restore by date, guest, and datastore `backupstore`.
+2. Restore it from the PBS UI or the Proxmox UI onto the destination node.
+3. If the guest holds application data on a separate volume (for example a `pve1-storage` dataset or a TrueNAS share), restore that volume from its own snapshot as well.
+4. Boot the guest and validate it end-to-end before swapping ingress or DNS back to it.
+
+Do not declare victory at the login prompt; follow the service through its real entry point (Caddy route, DNS name, dependent backend) and only then hand it back to users. If validation fails, you still have the pre-restore state and the backup to reason from, which is more than an in-place fix ever gives you.
 
 ### Docker host application data
 
-- The guest-level backup captures whatever lives inside the VM at backup time, including Docker volumes (assuming they live on the VM disk).
-- Application-specific dumps (e.g. `nextcloud-db` SQL dump) are **not** automated by this procedure. Per-service dump steps belong on each service page.
+Restoring a Docker host VM surprises people in a pleasant way: because Docker volumes live on the VM disk (assuming they were never relocated off-disk), the guest-level backup already contains the application state as it was at backup time. There is no separate container restore step beyond bringing the guest back and letting its stacks start.
+
+What this procedure deliberately does not automate is application-level dumps, such as the `nextcloud-db` SQL dump, which capture a consistency that a disk image alone cannot promise. Those per-service dump and reload steps belong on each service page, so check there before assuming the guest image is the whole story.
 
 ### Whole-node failure
 
+Losing a whole node is rare and disorienting, which is why the order below is opinionated: network and ingress first, then identity and backups, then everything that depends on them. Stand the replacement (or repaired) node up before touching any restore, and work down the list rather than in parallel, so each layer is verifiable before the next leans on it.
+
 #### `pve1` down
 
-- [ ] Stand up replacement `pve1` (or repair it).
-- [ ] Restore `forgejo` (`111`) and `postgresql` (`112`).
-- [ ] Restore `beszel` (`202`) if still canonical, else confirm Prometheus/Grafana coverage.
-- [ ] Restore remaining guests (`102`, `105`, `200`, `204`, utility LXCs).
+Losing `pve1` takes the forge, the database, and the legacy monitoring and Docker hosts with it, but the network and ingress survive on `pve3`, so this rebuild proceeds without fighting the front door at the same time.
+
+1. Stand up the replacement `pve1` (or repair the existing host).
+2. Restore `forgejo` (`111`) and `postgresql` (`112`) first, since so much else points at them.
+3. Restore `beszel` (`202`) if it is still the canonical observer, or otherwise confirm that Prometheus and Grafana coverage has taken over.
+4. Restore the remaining guests (`102`, `105`, `200`, `204`, and the utility LXCs).
+
+Validate the forge and the database from a real client before restoring the stacks that depend on them. A Docker host that boots against a still-missing database will look healthy for exactly long enough to mislead you.
 
 #### `pve3` down
 
-- [ ] Stand up replacement `pve3` (or repair it).
-- [ ] Restore `opnsense` (`501`) first if WAN is lost.
-- [ ] Restore `caddy` (`2010`) to bring ingress back.
-- [ ] Restore identity/DNS/backups plane: `130`, `553`, `578` (PBS config + datastore recovery may need the off-site copy).
-- [ ] Restore `truenas` (`127`) and re-attach the passed-through disks; verify pool import on the TrueNAS side.
-- [ ] Restore media stack (`300`, `301`, `302`) and remaining LXCs.
+Losing `pve3` is the bad one, because ingress, WAN, identity, DNS, backups, and storage all live there together. Expect to rebuild the front door before anything behind it can even be tested, and keep the off-site copy in mind from the start in case PBS itself needs reconstructing.
+
+1. Stand up the replacement `pve3` (or repair the existing host).
+2. Restore `opnsense` (`501`) first if WAN is lost, since nothing else can be validated properly without it.
+3. Restore `caddy` (`2010`) to bring ingress back.
+4. Restore the identity, DNS, and backups plane, namely `130`, `553`, and `578`, keeping in mind that PBS config and datastore recovery may need the off-site copy.
+5. Restore `truenas` (`127`), re-attach the passed-through disks, and verify pool import on the TrueNAS side.
+6. Restore the media stack (`300`, `301`, `302`) and the remaining LXCs.
+
+Verify each plane before moving down: WAN reachability, then ingress routes, then identity and DNS resolution, then storage mounts, and only then the workloads on top. The TrueNAS step deserves extra patience — confirm the pool import inside TrueNAS before letting dependents start, or they will start against empty mountpoints.
 
 ## Test cadence
 
-Restore drills are the proof that backups exist. At least one workload per tier should be exercised after any major change; the last successful drill booted on 10/09/2026.
+Restore drills are the proof that backups exist, and the schedule for them is deliberately tied to change rather than to the calendar. After any major platform change, at least one workload per tier should be exercised through a real restore, and the last successful drill — which booted on 10/09/2026 — is the baseline the next one has to match. A drill that only checks the backup catalog without booting the guest does not count.
 
 ## Known gaps
 
-Guest-level backups are solid; what is missing is the layer above — application-level dumps for the stateful Docker stacks (Nextcloud's database, n8n's state) — and the layer beside: TrueNAS replication to an off-chassis target. Both are the kind of gap that only hurts on the worst day, which is exactly why they are written here and not forgotten.
+Guest-level backups are solid; what is missing is the layer above and the layer beside. Above sits application-level dumps for the stateful Docker stacks — Nextcloud's database, n8n's state — without which a guest restore returns bytes but not necessarily a consistent application. Beside sits TrueNAS replication to an off-chassis target, without which the bulk-data snapshots still share fate with their chassis. Both are the kind of gap that only hurts on the worst day, which is exactly why they are written here instead of being quietly forgotten.

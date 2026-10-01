@@ -5,44 +5,49 @@ description: Container deployment plane on `obiwan`.
 
 Last synced with live infrastructure: **September 2026**.
 
-Dokploy is how new things get built here. Instead of hand-assembling containers on a VM, you point Dokploy at a Git repository and it builds, runs, and keeps alive a containerised app on the `obiwan` host — with Caddy in front for the public face. The wiki itself ships this way, so this page is both documentation and dogfood: every lesson below was learned deploying this very site, including the two traps (unpublished ports, start-first updates) that each cost an evening.
+Dokploy is how new things get built here. Instead of hand-assembling containers on a VM, you point Dokploy at a Git repository and it builds, runs, and keeps alive a containerised app on the `obiwan` host — with Caddy in front for the public face. The wiki itself ships this way, so this page is both documentation and dogfood: every lesson below was learned deploying this very site, including the two traps (unpublished ports, start-first updates) that each cost an evening. Read the ingress model before your first deploy and the swarm gotcha before your second, and the rest will feel uneventful in the best way.
 
 ## Components
+
+Dokploy runs as a small constellation of containers on a single LXC, which is why the host and the platform share fate — lose the host and every app on it goes quiet together, statelessly rebuildable but down all the same. The host is `obiwan`, and the versions below are what September 2026 actually ran.
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
 | LXC | `205` | `obiwan` | `pve3` | Dokploy host, `10.1.20.5` (4 GB RAM) |
 
-Dokploy v0.30.x runs in Docker Swarm mode on `obiwan`: `dokploy` (`:3000`), `dokploy-postgres` (`:5432` internal), and its own `dokploy-traefik` (binds `:80`/`:443` on the host for Dokploy-managed domains).
+On that host, Dokploy v0.30.x runs in Docker Swarm mode as three cooperating pieces: `dokploy` itself on port `3000`, `dokploy-postgres` on internal port `5432`, and its own `dokploy-traefik` binding ports `80` and `443` on the host for the Dokploy-managed domains it could serve. That last piece is deliberately left idle, as the ingress section explains, but it is still there, still bound, and worth knowing about before you wonder what owns those ports.
 
 ## Ingress model
 
-WAN → Cloudflare → OPNsense NAT (`:80`/`:443` → `10.1.20.10`) → **Caddy** → Dokploy apps. Caddy stays the single ingress: Dokploy's Traefik is left alone (internal use), and each app is exposed with a Caddy route to the published host port on `obiwan`.
+Traffic enters through a chain with exactly one front door, and keeping it that way is what makes Dokploy apps debuggable. The path runs from WAN through Cloudflare to the OPNsense NAT (ports `80` and `443` forwarded to `10.1.20.10) and then into **Caddy**, which reverse-proxies each app to its published host port on `obiwan`. Dokploy's own Traefik is left alone for internal use and never given public domains, so there is never a question of which proxy owns a given hostname.
 
-- Dokploy UI: `dokploy.cleeryy.cloud` → Caddy → `obiwan:3000`.
-- This wiki: `homelab.cleeryy.cloud` → Caddy → `obiwan:3545`.
+Concretely, the Dokploy UI itself is reachable at `dokploy.cleeryy.cloud`, which Caddy forwards to `obiwan:3000`, while this wiki answers at `homelab.cleeryy.cloud`, which Caddy forwards to `obiwan:3545`. Every new app repeats that second pattern: one published host port on `obiwan`, one Caddy route pointing at it, and Traefik nowhere in the public path.
 
 ## Deploying an app (learned the hard way)
 
-1. Create the application in the Dokploy UI (from the Git repository), configure build + environment.
-2. **Publish the port**: add a port mapping (host → container, TCP) in the app's Ports section, with Published Port Mode `HOST`. A Dokploy swarm service with no published port is reachable only inside the overlay network — Caddy will get connection-refused. Do not use `INGRESS` mode: on LXC-based Docker hosts the ingress mesh does not bind the host port (verified broken on `obiwan`, September 2026).
-3. **Redeploy** (saving alone does not recreate the swarm service).
-4. Verify on `obiwan`: `docker ps` shows `0.0.0.0:<port>-><port>` and `curl http://localhost:<port>/` returns `200`.
-5. Add the Caddy route (`/etc/caddy/sites/public/<app>.caddy`, `reverse_proxy obiwan:<port>`), `systemctl reload caddy`.
-6. Test Host-header → TLS → public URL, then document the route on the app's wiki page.
+Use this sequence for every new Dokploy app, because each step exists to prevent a specific evening-wasting failure. The two non-obvious ones are the port publication (without which Caddy dials into a void) and the explicit redeploy (without which the UI shows your change but the swarm never received it).
+
+1. Create the application in the Dokploy UI from its Git repository, configuring the build and the environment there.
+2. Publish the port by adding a port mapping (host to container, TCP) in the app's Ports section with Published Port Mode set to `HOST`, because a Dokploy swarm service with no published port is reachable only inside the overlay network and Caddy will get connection-refused; do not use `INGRESS` mode, since on LXC-based Docker hosts the ingress mesh does not bind the host port (verified broken on `obiwan`, September 2026).
+3. Redeploy the application, since saving alone does not recreate the swarm service.
+4. Verify on `obiwan` that `docker ps` shows `0.0.0.0:<port>-><port>` and that `curl http://localhost:<port>/` returns `200`.
+5. Add the Caddy route in `/etc/caddy/sites/public/<app>.caddy` with `reverse_proxy obiwan:<port>`, then run `systemctl reload caddy`.
+6. Test the full path from Host header through TLS to the public URL, then document the route on the app's wiki page.
+
+The verification habit is the procedure, not an epilogue: the `docker ps` plus localhost `curl` check separates Dokploy-side problems from Caddy-side problems in seconds, and the public-URL test afterward proves the chain rather than assuming it. If the localhost check passes but the public URL fails, the fault is in the Caddy route, not the app; if the localhost check fails, fix Dokploy first and leave Caddy alone.
 
 ## Swarm update order (single-node gotcha)
 
-Dokploy defaults to the `start-first` update order. On a single-node swarm with a host-published port, that deadlocks every redeploy: the new task stays `Pending` (`no suitable node (host-mode port is already in use)`) because the old task still holds the port, and the site keeps serving the stale build until someone intervenes.
+This section exists for the redeploy that mysteriously never finishes, serving the stale build forever while the new task sits in `Pending`. Dokploy defaults to the `start-first` update order, which on a single-node swarm with a host-published port deadlocks every redeploy: the new task cannot start because the old task still holds the port (`no suitable node (host-mode port is already in use)`), and the old task is never stopped because the new one never becomes healthy. The site keeps serving the old build until someone intervenes, looking fine right up until you realise nothing you push ever lands.
 
-- Set the update order to **`stop-first`** for every app with a published host port. Dokploy UI path: app → Cluster Settings (requires a registry to be configured first); otherwise set `application.updateConfigSwarm` to `{"order":"stop-first",...}` directly in the Dokploy database.
-- Reference setup on `homelab-docs-app` (September 2026): port `3545` in `HOST` mode + `updateConfigSwarm.order = stop-first`. Validated by pushing to `main` and watching the autodeploy roll cleanly.
+1. Set the update order to **`stop-first`** for every app with a published host port, via the Dokploy UI under app Cluster Settings (which requires a registry to be configured first); otherwise set `application.updateConfigSwarm` to `{"order":"stop-first",...}` directly in the Dokploy database.
+
+The reference setup is `homelab-docs-app` as of September 2026, with port `3545` in `HOST` mode and `updateConfigSwarm.order` set to `stop-first`, validated by pushing to `main` and watching the autodeploy roll cleanly. Apply the setting at creation time rather than after the first stuck deploy, because the first stuck deploy always arrives the night before something matters.
 
 ## Failure impact
 
-- `obiwan` down → all Dokploy apps down, including this wiki (stateless — rebuild from Git once the host is back).
-- Dokploy's own state (apps, volumes) is covered by the general PBS backup of CT `205`. When adding an app with a persistent volume, record the volume and its restore path on the app's page.
+If `obiwan` goes down, every Dokploy app goes down with it, including this wiki — which is alarming for exactly as long as it takes to remember the apps are stateless and rebuild from Git once the host returns. Dokploy's own state (apps, volumes) is covered by the general PBS backup of CT `205`, so host recovery restores the platform without re-creating every app by hand. The one thing the backup cannot reconstruct is knowledge of which volumes matter, so when adding an app with a persistent volume, record that volume and its restore path on the app's page while the context is fresh.
 
 ## Known gaps
 
-No persistent-volume inventory across Dokploy apps yet (the first stateful app will force the issue), Dokploy-managed Traefik domains remain deliberately unused in favor of Caddy, and the platform itself has never had a backup/restore drill — its state rides along in the PBS backup of `obiwan`, untested. The drill is the one to schedule.
+No persistent-volume inventory exists across Dokploy apps yet, and the honest reason is that no stateful app has forced the issue — the first one will. Dokploy-managed Traefik domains remain deliberately unused in favour of Caddy, which is a choice rather than a gap but worth restating so nobody "fixes" it. The platform itself has never had a backup and restore drill; its state rides along in the PBS backup of `obiwan`, untested, and scheduling that drill is the one concrete action this section asks for.

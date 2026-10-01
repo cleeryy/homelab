@@ -5,9 +5,11 @@ description: All Proxmox VMs by host node.
 
 Last synced with live infrastructure: **September 2026**.
 
-The VM list is short on purpose: virtual machines are reserved for the heavyweights — full operating systems with passed-through disks (TrueNAS), the firewall itself (OPNsense), and the legacy Docker hosts that predate the LXC era. Everything that can be a container already is one, which is exactly why this page fits on a screen while the container inventory does not.
+The VM list is short on purpose: virtual machines are reserved for the heavyweights — full operating systems with passed-through disks (TrueNAS), the firewall itself (OPNsense), and the legacy Docker hosts that predate the LXC era. Everything that can be a container already is one, which is exactly why this page fits on a screen while the container inventory does not. Where containers carry one service each, each VM below carries a whole Docker environment or a network function that needs a kernel of its own.
 
 ## `pve1`
+
+The `pve1` virtual machines are the legacy application tier that never had a reason to move. They sit on the flat management LAN rather than on VLANs, each one hosting a Docker stack that predates the current LXC-first placement, from small web apps through Nextcloud to monitoring and automation. Their modest RAM allocations reflect that history: they were sized when `pve1` was the only host, and they have stayed put because they are stable.
 
 | VM ID | Name | Function | Status | Notes |
 |-------|------|----------|--------|-------|
@@ -20,7 +22,11 @@ The VM list is short on purpose: virtual machines are reserved for the heavyweig
 
 Nginx Proxy Manager (`100`) has been decommissioned.
 
+The decommissioning note closes a chapter rather than opening a mystery. The old NPM host is gone because Caddy on `pve3` now handles ingress, leaving `105` as the last legacy proxy-adjacent VM on this node. For where traffic actually enters today, see [Networks](/inventory/networks) and the reverse-proxy service page.
+
 ## `pve3`
+
+The `pve3` virtual machines are fewer in number but far heavier in responsibility. TrueNAS owns the physical disks, OPNsense owns the network, and three Docker hosts carry the entire media pipeline, while a small crowd of stopped machines preserves past experiments and a standby firewall. Anything stopped here is stopped for a reason, and the standby firewall in particular should never be started casually.
 
 | VM ID | Name | Function | Status | Notes |
 |-------|------|----------|--------|-------|
@@ -36,17 +42,12 @@ Nginx Proxy Manager (`100`) has been decommissioned.
 
 Start-at-boot and boot order for all of the above: [Operations > Startup & shutdown](/operations/startup-shutdown).
 
+The stopped rows repay careful reading. The OPNsense standby is a full clone kept powered off with fresh MAC addresses, so booting it without preparation would duplicate the master on the same networks. The `taoxd` and `lune` machines are preserved experiments rather than active services, and the Mint desktop floats on DHCP in the admin VLAN. Cross-check media hosts against [Service placement](/architecture/service-placement) before moving any of them.
+
 ## ID ranges currently in use
 
-- `100–199` — legacy VMs (one remaining: `105`).
-- `200–299` — Docker host VMs for application workloads.
-- `300–399` — Docker host VMs for the media stack.
-- `500–599` — edge / network (`501` OPNsense master, `502` standby).
-- `127` — historical, outside the per-role ranges (TrueNAS).
-- `6000+` — POC VMs.
-- `10000+` — lab desktops.
+The numbering scheme grew alongside the cluster, so it reads as history as much as policy. Legacy VMs from the earliest days occupy `100–199`, with only `105` remaining, while `200–299` holds the Docker host VMs for general application workloads and `300–399` holds their counterparts for the media stack. Edge and network functions live in `500–599`, where `501` is the OPNsense master and `502` its standby. Three assignments fall outside that tidy progression for historical reasons: `127` predates the per-role ranges and stays with TrueNAS, `6000+` marks POC machines, and `10000+` marks lab desktops. New VMs are expected to follow the role-based ranges rather than reuse retired IDs.
 
 ## OS notes
 
-- The Docker host VMs run Ubuntu 24.04 (LTS releases observed: 24.04.2, 24.04.3).
-- The Nextcloud host's OS line is reported in Beszel as `6.8.0-111-generic` (kernel string); the Ubuntu release line is not captured at the same place.
+The Docker host generation is uniform in a way the container fleet is not. Those hosts run Ubuntu 24.04, with LTS point releases 24.04.2 and 24.04.3 observed across the fleet at the last sync. One reporting quirk is worth knowing so it does not cause confusion later: the Nextcloud host reports its OS line in Beszel as `6.8.0-111-generic`, which is a kernel string, while the Ubuntu release line is not captured in the same place. Kernel and distribution versions therefore come from different lenses and should not be compared directly.

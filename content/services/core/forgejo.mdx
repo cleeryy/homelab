@@ -7,39 +7,34 @@ Last synced with live infrastructure: **September 2026**.
 
 All the code that runs this homelab — including the wiki you are reading — lives here. Forgejo is the private Git forge: it stores the repositories, and its runner on the compute node executes CI so builds never steal resources from the infrastructure node. The split is intentional and worth preserving. If the forge is down, nothing running breaks, but nothing new can ship either: no wiki redeploys, no CI. That makes Forgejo quiet but load-bearing.
 
-## Components
+## Placement
+
+The forge lives on the infrastructure node while the runner lives on the compute node, so build work never competes with platform services. Both guests sit on the production VLAN within reach of each other and of Caddy.
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
 | LXC | `111` | `forgejo` | `pve1` | Git forge, `10.1.20.32` |
 | LXC | `124` | `forgejo-runner` | `pve3` | CI runner |
 
-## Placement
+## Status
 
-- The forge lives on `pve1` (infrastructure node).
-- The runner lives on `pve3` (compute node). Keeping CI on `pve3` avoids loading the infra node with build work.
+The forge is up and serves its web UI publicly without an SSO gate, while the runner polls it over the public URL and executes jobs with ephemeral Docker builders. The public-URL indirection paid off during the VLAN migration: the runner re-registered itself cleanly (`declared successfully`) with zero configuration change.
+
+- Web UI at `git.cleeryy.cloud` → Caddy → `10.1.20.32:3000`. No SSO gate currently.
+- LXC `124` `forgejo-runner` on `pve3` (`10.1.20.52`) polls the forge over `git.cleeryy.cloud` and runs jobs with ephemeral Docker builders.
 
 ## Dependencies
 
-- Forgejo uses a database. The PostgreSQL LXC (`112`) on `pve1` is the most likely backend, but the exact database wiring is not exported into this documentation.
+Forgejo needs its database to finish ORM initialisation, and the PostgreSQL LXC (`112`) on `pve1` is the confirmed backend. The runner in turn needs connectivity from `pve3` to the forge on `pve1`, so a `pve1` outage halts CI even when `pve3` itself is healthy.
 
 ## Storage
 
-- Forge data and runner caches live on the LXC root disks (`local-lvm` on the respective hosts). Whether additional volumes from `pve1-storage` or `nas` are mounted is not captured here.
+Forge data and runner caches live on the LXC root disks (`local-lvm` on the respective hosts). Whether additional volumes from `pve1-storage` or `nas` are mounted alongside them is not captured here.
 
-## Ingress
+## Failure impact
 
-- Web UI at `git.cleeryy.cloud` → Caddy → `10.1.20.32:3000`. No SSO gate currently.
-
-## Operational notes
-
-- The runner depends on connectivity from `pve3` to the forge on `pve1`. A `pve1` outage halts CI even if `pve3` is up.
-- The forge hosts the `homelab` wiki repository that Dokploy builds; a `pve1` outage blocks wiki redeploys (the running site is unaffected).
-
-## CI runner
-
-LXC `124` `forgejo-runner` on `pve3` (`10.1.20.52`) polls the forge over `git.cleeryy.cloud` and runs jobs with ephemeral Docker builders. Re-registered itself cleanly (`declared successfully`) after the VLAN migration with zero config change — the public URL indirection paid off.
+If the forge is down, running services keep running but nothing new can ship: CI stops and wiki redeploys block. The forge hosts the `homelab` wiki repository that Dokploy builds, so a `pve1` outage blocks wiki redeploys even though the already-deployed site stays up. Restore order matters here: bring PostgreSQL back first, then Forgejo.
 
 ## Known gaps
 
-Database wiring confirmed 28/09/2026: Postgres LXC `112` (`10.1.20.34:5432`, `user=forgejo database=forgejo`, see `/etc/forgejo/app.ini` on CT `111`). Credentials location and dump procedure still unconfirmed. Runner labels and the per-repository usage are nice-to-have; the application-level backup story (beyond the guest-level PBS job) is the other item worth an hour before it is ever needed.
+Database wiring was confirmed on 28/09/2026: Postgres LXC `112` (`10.1.20.34:5432`, `user=forgejo database=forgejo`, see `/etc/forgejo/app.ini` on CT `111`). What remains open is where the credentials live and what the dump procedure is, alongside the runner label inventory, per-repository usage, and the application-level backup story beyond the guest-level PBS job. The backup question is the one worth an hour before it is ever needed.

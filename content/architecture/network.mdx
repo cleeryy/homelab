@@ -5,30 +5,32 @@ description: Sites, addressing scheme, VLANs, edge devices, and DNS.
 
 Last synced with live infrastructure: **September 2026** (OPNsense 26.1.11_10, VM `501`).
 
+The network is the skeleton everything else hangs from: two sites, one routed addressing convention, seven VLANs on a single edge firewall, and a legacy flat LAN that refuses to die because the storage lives on it. This page describes the wire-level truth as observed in September 2026, and each table below is followed by a note on why it matters operationally.
+
 ## Sites
 
-The homelab spans two physical sites:
+The homelab spans two physical sites, but only the first one is routed and managed as infrastructure. The table below names them so that later pages can refer to site numbers without ambiguity.
 
 | Site ID | Location | Edge device | Role |
 |---------|----------|-------------|------|
 | `1` | mamie (server site) | OPNsense VM `501` on `pve3` | Carries the Proxmox cluster and all server workloads |
 | `2` | home | Fortigate 81E (present, **not configured**) | Carries a Raspberry Pi running home-oriented services (Home Assistant, AdGuard Home, iSponsorBlock) |
 
-The two sites are not yet interconnected at the routing layer. No site-to-site tunnel is configured today.
+The consequence of this layout is that site 1 is the entire managed network, while site 2 is an island with consumer-grade connectivity. The two sites are not yet interconnected at the routing layer, and no site-to-site tunnel is configured today, so any future inter-site design starts from zero rather than from an existing tunnel to extend.
 
 ## Addressing scheme
 
-All routed networks follow the convention:
+All routed networks follow a single convention that encodes both site and VLAN in the address itself, which makes an unfamiliar IP self-describing to anyone who knows the scheme.
 
 ```
 10.<site>.<vlan>.0/24
 ```
 
-The gateway for each subnet is `.1`. Site `1` is mamie; site `2` is reserved for home. Proxmox tags mirror this: `20.x` = `10.1.20.x` (production), `25.x` = `10.1.25.x` (preproduction), `50.x` = `10.1.50.x` (management), `1.x` = legacy `192.168.1.x`.
+The gateway for each subnet is `.1`. Site `1` is mamie, while site `2` is reserved for home and remains unused at the routing layer. Proxmox tags mirror this convention directly: `20.x` means `10.1.20.x` for production, `25.x` means `10.1.25.x` for preproduction, `50.x` means `10.1.50.x` for management, and `1.x` means the legacy `192.168.1.x` range. Once this mapping is internalised, the placement tables elsewhere in the wiki become readable without cross-referencing.
 
 ## VLAN plan — site 1 (mamie)
 
-Defined on the OPNsense edge. The parent interface is `vtnet1` (OPNsense LAN-side virtual NIC); VLANs are tagged sub-interfaces `vlan0.<tag>`. All seven VLAN interfaces are `active`.
+The VLAN plan below is defined on the OPNsense edge, where the parent interface is `vtnet1`, the OPNsense LAN-side virtual NIC, and each VLAN is a tagged sub-interface `vlan0.<tag>`. All seven VLAN interfaces are `active`, though active does not mean populated, as the traffic column makes clear.
 
 | VLAN | Tag | Name | CIDR | Gateway | DHCP | Traffic (Sept 2026) |
 |------|-----|------|------|---------|------|---------------------|
@@ -41,24 +43,21 @@ Defined on the OPNsense edge. The parent interface is `vtnet1` (OPNsense LAN-sid
 | 50 | 50 | Management | `10.1.50.0/24` | `10.1.50.1` | — | **Heavy** — Proxmox-adjacent services (PBS, DNS, monitoring) |
 | 60 | 60 | Home | `10.1.60.0/24` | `10.1.60.1` | `.10`–`.199` (dnsmasq) | Near idle |
 
-VLAN migration is in progress: production and management carry the platform; IoT / Guest / Home / Preproduction are configured but barely used. Guests still on the legacy `192.168.1.0/24` LAN have not all been migrated.
+What the table shows is a migration halfway done: production and management carry the platform, with production holding user-facing services and management holding Proxmox-adjacent services, while IoT, Guest, Home and Preproduction are configured but barely used. Guests still on the legacy `192.168.1.0/24` LAN have not all been migrated, so the flat LAN and the VLANs will coexist until the last stragglers move.
 
 ## Edge — OPNsense (site 1)
 
-- VM `501` `opnsense` on `pve3` (16 GB RAM), firmware `26.1.11_10`.
-- WAN: `vtnet0`, static `192.168.1.250/24`, gateway `192.168.1.1` (ISP CPE). The firewall sits behind the ISP box — **double NAT** for inbound traffic.
-- LAN trunk: `vtnet1` (`10.1.1.1/24`), carries the untagged LAN plus all seven VLANs.
-- DNS: Unbound on `:53` is the primary resolver. Override: `internal.cleeryy.cloud` → `10.1.50.53` (Technitium). DHCP served by dnsmasq (Admin `.100`–`.199`, Guest `.10`–`.199`, Home `.10`–`.199`).
-- Plugins: `os-crowdsec` 1.0.12 and `os-netbird` 1.3_3. Suricata (IDS) is **running**.
-- Gateways `WAN_GW` (`192.168.1.1`) and `AIRVPN_GW` (`10.128.0.1`) both report online.
-- NAS access from VLAN 20: IP alias `10.1.20.155/32` on PRODUCTION + DNAT `opt2 → 10.1.20.155` to `192.168.1.16` (all protocols, no SNAT — the NAS sees real `10.1.20.x` sources, so its exports must allow `10.1.20.0/24`). TCP `80/443/445/2049/111` verified through the VIP on 30/09/2026.
-- IPv6: not configured on any production interface (loopback only).
+The entire site-1 edge is a single virtual machine, which makes it both the most capable and the most critical host in the fleet. VM `501` named `opnsense` runs on `pve3` with 16 GB of RAM and firmware `26.1.11_10`. Its WAN interface `vtnet0` holds the static address `192.168.1.250/24` with gateway `192.168.1.1` on the ISP CPE, so the firewall sits behind the ISP box and inbound traffic arrives through double NAT. Its LAN trunk `vtnet1` at `10.1.1.1/24` carries the untagged LAN plus all seven VLANs, which means every inter-VLAN path and every inbound forward transits this one VM.
+
+DNS resolution and address assignment are split by design. Unbound on port `:53` is the primary resolver, with an override sending `internal.cleeryy.cloud` to `10.1.50.53` where Technitium is authoritative. DHCP is served by dnsmasq on three segments: Admin from `.100` to `.199`, Guest from `.10` to `.199`, and Home from `.10` to `.199`. The installed plugins are `os-crowdsec` version 1.0.12 and `os-netbird` version 1.3_3, and Suricata IDS is running. Both gateways, `WAN_GW` at `192.168.1.1` and `AIRVPN_GW` at `10.128.0.1`, reported online at the last observation. IPv6 is not configured on any production interface and appears only on loopback, so all routed reasoning in this wiki is IPv4. NAS access from VLAN 20 goes through an IP alias `10.1.20.155/32` on PRODUCTION with DNAT from `opt2` to `192.168.1.16` across all protocols and no SNAT — the NAS therefore sees the real `10.1.20.x` sources, so its exports must allow `10.1.20.0/24`; TCP `80`, `443`, `445`, `2049` and `111` were verified through the VIP on 30/09/2026.
 
 ### Firewall posture (current)
 
-Per-interface "allow all" rules still exist on LAN, Admin, Production, Preproduction, WireGuard, and NetBird interfaces. Several rules carry `[DEV]` or `TEMP` markers — not the final intended state. There is still no inter-VLAN isolation policy. New since June: an `INTERNAL` group with policy routing (outbound via `AIRVPN_GW`) followed by a kill-switch block rule, plus logged WAN rules for WireGuard (`udp/51920`) and NetBird P2P (`udp/51825`).
+The current firewall posture is best described as permissive with intent documented in rule names rather than enforced in policy. Per-interface allow-all rules still exist on the LAN, Admin, Production, Preproduction, WireGuard, and NetBird interfaces, and several rules carry `[DEV]` or `TEMP` markers that signal they are not the final intended state. There is still no inter-VLAN isolation policy, so VLANs today are addressing boundaries rather than trust boundaries. New since June is an `INTERNAL` group with policy routing that sends outbound traffic via `AIRVPN_GW`, followed by a kill-switch block rule, plus logged WAN rules for WireGuard on `udp/51920` and NetBird P2P on `udp/51825`. The direction of travel is therefore visible in the ruleset even though the destination has not been reached.
 
 ### NAT port forwards (current)
+
+Inbound traffic arrives through double NAT and only reaches guests through the explicit forwards below. The table is short, and its shortness is the point: every internet-reachable service on site 1 passes through one of these four rows.
 
 | Service | WAN | Target | Notes |
 |---------|-----|--------|-------|
@@ -67,15 +66,15 @@ Per-interface "allow all" rules still exist on LAN, Admin, Production, Preproduc
 | Warpgate SSH | `:22/tcp` | `10.1.20.22:2222` | SSO bastion |
 | Palworld | `:8211/udp`, `:8212/udp`, `:27015/udp` | `10.1.20.143` | Game server |
 
-Outbound: hybrid mode — `INTERNAL` group traffic NATs via the AirVPN interface (with kill-switch), NetBird traffic keeps a static-port WAN mapping.
+Outbound handling mirrors the inbound minimalism. The firewall runs in hybrid outbound NAT mode, where `INTERNAL` group traffic NATs via the AirVPN interface with a kill-switch beneath it, while NetBird traffic keeps a static-port WAN mapping so peer-to-peer connectivity survives NAT.
 
 ### Site-to-site VPN
 
-IPsec has no connections defined — the site-to-site VPN between mamie and home is still not configured.
+IPsec has no connections defined, which means the site-to-site VPN between mamie and home is still not configured. This is consistent with the two sites operating as routing islands, and any future site-to-site design will need new IPsec or WireGuard configuration rather than activation of something staged.
 
 ## Remote access — WireGuard road-warrior (site 1)
 
-OPNsense runs a WireGuard server (`wg0`):
+Remote administration does not go through forwarded management ports. Instead OPNsense runs a WireGuard server on interface `wg0` for road-warrior clients, whose parameters are summarised below.
 
 | Setting | Value |
 |---------|-------|
@@ -84,50 +83,40 @@ OPNsense runs a WireGuard server (`wg0`):
 | Server address | `10.1.90.1` |
 | Peer DNS pushed | `94.140.14.14`, `94.140.15.15` (AdGuard public DNS) |
 
-Three peers are configured (`m4-air` → `.90.3`, `iphone15` → `.90.2`, `windaube` → `.90.4`); all showed offline at the last observation. Public keys and pre-shared keys are stored in the OPNsense configuration backup and are deliberately not reproduced here.
+Three peers are configured, `m4-air` at `.90.3`, `iphone15` at `.90.2` and `windaube` at `.90.4`, and all three showed offline at the last observation. Public keys and pre-shared keys are stored in the OPNsense configuration backup and are deliberately not reproduced here, since this wiki records reachability rather than secrets.
 
 ## Privacy egress — AirVPN client (site 1)
 
-OPNsense runs a second WireGuard client (`wg1`, `AirVPN-NL3`):
-
-- Address `10.130.184.82/32` (+ IPv6 ULA), endpoint online, keepalive 15 s. Lifetime counters at last observation: ~14 GB RX / ~353 GB TX.
-- The `INTERNAL` interface group routes outbound traffic via `AIRVPN_GW`, with a kill-switch block rule directly below it — if the tunnel drops, that traffic is blocked rather than leaking to WAN.
-
-See [Services > Connectivity](/services/core/connectivity) for the service-level view.
+Selected outbound traffic leaves through a commercial VPN rather than the ISP uplink. OPNsense runs a second WireGuard client on interface `wg1` named `AirVPN-NL3` with address `10.130.184.82/32` plus an IPv6 ULA, an online endpoint and a 15-second keepalive. Lifetime counters at the last observation showed roughly 14 GB received and 353 GB transmitted, which confirms the tunnel carries real egress volume rather than sitting idle. The `INTERNAL` interface group routes its outbound traffic via `AIRVPN_GW`, with a kill-switch block rule directly below it, so if the tunnel drops that traffic is blocked rather than leaking to WAN. See [Services > Connectivity](/services/core/connectivity) for the service-level view.
 
 ## Mesh — NetBird (site 1)
 
-NetBird runs on OPNsense (`wt0`, `100.121.135.95/16`) with 7 peers online at the last observation, plus a VPS-based peer and endpoints on production hosts (Caddy network, Palworld host, `pve1`). WAN rule allows NetBird P2P (`udp/51825`). See [Services > Connectivity](/services/core/connectivity).
+Alongside the site edge there is a mesh overlay for machine-to-machine paths that should not depend on port forwards. NetBird runs on OPNsense on interface `wt0` at `100.121.135.95/16` with 7 peers online at the last observation, plus a VPS-based peer and endpoints on production hosts including the Caddy network, the Palworld host and `pve1`. The WAN rule allowing NetBird P2P on `udp/51825` keeps that mesh reachable through the double NAT. See [Services > Connectivity](/services/core/connectivity).
 
 ## Edge — Fortigate (site 2)
 
-A Fortigate 81E is present at the home site. It has not been configured. The Raspberry Pi at home currently sits directly on the upstream ISP router; its addressing is whatever the ISP CPE hands out.
+The home site has an edge device in hardware but not in configuration. A Fortigate 81E is physically present at the home site but has not been configured, so it plays no role in any traffic path today. The Raspberry Pi at home currently sits directly on the upstream ISP router, with whatever addressing the ISP CPE hands out, which is why site 2 has no addressing table worth maintaining yet.
 
 ## Legacy network on site 1
 
-Proxmox management, NAS and TrueNAS stay on the flat network (all guests migrated to VLAN 20/50 on 26-28/09/2026):
+Proxmox management, the NAS and TrueNAS stay on the flat network, a deliberate exception to the VLAN migration. All guests migrated to VLAN 20 and 50 on 26–28/09/2026, but the infrastructure underneath them did not move, as the table below records.
 
 | Segment | CIDR | Status |
 |---------|------|--------|
 | Management LAN | `192.168.1.0/24` | In use by `pve1`, `pve3`, OPNsense WAN (`192.168.1.250`), NAS (`192.168.1.16`), TrueNAS (`192.168.1.74`) |
 | Proxmox link | `vmbr0` on both nodes | Up |
 
-Host gateway for both Proxmox nodes is `192.168.1.1`. `vmbr1` is a shared trunk `pve3` (eno4) ↔ `pve1` (enp7s0), 1 Gbit/s, VLAN-aware 2-4094 (direct cable since 26/09/2026); `vlan50` on both hosts (10.1.50.103/10.1.50.101). The old `vmbr2` segment is gone.
+The host gateway for both Proxmox nodes is `192.168.1.1`. The inter-node trunk `vmbr1` is a shared link between `pve3` on `eno4` and `pve1` on `enp7s0`, running at 1 Gbit/s, VLAN-aware for tags 2–4094 over a direct cable in place since 26/09/2026, with `vlan50` on both hosts at 10.1.50.103 and 10.1.50.101. The old `vmbr2` segment is gone, so there is exactly one trunk to reason about.
 
 ## Ingress
 
-Canonical ingress is **Caddy** (LXC `2010` at `10.1.20.10`, also tagged on legacy `.205`):
+Canonical ingress is Caddy, running as LXC `2010` at `10.1.20.10` and also tagged on legacy `.205`. It holds wildcard TLS via Cloudflare DNS-01 covering `cleeryy.cloud`, `*.cleeryy.cloud` and `*.home.cleeryy.cloud`, which lets it front both public and private zones from a single proxy. The public zone under `sites/public/` carries user services such as `homelab`, `dokploy`, `authentik`, `code` behind Authentik `forward_auth`, `wazuh`, `nextcloud`, `n8n`, `immich`, `jellyfin` and `jellyseerr`, `affine`, `guacamole`, `truenas`, `dashboard`, `search`, `sure`, `chat`, `matrix` and more, with the full list living in `/etc/caddy/sites/` on the Caddy host. The private zone under `sites/private/` for `*.home.cleeryy.cloud` carries infrastructure surfaces: `pbs` on `:8007`, `dns` for Technitium on `:5380`, `proxmox`, `pve1` and `pve3` on `:8006`, plus `nas`, `adguard`, `ha` and service-internal routes. The Nginx Proxy Manager VM `100` has been decommissioned, while `ubuntu-nginxrpm` (`105` at `10.1.20.43`), migrated to VLAN 20 on 28/09/2026, serves Caddy upstreams on `:81` and `:8080`.
 
-- Wildcard TLS via Cloudflare DNS-01 for `cleeryy.cloud`, `*.cleeryy.cloud`, `*.home.cleeryy.cloud`.
-- Public zone (`sites/public/`): user services — `homelab`, `dokploy`, `authentik`, `code` (behind Authentik `forward_auth`), `wazuh`, `nextcloud`, `n8n`, `immich`, `jellyfin`/`jellyseerr`, `affine`, `guacamole`, `truenas`, `dashboard`, `search`, `sure`, `chat`, `matrix`, and more. Full list lives in `/etc/caddy/sites/` on the Caddy host.
-- Private zone (`sites/private/`, `*.home.cleeryy.cloud`): `pbs` (`:8007`), `dns` (Technitium `:5380`), `proxmox`/`pve1`/`pve3` (`:8006`), `nas`, `adguard`, `ha`, plus service-internal routes.
-- Nginx Proxy Manager (VM `100`) has been decommissioned. `ubuntu-nginxrpm` (`105`, `10.1.20.43`) migrated to VLAN 20 on 28/09/2026; serves Caddy upstreams `:81`/`:8080`.
-
-A `cloudflared` LXC (`103`) on `pve1` plus `cloudflared-opnsense` (`511`) on `pve3` provide Cloudflare tunnel egress for selected services.
+A `cloudflared` LXC (`103`) on `pve1` plus `cloudflared-opnsense` (`511`) on `pve3` provide Cloudflare tunnel egress for selected services, complementing rather than replacing the Caddy ingress path.
 
 ## Docker host addresses (site 1, production VLAN 20)
 
-Reported by the Proxmox API and Beszel:
+The Docker VMs that survived the VLAN migration now sit on production VLAN 20, and the table below pins each one to the address reported by the Proxmox API and Beszel. It exists so that NAT rules, Caddy upstreams and firewall logs can be read without guessing which hostname means which VM.
 
 | Host (Beszel label) | IP | Proxmox VM | Node |
 |---------------------|----|------------|------|
@@ -139,16 +128,12 @@ Reported by the Proxmox API and Beszel:
 | `Servarr` | `10.1.20.62` | `301` `ubuntu-servarr` | `pve3` |
 | `web-apps` | `10.1.20.42` | `102` `ubuntu-small-webapps` | `pve1` |
 
+The pattern worth noticing is that these hosts are split across both nodes rather than consolidated, which reflects their history as pre-migration residents rather than any placement policy.
+
 ## Beszel hostname mismatches
 
-Two Docker hosts report a system hostname `ntfy` in Beszel while their system label is different:
-
-- `n8n` host — label `n8n`, system hostname `ntfy`.
-- `web-apps` host — label `web-apps`, system hostname `ntfy`.
-
-The cause is not documented. The mismatch is recorded so that operators reading Beszel do not misidentify hosts.
+Two Docker hosts report a system hostname of `ntfy` in Beszel while their system label is different, and the discrepancy is recorded here so operators do not misidentify hosts when reading monitoring. The `n8n` host carries the label `n8n` but reports hostname `ntfy`, and the `web-apps` host carries the label `web-apps` but likewise reports hostname `ntfy`. The cause is not documented, and the mismatch is preserved verbatim rather than reconciled, in keeping with the wiki's habit of reporting observed names as they appear.
 
 ## Known gaps
 
-The honest list: TrueNAS/NAS stay on the flat LAN by design, inter-VLAN policy is still allow-all with `[DEV]`/`TEMP` markers, the CrowdSec bans naming Caddy itself need someone to confirm log-noise and tune the rule, and site 2 is still a Fortigate in a box plus a site-to-site VPN that exists only as intent. Each is tracked; none is news.
-- The remaining role of `ubuntu-nginxrpm` (`105`).
+The honest list is short but structural. TrueNAS and the NAS stay on the flat LAN by design, inter-VLAN policy is still allow-all with `[DEV]` and `TEMP` markers, the CrowdSec bans that name Caddy itself need someone to confirm log-noise and tune the rule, and site 2 remains a Fortigate in a box plus a site-to-site VPN that exists only as intent. Each item is tracked rather than hidden, and none of them is news to anyone operating the network — the remaining role of `ubuntu-nginxrpm` (`105`) belongs on the same list of things to confirm rather than assume.

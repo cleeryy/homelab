@@ -7,20 +7,12 @@ This wiki has opinions, and they fit on one page. The core bet is that documenta
 
 ## Documentation principles
 
-- **Current state, not aspiration.** Pages describe what is actually running. In-flight transitions are noted explicitly on the [migration plan](/architecture/migration-plan).
-- **Don't invent.** When a value (VLAN ID, backup schedule, port, secret) is not in the source material, it is marked **unknown** or **pending validation**.
-- **Use real names.** VM, LXC, and container names are reproduced as they appear in Proxmox or Beszel. Display mismatches (e.g. Beszel hostname vs. system label) are called out, not silently reconciled.
-- **One source of truth.** Fumadocs is the canonical documentation surface. Docmost remains visible in the inventory because it is still deployed.
+The documentation rules exist to keep the wiki honest as the infrastructure churns, and they apply to every page equally. Current state matters more than aspiration, so pages describe what is actually running while in-flight transitions are noted explicitly on the [migration plan](/architecture/migration-plan) instead of being folded silently into the present tense. Nothing is invented to fill a gap: when a value such as a VLAN ID, a backup schedule, a port or a secret is not present in the source material, it is marked **unknown** or **pending validation** rather than guessed. Real names are used throughout, so VM, LXC and container names are reproduced exactly as they appear in Proxmox or Beszel, and display mismatches such as a Beszel hostname differing from a system label are called out instead of being silently reconciled. Finally there is one source of truth: Fumadocs is the canonical documentation surface, while Docmost remains visible in the inventory only because it is still deployed, not because it carries authority.
 
 ## Operational framing
 
-- **Asymmetric nodes.** `pve1` is the infrastructure and management node; `pve3` is the primary compute and production node. The cluster is not symmetric and HA failover between nodes is not configured.
-- **Three execution layers.** Proxmox host → VM/LXC → Docker stack. Documentation is structured accordingly.
-- **Shared NFS is shared.** The `nas` mount is reachable from both `pve1` and `pve3` and is configured for `rootdir`, `iso`, `backup`, and `images`.
-- **`pve2` is gone.** It was ejected from the cluster and its storage entry removed; it appears in this wiki only as history.
+The operational framing follows from the hardware rather than preceding it. The two nodes are asymmetric by design and by age: `pve1` is the infrastructure and management node while `pve3` is the primary compute and production node, and the cluster is not symmetric nor is HA failover between nodes configured. Execution happens in three layers, from the Proxmox host through VMs and LXCs down to Docker stacks, and the documentation is structured along those same layers so a reader always knows which level a setting belongs to. Shared NFS is genuinely shared: the `nas` mount is reachable from both `pve1` and `pve3` and is configured for `rootdir`, `iso`, `backup` and `images`. And `pve2` is gone, having been ejected from the cluster with its storage entry removed, so it appears in this wiki only as history rather than as capacity.
 
 ## Non-goals
 
-- High availability across nodes.
-- Symmetry between `pve1` and `pve3`.
-- Canonical ingress is Caddy. The remaining legacy proxy VM is documented, not legitimised.
+The non-goals are stated plainly so nobody mistakes the current shape for a stepping stone. High availability across nodes is not a goal, and neither is symmetry between `pve1` and `pve3`; the cluster is operated as two distinct machines with distinct jobs. Canonical ingress is Caddy, and the remaining legacy proxy VM is documented for completeness rather than legitimised as an alternative, since keeping one ingress story is itself a design decision.

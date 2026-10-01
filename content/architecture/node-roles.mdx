@@ -5,45 +5,26 @@ description: What each cluster node actually carries.
 
 Last synced with live infrastructure: **September 2026** (PVE 9.2.11 on both nodes).
 
+The cluster looks symmetric in the Proxmox UI and is anything but symmetric in practice. The two nodes differ in age, CPU, memory and intent: one is a lightly loaded infrastructure and management node, the other is a heavily loaded production workhorse. This page describes what each node actually carries so that placement, load and failure reasoning can start from observed reality.
+
 ## `pve1` — infrastructure / management
 
-- Proxmox VE 9.2.11 (kernel `7.0.14-8-pve`), management address `192.168.1.101/24` on `vmbr0`. Hardware: 2x Xeon E5-2450v2, 64 GB RAM. Lightly loaded at last observation (loadavg ~2.7).
-- Storage attached: `local`, `local-lvm`, `pve1-storage` (ZFS pool), `nas` + `truenas` (shared NFS), `pbs` (Proxmox Backup Server).
-- Hosts legacy application VMs (Ubuntu 24.04 Docker hosts), the code/database stack, the transitional documentation app, and utility LXCs.
+The older node is the quiet one. It runs Proxmox VE 9.2.11 on kernel `7.0.14-8-pve` with management address `192.168.1.101/24` on `vmbr0`, on hardware built around two Xeon E5-2450v2 processors with 64 GB of RAM. At the last observation it was lightly loaded with a loadavg around 2.7, which fits its role as the home of steady-state infrastructure rather than bursty production compute. Storage attached to this node covers every tier the cluster knows: `local`, `local-lvm`, the `pve1-storage` ZFS pool, the shared NFS mounts `nas` and `truenas`, and the `pbs` Proxmox Backup Server storage. In workload terms it hosts the legacy application VMs as Ubuntu 24.04 Docker hosts, the code and database stack, the transitional documentation app, and a set of small utility LXCs.
 
-Notable workloads on `pve1` (5 VMs, 8 CTs — verified September 2026):
-
-- Application VMs (Ubuntu 24.04 with Docker stacks): `ubuntu-small-webapps` (`102`), `ubuntu-nginxrpm` (`105`, role to be confirmed), `ubuntu-nextcloud` (`200`), `ubuntu-beszel` (`202`), `ubuntu-n8n` (`204`).
-- Code / data: Forgejo (`111`), PostgreSQL (`112`).
-- Documentation: Docmost (`109`, transitional — Fumadocs is canonical).
-- Utility LXCs: `alpine-rustypaste` (`101`), `cloudflared` (`103`), `bentopdf` (`104`), `elementsynapse` (`107`), `alpine-docker` (`108`).
-- Deleted since June 2026: secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (`1101`), Nginx Proxy Manager VM (`100`).
+Notable workloads on `pve1` total 5 VMs and 8 CTs as verified in September 2026. The application VMs with their Docker stacks are `ubuntu-small-webapps` (`102`), `ubuntu-nginxrpm` (`105`, whose role is to be confirmed), `ubuntu-nextcloud` (`200`), `ubuntu-beszel` (`202`) and `ubuntu-n8n` (`204`). The code and data tier consists of Forgejo (`111`) and PostgreSQL (`112`), with documentation represented by Docmost (`109`, transitional since Fumadocs is canonical). The utility LXCs are `alpine-rustypaste` (`101`), `cloudflared` (`103`), `bentopdf` (`104`), `elementsynapse` (`107`) and `alpine-docker` (`108`). Deleted since June 2026 are the secondary PostgreSQL (`113`), `debian` (`1005`), GLPI (`1101`) and the Nginx Proxy Manager VM (`100`), so the inventory no longer carries those ghosts.
 
 ## `pve3` — primary compute / production
 
-- Proxmox VE 9.2.11 (kernel `7.0.14-15-pve`), management address `192.168.1.103/24` on `vmbr0`. Hardware: 2x Xeon Silver 4208 (32 threads), ~172 GiB RAM. Heavily loaded at last observation (loadavg 34–51, ~103 GB RAM used, ~1.1 GB swap used).
-- Host bridges: `vmbr0` (management) + `vmbr1` (trunk to the other node, VLAN-aware). Static route `10.1.0.0/16 via 10.1.50.1` persists on both hosts for reaching the VLANs.
-- Storage attached: `local`, `local-lvm` (large LVM-thin pool), `nas` + `truenas` (shared NFS), `pbs`. Additional physical disks are passed through to the TrueNAS VM. No active ZFS pool on the host itself.
+The newer node is where the action is. It runs Proxmox VE 9.2.11 on kernel `7.0.14-15-pve` with management address `192.168.1.103/24` on `vmbr0`, on hardware built around two Xeon Silver 4208 processors with 32 threads and roughly 172 GiB of RAM. At the last observation it was heavily loaded with a loadavg between 34 and 51, about 103 GB of RAM used and about 1.1 GB of swap used, which is the normal cost of carrying the edge, the storage VM and most user-facing services on one chassis. Host networking pairs `vmbr0` for management with `vmbr1` as the trunk to the other node in VLAN-aware mode, and a static route for `10.1.0.0/16` via `10.1.50.1` persists on both hosts for reaching the VLANs. Storage attached here is `local`, the large `local-lvm` LVM-thin pool, the shared NFS mounts `nas` and `truenas`, and `pbs`, with additional physical disks passed through to the TrueNAS VM. There is no active ZFS pool on the host itself, so persistent data lives on `local-lvm`, on TrueNAS datasets, or on the shared NFS mounts.
 
-Notable workloads on `pve3` (verified September 2026):
-
-- Edge: `opnsense` (`501`, 16 GB RAM).
-- Storage / data: `truenas` (`127`) with attached disks.
-- Ingress / platform: `caddy` (`2010`), `technitium` (`553`, DNS), `authentik` (`130`, SSO), `warpgate` (`222`, bastion), `pbs` (`578`, backups), `wazuh` (`129`, SIEM), `prometheus` (`566`), `grafana` (`567`), `prometheus-pve-exporter` (`576`), `scraparr` (`577`), `cloudflared-opnsense` (`511`).
-- Media VMs (Ubuntu 24.04 with Docker stacks): `ubuntu-jelly` (`300`), `ubuntu-servarr` (`301`), `ubuntu-qbittorrent` (`302`).
-- Platform / app LXCs: `guacamole` (`106`), `discopanel` (`110`), `code` (`119`), `forgejo-runner` (`124`), `hermesagent` (`125`), `affine` (`126`), `sure` (`128`), `openwebui` (`131`), `searxng` (`132`), `dynacat` (`151`), `obiwan` (`205`, Dokploy host), `zenfree` (`233`), `projet-paul` (`257`), `gamevault` (`258`), `immich` (`276`), `paperclip` (`279`).
-- Stopped / parked: `mint` (`10001`, lab desktop — running but manual start, no auto-boot), `lune-pve1` (`6001`) and `lune-pve2` (`6002`, stopped POC VMs), `taoxd` (`2242`, stopped), `palworld` (`4001`, stopped game server), `esgi-debian` (`15001`, stopped), `esgi-docker` (`15002`, stopped).
-- Deleted since June 2026: `prod-lockbits` (`310`), `preprod-lockbits` (`320`), `debian-test-edragent` (`331`), `debian-test-edragent2` (`332`), `debian-test-edragent3` (`333`).
+Notable workloads on `pve3`, verified in September 2026, span edge, data, platform, media and lab. The edge is `opnsense` (`501`) with 16 GB of RAM. Storage and data are represented by `truenas` (`127`) with its attached disks. Ingress and platform services form the densest group: `caddy` (`2010`), `technitium` (`553` for DNS), `authentik` (`130` for SSO), `warpgate` (`222` as bastion), `pbs` (`578` for backups), `wazuh` (`129` for SIEM), `prometheus` (`566`), `grafana` (`567`), `prometheus-pve-exporter` (`576`), `scraparr` (`577`) and `cloudflared-opnsense` (`511`). The media VMs, all Ubuntu 24.04 Docker hosts, are `ubuntu-jelly` (`300`), `ubuntu-servarr` (`301`) and `ubuntu-qbittorrent` (`302`). The platform and application LXCs are `guacamole` (`106`), `discopanel` (`110`), `code` (`119`), `forgejo-runner` (`124`), `hermesagent` (`125`), `affine` (`126`), `sure` (`128`), `openwebui` (`131`), `searxng` (`132`), `dynacat` (`151`), `obiwan` (`205`, the Dokploy host), `zenfree` (`233`), `projet-paul` (`257`), `gamevault` (`258`), `immich` (`276`) and `paperclip` (`279`). Parked are the `mint` lab desktop (`10001`, running but manual start with no auto-boot), the stopped POC VMs `lune-pve1` (`6001`) and `lune-pve2` (`6002`), the stopped `taoxd` (`2242`), the stopped game server `palworld` (`4001`), and the stopped `esgi-debian` (`15001`) and `esgi-docker` (`15002`). Deleted since June 2026 are `prod-lockbits` (`310`), `preprod-lockbits` (`320`) and the three `debian-test-edragent` containers (`331`, `332`, `333`).
 
 ## `pve2`
 
-`pve2` has been **fully removed** from the cluster: it is not a member, hosts no workloads, and the `pve2-storage` entry is gone from `/etc/pve/storage.cfg`.
+The third node is history rather than infrastructure. The `pve2` host has been fully removed from the cluster: it is not a member, it hosts no workloads, and the `pve2-storage` entry is gone from `/etc/pve/storage.cfg`. It appears in this wiki only so that older references resolve to a known answer instead of a mystery.
 
 ## Placement notes
 
-- Several apps that fit the "compute" role (Nextcloud, n8n, BentoPDF, Element/Synapse, RustyPaste, small webapps) still run on `pve1`, not on `pve3`. This is the observed state.
-- Newer platform services (identity, DNS, backups, monitoring, SIEM, ingress) all run on `pve3` on the production/management VLANs.
-- The Forgejo runner is intentionally on `pve3` to keep CI compute off the infra node.
-- Dokploy (`obiwan`, `205`) is the deployment plane for containerised apps; see [Operations > Dokploy](/operations/dokploy).
+Several apps that fit the compute role, including Nextcloud, n8n, BentoPDF, Element and Synapse, RustyPaste and the small webapps, still run on `pve1` rather than on `pve3`, and that is the observed state rather than a recommendation. Newer platform services for identity, DNS, backups, monitoring, SIEM and ingress all run on `pve3` on the production and management VLANs, which shows where the platform is heading even while the older apps stay where they are. The Forgejo runner sits intentionally on `pve3` so that CI compute stays off the infrastructure node. Dokploy on `obiwan` (`205`) is the deployment plane for containerised apps, as described under [Operations > Dokploy](/operations/dokploy).
 
-These observations are captured in [Service placement](/architecture/service-placement) and are not interpreted as design errors here — they are the live placement.
+These observations are captured in [Service placement](/architecture/service-placement) and are not interpreted as design errors here — they are the live placement, recorded so operations can reason from where things are rather than where a tidy diagram would put them.

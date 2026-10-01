@@ -9,39 +9,33 @@ This page captures **transitions that are already visible** in the live setup, n
 
 ## Resolved since June 2026
 
-- **Cluster `pve2`.** Fully removed — no member, no `pve2-storage` entry. Closed.
-- **Network `vmbr2`.** The bridge no longer exists on `pve3`. Closed.
-- **Ingress NPM.** Nginx Proxy Manager (VM `100`) decommissioned; **Caddy (`2010`) is the canonical ingress**. Remaining: confirm or repurpose `ubuntu-nginxrpm` (`105`).
-- **Lab containers.** `prod-lockbits` (`310`), `preprod-lockbits` (`320`), and all three `debian-test-edragent` containers (`331`–`333`) deleted. `postgresql` secondary (`113`), `debian` (`1005`), GLPI (`1101`) deleted. Closed.
-- **Wiki deployment.** This site now deploys via Dokploy on `obiwan` and is exposed at `homelab.cleeryy.cloud` through Caddy. See [Operations > Dokploy](/operations/dokploy).
+The resolved list below is the homelab's proof of momentum. Each entry was once an open migration with the same shape as the ones further down this page, and each is now closed, so the section reads as a changelog of finished intent rather than a trophy shelf.
+
+The cluster entry for `pve2` is fully removed, with no membership and no `pve2-storage` entry remaining, and is closed. The network bridge `vmbr2` no longer exists on `pve3` and is closed. Ingress through Nginx Proxy Manager, VM `100`, is decommissioned with Caddy (`2010`) established as the canonical ingress; the remaining question is to confirm or repurpose `ubuntu-nginxrpm` (`105`). The lab containers `prod-lockbits` (`310`), `preprod-lockbits` (`320`) and all three `debian-test-edragent` containers (`331`–`333`) are deleted, as are the `postgresql` secondary (`113`), `debian` (`1005`) and GLPI (`1101`), and those deletions are closed. The wiki deployment now runs via Dokploy on `obiwan` and is exposed at `homelab.cleeryy.cloud` through Caddy, as described under [Operations > Dokploy](/operations/dokploy).
 
 ## Documentation: Docmost → Fumadocs
 
-- Docmost runs as LXC `109` on `pve1`.
-- This Fumadocs site is the canonical documentation surface going forward.
-- Action: migrate any surviving Docmost content into Fumadocs, then decide whether to keep Docmost online for archive access or decommission the LXC.
+The documentation migration is a change of canonical surface rather than a data move. Docmost still runs as LXC `109` on `pve1`, holding whatever content has not yet been carried over, while this Fumadocs site is the canonical documentation surface going forward. The action is to migrate any surviving Docmost content into Fumadocs and then decide whether to keep Docmost online for archive access or decommission the LXC, since running two documentation systems indefinitely guarantees they will disagree.
 
 ## Ingress: remaining `ubuntu-nginxrpm` (`105`)
 
-- VM `105` (`nginxrpm`, `10.1.20.43`) migrated to VLAN 20 on 28/09/2026; serves Caddy upstreams `:81` (proxy) and `:8080` (wol). Role confirmed, nothing to decommission.
+One legacy proxy VM survived the ingress consolidation and now needs a verdict. VM `105` named `nginxrpm` at `10.1.20.43` was migrated to VLAN 20 on 28/09/2026 and serves Caddy upstreams on port `:81` for proxy traffic and port `:8080` for wol. Its role is confirmed and there is nothing to decommission, so this entry persists as a record of the remaining proxy rather than as an open removal.
 
 ## Network: finish the VLAN migration
 
-- Production (20) and Management (50) carry the platform; Admin (10) is lightly used; Preproduction (25), IoT (30), Guest (40), Home (60) are configured but near idle.
-- Legacy guests (all Docker VMs + LXCs, `pve1` and `pve3`) moved onto VLAN 20/50 on 26-28/09/2026. TrueNAS (`127`) and the physical NAS stay on `192.168.1.0/24` by design (NFS backends, reachable from VLAN 20 via OPNsense).
-- Action: write the inter-VLAN firewall policy (current `[DEV]`/`TEMP` allow-all rules are not final).
+The VLAN migration moved the guests but has not yet finished the policy, which is the harder half of the work. Production (20) and Management (50) now carry the platform, Admin (10) is lightly used, and Preproduction (25), IoT (30), Guest (40) and Home (60) are configured but near idle — the addressing exists everywhere while the traffic lives in two VLANs. Legacy guests, meaning all Docker VMs and LXCs on both `pve1` and `pve3`, moved onto VLAN 20 and 50 on 26–28/09/2026, while TrueNAS (`127`) and the physical NAS stay on `192.168.1.0/24` by design since they are NFS backends reachable from VLAN 20 via OPNsense. The action is to write the inter-VLAN firewall policy, because the current allow-all rules marked `[DEV]` and `TEMP` are not a final posture and every month they persist they become load-bearing by accident.
 
 ## Security: SSO coverage
 
-- Authentik `forward_auth` protects selected Caddy routes (e.g. `code`). Most public routes, including this wiki, are currently open.
-- Action: decide the default posture (SSO-by-default vs. explicit public list) and roll `forward_auth` out per route.
+SSO coverage is proven on a subset of routes and undecided as a default. Authentik `forward_auth` already protects selected Caddy routes such as `code`, which demonstrates the mechanism end to end, while most public routes including this wiki are currently open. The action is to decide the default posture — SSO-by-default with an explicit public list, or the reverse — and then roll `forward_auth` out per route, since route-by-route drift without a default will produce an unmappable mix.
 
 ## Monitoring: Beszel → Prometheus/Grafana
 
-- Prometheus (`566`) + Grafana (`567`) + PVE exporter (`576`) are live on the private zone; Beszel (`202`) still runs.
-- Action: confirm Grafana as canonical, define alerting/notification channels, then decommission Beszel.
+Monitoring is mid-handover between two stacks that currently run in parallel. Prometheus (`566`), Grafana (`567`) and the PVE exporter (`576`) are live on the private zone and already collect platform metrics, while Beszel (`202`) still runs as the legacy per-host view. The action is to confirm Grafana as canonical, define alerting and notification channels so the new stack pages someone rather than merely graphing, and then decommission Beszel instead of running both indefinitely.
 
 ## Stopped systems pending decision
+
+The stopped and ambiguous systems below are grouped in one table because they share the same decision shape: each needs an owner to confirm whether it revives, stays parked, or is deleted for its disk. The table is the pending queue, not the archive.
 
 | Item | Kind | Status | Action |
 |------|------|--------|--------|
@@ -50,6 +44,8 @@ This page captures **transitions that are already visible** in the live setup, n
 | `esgi-debian` (`15001`) | LXC on `pve3` | Stopped | Lab cleanup or revival |
 | `hermesagent` (`125`) | LXC on `pve3` | Running lab agent | Confirm owner/purpose |
 
+The two `lune` POC VMs deserve emphasis because at 512 GB of disk each they are the largest idle reservation in the cluster. Clearing this table is mostly a matter of assigning each row to someone willing to say delete.
+
 ## Out of scope
 
-- Reorganising live workload placement between `pve1` and `pve3` is not in flight and is not planned here. Current placement is documented as-is in [Service placement](/architecture/service-placement).
+Reorganising live workload placement between `pve1` and `pve3` is not in flight and is not planned here. Current placement is documented as-is in [Service placement](/architecture/service-placement).

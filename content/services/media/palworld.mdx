@@ -9,24 +9,23 @@ Unlike everything else on this site, Palworld does not speak HTTP at all. Game c
 
 ## Placement
 
-- LXC `4001` `palworld` on `pve3` (production VLAN, `10.1.20.143`; 32 GB RAM allocated).
+The game server runs as LXC `4001` (`palworld`) on `pve3` on the production VLAN at `10.1.20.143`, with 32 GB of RAM allocated — by far the most memory-hungry guest in this section.
 
 ## Ingress
 
-Dedicated game ports via OPNsense NAT (all UDP → `10.1.20.143`): `8211`, `8212`, `27015`. No Caddy involvement — raw game traffic. Source-IP restriction is recommended but not confirmed in place.
+There is no Caddy involvement here: dedicated game ports arrive via OPNsense NAT, all UDP toward `10.1.20.143`, on `8211`, `8212`, and `27015`. Source-IP restriction is recommended but not confirmed in place, so treat the ports as internet-visible until proven otherwise.
 
 ## Dependencies
 
-- Save data lives on the LXC disk; covered by the general PBS job. Save-restore procedure is not documented here.
+Save data lives on the LXC disk and is covered by the general PBS job. The save-restore procedure itself is not documented here, which is the gap that would hurt on the evening it matters.
 
 ## Failure impact
 
-- A `pve3` outage takes the game server down. Worlds persist on disk.
+A `pve3` outage takes the game server down with the production VLAN. Worlds persist on disk through the outage, so the failure mode is interrupted play rather than lost progress — provided the saves are intact.
 
 ## Operational notes
 
-- Game servers attract unsolicited WAN traffic; watch OPNsense/CrowdSec logs after any player-slot change.
-- Updates wipe no data in the standard layout, but snapshot before updating anyway.
+Game servers attract unsolicited WAN traffic, so OPNsense and CrowdSec logs deserve a glance after any player-slot change. Updates wipe no data in the standard layout, but snapshot before updating anyway — cheap insurance against patch-day surprises.
 
 ## Known gaps
 

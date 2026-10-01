@@ -7,7 +7,9 @@ Last synced with live infrastructure: **September 2026**.
 
 Every public hostname in the homelab ends its journey here. Caddy is the single front door: it holds the wildcard certificates, decides — by hostname — which internal service answers, and optionally demands a login via Authentik before proxying a single byte. That centralisation is what makes the rest of the setup manageable. Services never deal with certificates, ports 80/443 are forwarded exactly once at the firewall, and exposing something new is a small config file rather than a network change. If Caddy is down, everything behind it looks down too, even though all the apps are still healthy — always check here before restarting application containers.
 
-## Components
+## Placement
+
+Caddy runs as a single LXC on `pve3` with the production address that OPNsense forwards ports 80 and 443 to. The previous Nginx-based ingress is out of the path: one VM is decommissioned and the other still runs on `pve1` with no confirmed ingress role, as tracked in the migration plan.
 
 | Kind | ID | Name | Host | Function |
 |------|----|------|------|----------|
@@ -15,7 +17,13 @@ Every public hostname in the homelab ends its journey here. Caddy is the single 
 
 Nginx Proxy Manager (VM `100`) has been decommissioned. `ubuntu-nginxrpm` (VM `105`) still runs on `pve1` but is no longer the ingress path; its remaining role is tracked in the [migration plan](/architecture/migration-plan).
 
+## Status
+
+Caddy is running as the canonical HTTPS ingress for both zones. Routes live as one file per hostname under `/etc/caddy/sites/`, imported by the main `Caddyfile`, with short service names resolved through internal DNS. Unknown hosts get a `404` rather than a default backend.
+
 ## TLS
+
+Certificates are fully automatic through Cloudflare DNS-01, covering the apex and both wildcard trees. Public hostnames resolve to Cloudflare Anycast in front, with OPNsense forwarding 80 and 443 straight to Caddy. Backends that present self-signed certificates are still reached over TLS — Caddy simply skips validating their chain.
 
 - Wildcard certificates via Cloudflare DNS-01 (`acme_dns cloudflare`), covering `cleeryy.cloud`, `*.cleeryy.cloud`, and `*.home.cleeryy.cloud`.
 - Cloudflare proxy sits in front (public hostnames resolve to Cloudflare Anycast); OPNsense NAT-forwards 80/443 to `10.1.20.10`.
@@ -23,7 +31,7 @@ Nginx Proxy Manager (VM `100`) has been decommissioned. `ubuntu-nginxrpm` (VM `1
 
 ## Zones
 
-Routes live in `/etc/caddy/sites/` on the Caddy host, split in two files trees imported by the main `Caddyfile`:
+The public tree holds user services on `*.cleeryy.cloud`, while the private tree holds infrastructure on `*.home.cleeryy.cloud`. Both follow the same file-per-host pattern matching on the Host header and proxying to the recorded upstream.
 
 - **Public** (`sites/public/`, `*.cleeryy.cloud`): user services. Verified routes include `homelab` → `obiwan:3545` (this wiki), `dokploy` → `obiwan:3000`, `authentik` → `https://authentik:9443`, `code` → `code:8680` (behind Authentik `forward_auth`), `wazuh` → `https://wazuh:443`, `guacamole` → `apache-guacamole:8080`, `immich` → `immich:2283`, `chat` → `openwebui:8080`, `search` → `searxng:8888`, `dashboard` → `dynacat:8080`, `sure` → `sure:3000`, `affine` → `affine:3010`, `mc-dashboard` → `discopanel:8080`, `nextcloud` → `10.1.20.44:8080`, `n8n` → `https://10.1.20.47:443`, `jellyfin`/`jelly` → `10.1.20.61:8096`, `jellyseerr` → `10.1.20.61:5055`, `git` → `10.1.20.32:3000`, `matrix` → `10.1.20.38:8008`, `truenas` → `https://192.168.1.74`, `warpgate` → `https://warpgate:8888`. Unknown hosts get a `404`.
 - **Private** (`sites/private/`, `*.home.cleeryy.cloud`): `pbs` → `https://pbs:8007`, `dns` (Technitium `:5380`), `proxmox`/`pve1`/`pve3` → `:8006`, `nas`, `adguard`, `ha`, plus service-internal routes.
@@ -31,7 +39,7 @@ Routes live in `/etc/caddy/sites/` on the Caddy host, split in two files trees i
 
 ### Full public inventory (verified September 2026)
 
-Every file below is a live route. Targets marked `*` were read from the Caddy config; the rest follow the same file-per-host pattern (see the host for exact upstreams).
+Every file below is a live route read from the Caddy config, following the same file-per-host pattern (see the host for exact upstreams where not marked). Targets marked `*` were read verbatim from the config; short names resolve via the Technitium search domain.
 
 | Host | Upstream |
 |------|----------|
@@ -61,7 +69,13 @@ Every file below is a live route. Targets marked `*` were read from the Caddy co
 
 Private zone (`*.home.cleeryy.cloud`, verified): `pbs` → `https://pbs:8007`, `dns` → `technitium:5380`, `proxmox`/`pve1`/`pve3` → `:8006`, `nas` → `https://192.168.1.16:443`, plus `adguard`, `ha`, `beszel`, `grafana`, `prometheus`, media-internal routes (`sonarr`, `radarr`, `prowlarr`, `bazarr`, `qbittorrent`, `flaresolverr`, `scraparr`), `gamevault`, `gv-downloader`, `proxy`, `public-proxy`, `wol`, and Nextcloud/ntfy backup routes.
 
+## Dependencies
+
+Caddy depends on Technitium for short-name upstream resolution, on Cloudflare for DNS-01 issuance, and on OPNsense for the 80/443 forwards. If internal DNS fails, Caddy stays up but cannot route to short-name backends, which looks identical to every service being down.
+
 ## Adding a route
+
+Exposing a new service is a small config change followed by a reload and a three-layer test. Copy the existing per-host pattern, add the Authentik block only when the route must require login, and remember that a bare `caddy validate` fails outside the service environment because the Cloudflare token only exists there.
 
 - [ ] Add a `<name>.caddy` file under `sites/public/` (or `sites/private/` for internal-only) following the existing `@name host … / handle @name { reverse_proxy … }` pattern.
 - [ ] If the route must require login, add the Authentik `forward_auth` block (copy from `code.caddy`).
@@ -71,9 +85,8 @@ Private zone (`*.home.cleeryy.cloud`, verified): `pbs` → `https://pbs:8007`, `
 
 ## Failure impact
 
-- If Caddy is down, all HTTPS-fronted services become unreachable from outside (and Cloudflare has nothing to talk to).
-- OPNsense (`501` on `pve3`) is upstream of Caddy; its failure has broader impact (WAN + VLAN routing + VPN).
+If Caddy goes down, every HTTPS-fronted service becomes unreachable from outside even though the applications themselves are healthy, and Cloudflare has nothing to talk to. OPNsense (`501` on `pve3`) sits upstream of Caddy, so its failure is broader still: WAN plus VLAN routing plus VPN on top of the ingress outage.
 
 ## Known gaps
 
-Two decisions remain open: the default posture for public routes (SSO-by-default vs. an explicit public list — most routes are currently open by inertia, not by choice) and the fate of the leftover `ubuntu-nginxrpm` VM, which still runs with no confirmed role. Both are tracked in the migration plan; neither affects the Caddy path itself.
+Two decisions remain open: whether public routes should require SSO by default or stay open under an explicit public list — most routes are currently open by inertia rather than by choice — and what to do with the leftover `ubuntu-nginxrpm` VM, which still runs with no confirmed role. Both are tracked in the migration plan; neither affects the Caddy path itself.

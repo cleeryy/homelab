@@ -7,11 +7,11 @@ Nextcloud is the private cloud of the homelab: files, calendar, contacts, and co
 
 ## Placement
 
-- VM `200` `ubuntu-nextcloud` on `pve1`.
-- Beszel label `Nextcloud`, IP `10.1.20.44`.
-- OS line reported by Beszel as `6.8.0-111-generic` (Linux kernel string).
+The stack lives on VM `200` (`ubuntu-nextcloud`) on `pve1`, carrying the Beszel label `Nextcloud` at IP `10.1.20.44`. Beszel reports the OS line as `6.8.0-111-generic`, a Linux kernel string.
 
 ## Docker containers
+
+The host runs the full Nextcloud ensemble — app, database, cache, background jobs, and office suite — plus the usual management sidecars. `nextcloud-app` is the application itself, backed by `nextcloud-db` and `nextcloud-redis`, with `nextcloud-cron` running background jobs and `collabora` providing document editing. `zerobyte` is also present on the host, though its specific role is not documented and is preserved here as an uncertainty rather than a guess.
 
 | Container | Function |
 |-----------|----------|
@@ -24,22 +24,19 @@ Nextcloud is the private cloud of the homelab: files, calendar, contacts, and co
 | `portainer` | Container management UI |
 | `beszel-agent` | Monitoring agent |
 
-`portainer` was reported as **restarting** at the last observation. Cause not investigated.
+`portainer` was reported as **restarting** at the last observation, for a cause not yet investigated. Restart order matters across this stack: `nextcloud-db` and `nextcloud-redis` must come up before `nextcloud-app`, and the database volume is the backup weak point of the entire host — lose it and the files lose their index.
 
 ## Dependencies
 
-- The Nextcloud stack is self-contained: database, cache, and document editor all run on the same host.
-- Ingress: `nextcloud.cleeryy.cloud` → Caddy → `10.1.20.44:8080`.
-- Storage paths (whether user files live on the local VM disk, on `nas`, or on a TrueNAS share) are **not captured here**.
+The stack is self-contained, with database, cache, and document editor all running on the same host rather than in shared services. Ingress is `nextcloud.cleeryy.cloud` through Caddy toward `10.1.20.44:8080`. Whether user files live on the local VM disk, on `nas`, or on a TrueNAS share is **not captured here**, and that unanswered storage question dominates everything below.
 
 ## Operational notes
 
-- Stack uses standard Nextcloud images with a sidecar for cron. Restart order matters: `nextcloud-db` and `nextcloud-redis` come up before `nextcloud-app`.
+The stack uses standard Nextcloud images with a sidecar for cron, deliberately without Watchtower so upgrades stay manual. Start the data services first, then the app — the reverse order produces a healthy-looking container over an empty backend.
 
 ## Failure impact
 
-- A `pve1` outage takes the Nextcloud host with it.
-- Loss of `nextcloud-db` data is the most critical risk; backup of this volume is essential and not documented here.
+A `pve1` outage takes the Nextcloud host with it, and with it files, calendar, contacts, and editing all at once. The most critical single risk is loss of `nextcloud-db` data, whose backup path is essential yet undocumented here.
 
 ## Known gaps
 

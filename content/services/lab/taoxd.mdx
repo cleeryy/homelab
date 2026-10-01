@@ -3,24 +3,24 @@ title: TaoXD
 description: Stopped VM on `pve3` — undocumented workload.
 ---
 
-TaoXD is a stopped 4 GB / 64 GB VM on the production VLAN tag with no documentation, no DNS record, and no owner on file. It was running at the start of the September migration and stopped at some point during it; whether that was cleanup or accident is itself undocumented.
+TaoXD is a stopped 4 GB / 64 GB VM on the production VLAN tag with no documentation, no DNS record, and no owner on file. It was running at the start of the September migration and stopped at some point during it; whether that was cleanup or accident is itself undocumented. A stopped unknown is the cheapest kind of mystery to keep and the most annoying kind to resolve — it costs nothing while off, but nobody can say whether booting or deleting it is the right move.
 
 ## Placement
 
-- VM `2242` on `pve3`, `net0` on `vmbr1` tag 20. **Stopped.**
+The guest is VM `2242` on `pve3`, with `net0` on `vmbr1` tag 20. It is **stopped**.
 
 ## Status
 
-- Stopped. QEMU guest agent flag set (takes effect on next boot).
+The VM is stopped. The QEMU guest agent flag is set and takes effect on next boot, whenever that boot happens.
 
 ## Dependencies
 
-- Unknown.
+Its dependencies are unknown — nothing was recorded about what it consumed or what consumed it while it ran.
 
 ## Failure impact
 
-- None observed while stopped.
+No impact has been observed while it sits stopped. Whatever it once did, nothing currently running appears to miss it.
 
 ## Known gaps
 
-- Everything: what it ran, who stopped it, boot or delete. This page is a placeholder until someone claims it.
+Everything: what it ran, who stopped it, whether to boot or delete it. This page is a placeholder until someone claims it — boot it to identify it, or delete it to end the suspense.

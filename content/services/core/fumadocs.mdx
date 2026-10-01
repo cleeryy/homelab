@@ -9,21 +9,32 @@ This page describes the site you are standing in. The wiki is deliberately borin
 
 ## Purpose
 
-This Fumadocs site is the canonical documentation surface for the homelab. It is deployed from the `cleeryy/homelab` repository (`homelab-wiki` package).
+This Fumadocs site is the canonical documentation surface for the homelab. It is built from the `cleeryy/homelab` repository (`homelab-wiki` package) and replaces Docmost, so new content belongs here and remaining Docmost content is tracked for migration rather than expanded in place.
 
 ## Placement
+
+The wiki is built on the Dokploy host and runs as an ordinary swarm service with a published port, then exposed publicly through Caddy without SSO since the documentation is deliberately public. Until the port is explicitly published and the app redeployed, a Dokploy app stays unreachable from Caddy — that lesson is documented in the Dokploy operations page rather than repeated per app.
 
 - **Built** by Dokploy on `obiwan` (CT `205`) from the `main` branch.
 - **Run** as the Dokploy swarm service `homelab-documentation-homelabdocsapp`, with host port `3545` published → container `3545`.
 - **Exposed** at `homelab.cleeryy.cloud` via Caddy (`reverse_proxy obiwan:3545`). No SSO (deliberate, public documentation).
-- See [Operations > Dokploy](/operations/dokploy) for the deployment procedure. Key lesson: a Dokploy app is unreachable from Caddy until its port is explicitly published and the app redeployed.
+- See [Operations > Dokploy](/operations/dokploy) for the deployment procedure.
+
+## Status
+
+The site is a stateless static export: every deploy rebuilds from `main` and the running host holds no unique data. A site outage therefore loses no content, and recovery is a redeploy rather than a restore.
+
+## Dependencies
+
+There are no runtime dependencies beyond the build host and Git itself. The wiki needs no database, no login provider, and no persistent volume, which is exactly why it survives outages that take stateful services down.
 
 ## Relation to Docmost
 
-- Docmost runs as LXC `109` on `pve1` and is still present from the previous setup.
-- Fumadocs replaces Docmost as the canonical documentation layer. Migrating remaining content out of Docmost is tracked in the [migration plan](/architecture/migration-plan).
+Docmost still runs as LXC `109` on `pve1` as a leftover of the previous setup. Fumadocs is now the canonical layer, and migrating the remaining content out of Docmost is tracked in the [migration plan](/architecture/migration-plan) rather than treated as a second source of truth.
 
 ## Build and run
+
+The stack is Next.js 16 with Fumadocs v16 on pnpm 9. Local development runs on port `3545` after install, production builds to standalone output through the repository `Dockerfile` that Dokploy consumes, and CI guards every push and pull request with install, lint, and build.
 
 - Stack: Next.js 16 + Fumadocs v16, pnpm 9.
 - Local dev: `pnpm install && pnpm dev` on port `3545`.
@@ -32,8 +43,12 @@ This Fumadocs site is the canonical documentation surface for the homelab. It is
 
 ## Design
 
-The theme follows Dieter Rams' ten principles of good design: one paper, one ink, one functional orange accent, no decorative color. Type and spacing do the work; the accent appears only where function demands it — active states, focus rings, selection. If a future redesign adds a second accent color, it should have to justify itself against "as little design as possible".
+The theme follows Dieter Rams' ten principles of good design: one paper, one ink, one functional orange accent, no decorative colour. Type and spacing do the work, and the accent appears only where function demands it — active states, focus rings, selection. Any future redesign that wants a second accent colour should have to justify itself against doing as little design as possible.
 
 ## Failure impact
 
-- The wiki is stateless. Content lives in Git; the Dokploy host holds no unique data. A site outage loses no data — rebuild from `main`.
+The wiki is stateless, so an outage loses no data: content lives in Git and the Dokploy host holds nothing unique. Rebuild from `main` and the site is back.
+
+## Known gaps
+
+There are no open infrastructure gaps beyond the content migration itself. Remaining Docmost pages still need to be moved over, as tracked in the migration plan, but the pipeline, hosting, and recovery story are settled.

@@ -9,41 +9,30 @@ Security here is layered but honest about its gaps. The perimeter is genuinely t
 
 ## Trust boundaries
 
-- **WAN** — terminated by OPNsense (VM `501`) on `pve3`, behind the ISP CPE (double NAT). Inbound ports are limited to the NAT forwards listed in [Network](/architecture/network): Caddy 80/443, Warpgate SSH, Palworld UDP, WireGuard `udp/51920`, NetBird P2P `udp/51825`.
-- **Public services** — TLS-terminated by Caddy (`2010`) with Cloudflare-managed wildcard certificates. No service is exposed directly; everything public goes through Caddy routes.
-- **Private services** — `*.home.cleeryy.cloud` zone on the same Caddy (PBS, Proxmox UIs, Technitium, NAS). Reachable from WAN through the same NAT forwards; network-level restriction to VPN/management networks is **pending**.
-- **VLANs** — Admin (10), Production (20), Preproduction (25), IoT (30), Guest (40), Management (50), Home (60) exist at the OPNsense layer, but inter-VLAN isolation policy is **not in place yet** (allow-all rules with `[DEV]`/`TEMP` markers persist).
-- **Legacy LAN** — `192.168.1.0/24`: Proxmox management, NAS, TrueNAS. Flat, no segmentation. All guests moved to VLAN 20/50 on 26-28/09/2026.
+Trust boundaries in this homelab are physical and network-level rather than application-level, and they get weaker as traffic moves inward. That ordering matters: the outer layers do real work while the inner ones are still scaffolding.
+
+The WAN boundary is terminated by OPNsense, VM `501` on `pve3`, itself sitting behind the ISP CPE in double NAT. Inbound ports are limited to the NAT forwards listed in [Network](/architecture/network): Caddy on 80 and 443, Warpgate SSH, Palworld UDP ports, WireGuard on `udp/51920`, and NetBird P2P on `udp/51825`. Public services sit behind the second boundary, where Caddy (`2010`) terminates TLS with Cloudflare-managed wildcard certificates, and no service is exposed directly since everything public passes through Caddy routes. Private services form the third boundary: the `*.home.cleeryy.cloud` zone on the same Caddy serves PBS, the Proxmox UIs, Technitium and the NAS, but although these names suggest internal-only access they remain reachable from WAN through the same NAT forwards, with network-level restriction to VPN or management networks still pending. The VLAN boundary comes next: Admin (10), Production (20), Preproduction (25), IoT (30), Guest (40), Management (50) and Home (60) all exist at the OPNsense layer, yet inter-VLAN isolation policy is not in place, with allow-all rules carrying `[DEV]` and `TEMP` markers persisting. The innermost boundary is the legacy LAN on `192.168.1.0/24` for Proxmox management, NAS and TrueNAS: flat, unsegmented, and deliberately so for storage traffic, with all guests moved to VLAN 20 and 50 on 26–28/09/2026.
 
 ## Ingress
 
-- HTTPS termination is handled exclusively by **Caddy** (LXC `2010` at `10.1.20.10`). Nginx Proxy Manager (VM `100`) has been decommissioned.
-- Selected routes (e.g. `code.cleeryy.cloud`) enforce Caddy `forward_auth` against Authentik. The wiki and most services are currently **public without SSO** — a deliberate temporary state, tracked in the [migration plan](/architecture/migration-plan).
-- `cloudflared` LXCs (`103`, `511`) provide Cloudflare tunnel egress for selected services.
+Ingress is a single-proxy story, which keeps the exposure surface legible. HTTPS termination is handled exclusively by Caddy, LXC `2010` at `10.1.20.10`, since the Nginx Proxy Manager VM `100` has been decommissioned. Selected routes such as `code.cleeryy.cloud` enforce Caddy `forward_auth` against Authentik, proving the mechanism works, but the wiki and most services are currently public without SSO. That openness is a deliberate temporary state rather than an oversight, and it is tracked in the [migration plan](/architecture/migration-plan) until a default posture is decided. The `cloudflared` LXCs `103` and `511` provide Cloudflare tunnel egress for selected services, adding a second path whose exposure is scoped per service.
 
 ## Identity and remote access
 
-- **Authentik** (LXC `130`) is the SSO provider for humans and for Caddy `forward_auth`.
-- **Warpgate** (LXC `222` at `10.1.20.22`) is the only SSH entry point: WAN `:22` NAT-forwards to Warpgate `:2222`, authenticated via SSO. Direct SSH to guests from WAN is denied by design.
-- **Guacamole** (LXC `106`) remains as a browser-based remote-access gateway behind Caddy.
+Identity and remote access are centralised so that there is one login story and one SSH door to audit. Authentik, LXC `130`, is the SSO provider for humans and for Caddy `forward_auth`, which makes it the control point for any future SSO-by-default rollout. Warpgate, LXC `222` at `10.1.20.22`, is the only SSH entry point: WAN port `:22` NAT-forwards to Warpgate port `:2222` with SSO authentication, and direct SSH to guests from WAN is denied by design. Guacamole, LXC `106`, remains as a browser-based remote-access gateway behind Caddy for sessions that need a desktop rather than a shell.
 
 ## Egress and privacy
 
-- The `INTERNAL` interface group on OPNsense routes outbound traffic via the **AirVPN** WireGuard client, with a **kill-switch** block rule beneath it — tunnel down means no egress, not clearnet leakage.
-- Several media-stack Docker containers route through `gluetun` at the compose level (Servarr host, qBittorrent host).
+Egress control is where privacy requirements meet the default-route reality. The `INTERNAL` interface group on OPNsense routes its outbound traffic via the AirVPN WireGuard client, with a kill-switch block rule beneath it, so a tunnel failure means no egress rather than clearnet leakage. That guarantee holds at the network layer for everything assigned to the group. At the container layer, several media-stack Docker containers route through `gluetun` at the compose level, notably on the Servarr host and the qBittorrent host, which scopes VPN egress to those stacks without moving the whole VLAN.
 
 ## Detection
 
-- **Suricata** (IDS) runs on OPNsense; **CrowdSec** is active (6 recent alerts at last observation, including port-scan bans — one set names the Caddy host itself, likely proxy log-noise; rule tuning is pending).
-- **Wazuh** (LXC `129`, `wazuh.cleeryy.cloud`) is the SIEM; agents on internal hosts are pending inventory.
+Detection is present but young, and the page records what runs without overstating what it catches. Suricata IDS runs on OPNsense, and CrowdSec is active with 6 recent alerts at the last observation, including port-scan bans where one set names the Caddy host itself, most likely proxy log-noise for which rule tuning is pending. Wazuh, LXC `129` reachable at `wazuh.cleeryy.cloud`, is the SIEM, while agents on internal hosts are still pending inventory, so centralised correlation currently sees only what forwards to it.
 
 ## Known operational observations
 
-- `gluetun` on the `QBittorrent` host has been reported **unhealthy** more than once. When `gluetun` is unhealthy, `qbittorrent` loses egress. This is the most common single failure on that host.
-- `portainer` on the `Nextcloud` host has been observed in a restarting loop without taking Nextcloud itself down (transient).
+Two recurring host-level symptoms are worth recording because they bite during incidents. The `gluetun` container on the `QBittorrent` host has been reported unhealthy more than once, and when `gluetun` is unhealthy `qbittorrent` loses egress, making this the most common single failure on that host. Separately, `portainer` on the `Nextcloud` host has been observed in a restarting loop without taking Nextcloud itself down, a transient condition that is noisy in monitoring but not service-impacting.
 
 ## Out of scope for this page
 
-- Identity, account, secret, and credential management: not exported into this documentation.
-- Per-service TLS configuration: see each service page.
-- Full WAN-side firewall rules: live in OPNsense; summary in [Network](/architecture/network).
+Some security-adjacent topics are deliberately not documented here, and their absence is a scoping choice rather than a gap. Identity, account, secret and credential management are not exported into this documentation. Per-service TLS configuration lives on each service page rather than being duplicated here. Full WAN-side firewall rules live in OPNsense, with only the summary in [Network](/architecture/network), since the firewall itself remains the authoritative source.

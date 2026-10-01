@@ -7,20 +7,22 @@ TrueNAS is the exception that proves the migration: while everything else moved 
 
 ## Placement
 
+The VM stays on the LAN bridge on `pve3` by design, with physical disks passed through and the guest agent running.
+
 - VM `127` on `pve3`, `192.168.1.74` (vmbr0). QEMU guest agent running.
 
 ## Status
 
-- Running. Exports consumed as PVE `truenas` storage and guest NFS mounts. Reachable from VLAN 20 via OPNsense (same path as the physical NAS).
+TrueNAS is running and its exports are consumed both as the Proxmox `truenas` storage and as guest NFS mounts. VLAN 20 reaches it through OPNsense, following the same path as the physical NAS.
 
 ## Dependencies
 
-- Passed-through physical disks (see nodes gaps: slot mapping unknown).
+The only dependency is hardware: the passed-through physical disks the pools live on. Slot-to-disk mapping is unknown (see the nodes gaps), so any disk surgery starts with identification rather than replacement.
 
 ## Failure impact
 
-- NFS-backed guests lose media/storage mounts until restore. VM virtual disks on `nas` are unaffected.
+If TrueNAS stops, NFS-backed guests lose their media and storage mounts until it is restored, while VM virtual disks living on `nas` are unaffected. The blast radius is therefore large for media but narrow for the platform itself.
 
 ## Known gaps
 
-- Which physical disk sits in which slot, and the TrueNAS pool/dataset layout, are not recorded here.
+Which physical disk sits in which slot, and the TrueNAS pool and dataset layout, are not recorded here. A short hardware-to-pool map would close both at once.

@@ -3,24 +3,24 @@ title: DiscoPanel
 description: Game server panel on `pve3`.
 ---
 
-DiscoPanel is the game server panel (Minecraft port `25565` is open alongside the `:8080`/`:8100` web ports). Lab-grade workload with production-grade uptime so far.
+DiscoPanel is the game server panel: the web UI from which game servers are created and managed, with the Minecraft port `25565` open alongside the `:8080` and `:8100` web ports. It is a lab-grade workload with production-grade uptime so far — nobody depends on it for infrastructure, but players notice quickly when it goes quiet. The panel itself is stateless ceremony around the game servers; the servers it manages may well keep running headless even while the panel is down.
 
 ## Placement
 
-- LXC `110` `discopanel` on `pve3`, `10.1.20.49:8080` (VLAN 20).
+The panel runs as LXC `110` (`discopanel`) on `pve3`, listening at `10.1.20.49:8080` on VLAN 20.
 
 ## Status
 
-- Running. Ingress: `mc-dashboard.cleeryy.cloud` → Caddy → `discopanel:8080`.
+The container is running. Ingress is `mc-dashboard.cleeryy.cloud` through Caddy toward `discopanel:8080`.
 
 ## Dependencies
 
-- None (manages game servers itself).
+DiscoPanel has no infrastructure dependencies: it manages game servers itself rather than consuming a shared database or storage service.
 
 ## Failure impact
 
-- Panel unreachable until restore. Game servers it manages may keep running headless.
+If the LXC fails, the panel is unreachable until the guest is restored. Game servers it manages may keep running headless in the meantime, so players and operators experience different outages.
 
 ## Known gaps
 
-- Which game servers it manages and who owns them is not recorded here — see test-systems gaps.
+Which game servers it actually manages and who owns them is not recorded here — see the gaps on the test-systems page, which tracks the same open ownership question.

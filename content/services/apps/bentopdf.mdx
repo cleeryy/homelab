@@ -3,24 +3,24 @@ title: BentoPDF
 description: PDF utility service on `pve1`.
 ---
 
-BentoPDF is the PDF toolbox: merge, split, compress and convert through a web UI. Same philosophy as the other utilities — one container, one port, behind Caddy.
+BentoPDF is the PDF toolbox of the homelab: merge, split, compress, and convert through a plain web UI, no accounts and nothing to learn. It follows the same philosophy as the other small utilities — one container, one port, tucked behind Caddy — so it is trivial to run and trivial to replace. There is no state worth protecting here beyond the running container itself.
 
 ## Placement
 
-- LXC `104` `bentopdf` on `pve1`, `10.1.20.37:8080` (VLAN 20).
+The service runs as LXC `104` (`bentopdf`) on `pve1`, listening at `10.1.20.37:8080` on VLAN 20.
 
 ## Status
 
-- Running. Ingress: `pdf.cleeryy.cloud` → Caddy → `10.1.20.37:8080`.
+The container is running. Ingress is `pdf.cleeryy.cloud` through Caddy toward `10.1.20.37:8080`.
 
 ## Dependencies
 
-- None.
+BentoPDF depends on nothing: no database, no shared storage, no upstream service.
 
 ## Failure impact
 
-- PDF tools unreachable until restore. No downstream services.
+If the LXC fails, the PDF tools are simply unreachable until the guest is restored. No downstream service depends on it, so the blast radius ends at the toolbox itself.
 
 ## Known gaps
 
-- Upload size limits and temp-file cleanup are not recorded here.
+Upload size limits and temp-file cleanup behavior are not recorded here — the two practical details that decide whether large PDFs succeed or fill the disk.

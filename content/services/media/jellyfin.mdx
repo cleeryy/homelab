@@ -7,10 +7,11 @@ Jellyfin is the cinema: the media library, collected by the Servarr stack and do
 
 ## Placement
 
-- VM `300` `ubuntu-jelly` on `pve3`.
-- Beszel label `Jelly`, IP `10.1.20.61`.
+The cinema lives on VM `300` (`ubuntu-jelly`) on `pve3`, carrying the Beszel label `Jelly` at IP `10.1.20.61`.
 
 ## Docker containers
+
+The host pairs the media server itself with its request front-end and the usual monitoring sidecar. `jellyfin` serves the library, `seerr` (of the Jellyseerr / Overseerr family) takes requests, and `beszel-agent` reports health.
 
 | Container | Function |
 |-----------|----------|
@@ -18,24 +19,23 @@ Jellyfin is the cinema: the media library, collected by the Servarr stack and do
 | `seerr` | Request management (Jellyseerr / Overseerr family) |
 | `beszel-agent` | Monitoring agent |
 
+`jellyfin` was observed using a large amount of memory at the last check — treated as transient, but worth knowing before sizing the host. Catalog continuity depends on Jellyfin's metadata volume rather than on the media files themselves, so that volume is the backup weak point; the movies can be re-downloaded, the watched states and artwork cannot.
+
 ## Ingress
 
-- `jellyfin.cleeryy.cloud` (alias `jelly.cleeryy.cloud`) → Caddy → `10.1.20.61:8096`.
-- Requests: `jellyseerr.cleeryy.cloud` → Caddy → `10.1.20.61:5055`.
+Playback arrives as `jellyfin.cleeryy.cloud` (alias `jelly.cleeryy.cloud`) through Caddy toward `10.1.20.61:8096`, while requests go to `jellyseerr.cleeryy.cloud` through Caddy toward `10.1.20.61:5055`.
 
 ## Dependencies
 
-- The media library is expected to live on TrueNAS datasets and to be mounted into the Jellyfin container. The exact mount path is **not captured here**.
-- The media catalog is filled by the Servarr host (`301`), which writes to the same shared library.
+The media library is expected to live on TrueNAS datasets and to be mounted into the Jellyfin container, though the exact mount path is **not captured here**. The catalog itself is filled by the Servarr host (`301`), which writes to the same shared library that Jellyfin reads.
 
 ## Operational notes
 
-- `jellyfin` was reported as using a large amount of memory at the last observation. Transient.
+Memory pressure from `jellyfin` was the only observation of note at the last check, and it was transient. No image-pinning or restart-ordering subtlety is documented beyond that.
 
 ## Failure impact
 
-- A `pve3` outage takes Jellyfin, the Servarr stack, and qBittorrent down at the same time. TrueNAS, which sits on the same node, is also affected.
-- Catalog continuity depends on Jellyfin's metadata volume, not on the media files themselves.
+A `pve3` outage takes Jellyfin down together with the Servarr stack, qBittorrent, and TrueNAS, since all four share the same node. Playback of already-downloaded content is the last thing to break and the first thing to recover once the library remounts.
 
 ## Known gaps
 

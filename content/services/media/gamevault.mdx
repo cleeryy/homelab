@@ -9,24 +9,24 @@ Gamevault is the elephant in the cluster: a single guest holding over a terabyte
 
 ## Placement
 
-- LXC `258` `gamevault` on `pve3` (production VLAN, `10.1.20.58` tag; 4 GB RAM, ~1.2 TB of ~1.8 TB disk in use — the largest single guest on the cluster).
+Gamevault runs as LXC `258` (`gamevault`) on `pve3` on the production VLAN, carrying the `10.1.20.58` tag with 4 GB of RAM and roughly 1.2 TB of about 1.8 TB disk in use — the largest single guest on the cluster.
 
 ## Ingress
 
-`gamevault.cleeryy.cloud` (public) plus downloader route; served through Caddy like other apps.
+The service is reached as `gamevault.cleeryy.cloud` (public) plus its downloader route, served through Caddy like the other apps.
 
 ## Dependencies
 
-- Backend storage for the game library lives on the LXC disk. Exact mount/volume layout not captured here.
+Backend storage for the game library lives on the LXC disk, though the exact mount and volume layout is not captured here. There is no database or shared service in the path — just a very large pile of files on local disk.
 
 ## Backup posture
 
-**Deliberately excluded** from all PBS jobs: ~1.2 TB of replaceable game data. Re-download, don't restore. This exclusion is by design, not an oversight.
+Gamevault is **deliberately excluded** from all PBS jobs: some 1.2 TB of replaceable game data. Re-download, don't restore. This exclusion is by design, not an oversight, and it is the single most important fact on this page.
 
 ## Failure impact
 
-- A `pve3` outage takes Gamevault down. Recovery is re-deployment + re-download, potentially slow on large libraries.
+A `pve3` outage takes Gamevault down with the production VLAN. Recovery means re-deployment plus re-download, potentially slow on large libraries — the accepted price of not backing up a terabyte of binaries.
 
 ## Known gaps
 
-Volume layout, library paths, and a re-seed time estimate — the three facts a rebuild would need, none of them urgent since nothing here is precious. The day disk pressure arrives, this page becomes important; until then it is deliberately thin.
+Volume layout, library paths, and a re-seed time estimate remain undocumented — the three facts a rebuild would need, none of them urgent since nothing here is precious. The day disk pressure arrives, this page becomes important; until then it is deliberately thin.
